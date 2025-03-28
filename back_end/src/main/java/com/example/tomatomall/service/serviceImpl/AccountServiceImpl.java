@@ -40,8 +40,6 @@ public class AccountServiceImpl implements AccountService {
 
     //支持手机号和用户名登录
     public String login(AccountVO accountVO) {
-        System.out.println(accountVO.getUsername());
-        System.out.println(accountVO.getPassword());
         Account tmp=accountVO.toPO();
         String usernameOrTelephone = tmp.getUsername();
         String rawPassword = tmp.getPassword();

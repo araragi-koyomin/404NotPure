@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, computed, onMounted} from 'vue'
+import {ref, computed } from 'vue'
 import {router} from '../../router'
 import {uploadImage} from '../../api/tools';
 import {userRegister} from "../../api/user.ts"
@@ -38,8 +38,8 @@ const registerDisabled = computed(() => {
   return !(mustFields && phoneOk && emailOk)
 })
 
-function handleRegister() {
-  userRegister({
+async function handleRegister() {
+  return userRegister({
     username: username.value,
     password: password.value,
     avatar: imgURLs.value[0],
@@ -49,7 +49,7 @@ function handleRegister() {
     email: email.value,
     location: location.value,
   }).then(res => {
-    if (res.data.code === '200') {  //类型守卫，它检查 res.data 对象中是否存在名为 code 的属性
+    if (res.data.code === '200') {
       clearCache();
       ElMessage({
         message: "注册成功！请登录账号",
@@ -63,11 +63,18 @@ function handleRegister() {
         message: res.data.code + res.data.msg,
         type: 'error',
         center: true,
-      })
+      });
     }
-  }).finally(() => {
-    loading.value = false;
-  })
+  });
+}
+
+function runWithTimeout(task: () => Promise<void>, timeout: number): Promise<void> {
+  return Promise.race([
+    task(),
+    new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), timeout)
+    )
+  ]);
 }
 
 //file
@@ -76,8 +83,21 @@ const imgURLs = ref([] as any);
 const loading = ref(false);
 async function handleChangeUltimate() {
   loading.value = true;
-  await loopUpload();
-  handleRegister();
+  try {
+    await runWithTimeout(async () => {
+      await loopUpload();
+      await handleRegister(); // 注意：handleRegister 也要改成 async 返回 Promise
+    }, 10000); // 设置超时 10 秒
+  } catch (err) {
+    resetImgCache();
+    ElMessage({
+      message: "创建账户失败：请求超时，请重试",
+      type: 'error',
+      center: true,
+    });
+  } finally {
+    loading.value = false;
+  }
 }
 async function loopUpload() {
   for (let image of imageFileList.value) {
@@ -106,6 +126,14 @@ function clearCache() {
   location.value = '';
   email.value = '';
 }
+const beforeUpload = (file: File) => {
+  const isLt5M = file.size / 1024 / 1024 < 10;
+  if (!isLt5M) {
+    ElMessage.error('上传的文件不能超过 10MB 哦~');
+  }
+  return isLt5M;
+};
+
 </script>
 
 
@@ -126,6 +154,7 @@ function clearCache() {
                 list-type="picture"
                 :auto-upload="false"
                 drag
+                :before-upload="beforeUpload"
             >
               <el-icon class="el-icon--upload">
                 <upload-filled/>
@@ -167,13 +196,13 @@ function clearCache() {
             <el-col :span="12">
               <el-form-item>
 
-                <label v-if="!hasEmailInput" for="telephone">
+                <label v-if="!hasEmailInput" for="email">
                   邮箱（可选）
                 </label>
-                <label v-else-if="!emailLegal" for="telephone" class="error-warn">
+                <label v-else-if="!emailLegal" for="email" class="error-warn">
                   邮箱不合法
                 </label>
-                <label v-else for="telephone">
+                <label v-else for="email">
                   邮箱（可选）
                 </label>
 

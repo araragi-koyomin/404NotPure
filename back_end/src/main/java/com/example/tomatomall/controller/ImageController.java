@@ -18,6 +18,7 @@ public class ImageController {
   public Response<String> uploadImage(@RequestPart("file") MultipartFile file) {
     try {
       String url = imageService.upload(file);
+      System.out.println(url);
       return Response.buildSuccess(url); // 确保 ResultVO.buildSuccess 正确包装数据
     } catch (TomatoException e) {
       e.printStackTrace();

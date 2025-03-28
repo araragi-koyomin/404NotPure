@@ -82,8 +82,8 @@ function getUserInfo() {
   });
 }
 
-function updateUserInfo() {
-  userInfoUpdate({
+async function updateUserInfo() {
+  return userInfoUpdate({
     username: username,
     password: undefined,
     name: newName.value === '' ? undefined : newName.value,
@@ -117,13 +117,12 @@ function updateUserInfo() {
         message: res.data.code + res.data.msg,
       });
     }
-  }).finally(() => {
-    loading.value = false;
   });
 }
 
-function updatePassword() {
-  userInfoUpdate({
+
+async function updatePassword() {
+  return userInfoUpdate({
     username: username,
     password: newPassword.value === '' ? undefined : newPassword.value,
   }).then(res => {
@@ -150,9 +149,16 @@ function updatePassword() {
       newPassword.value = '';
       confirmPassword.value = '';
     }
-  }).finally(() => {
-    loading.value = false;
   });
+}
+
+function runWithTimeout(task: () => Promise<void>, timeout: number): Promise<void> {
+  return Promise.race([
+    task(),
+    new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), timeout)
+    )
+  ]);
 }
 
 const loading = ref(false);
@@ -161,6 +167,7 @@ const imgURLs = ref([] as any);
 function handleExceed() {
   ElMessage.warning(`当前限制选择 1 个文件`);
 }
+
 async function loopUpload() {
   for (let image of imageFileList.value) {
     let formData = new FormData();
@@ -171,32 +178,47 @@ async function loopUpload() {
 }
 async function handleChangeUltimate() {
   loading.value = true;
-  await loopUpload();
-  updateUserInfo();
+  try {
+    await runWithTimeout(async () => {
+      await loopUpload();
+      await updateUserInfo();
+    }, 10000);
+  } catch (err) {
+    imgURLs.value = [];
+    ElMessage({
+      customClass: 'customMessage',
+      type: 'error',
+      message: '更新资料超时，请检查网络后重试',
+    });
+  } finally {
+    loading.value = false;
+  }
 }
+
 async function handleChangePassword() {
   loading.value = true;
-  updatePassword();
+  try {
+    await runWithTimeout(async () => {
+      await updatePassword();
+    }, 10000);
+  } catch (err) {
+    ElMessage({
+      customClass: 'customMessage',
+      type: 'error',
+      message: '修改密码超时，请稍后重试',
+    });
+  } finally {
+    loading.value = false;
+  }
 }
 
-watchEffect(() => {
-  console.log('--- 表单变动状态 ---');
-  console.log('hasNewNameInput:', hasNewNameInput.value);
-  console.log('hasNewAvatarInput:', hasNewAvatarInput.value);
-  console.log('hasNewRoleInput:', hasNewRoleInput.value);
-  console.log('hasNewEmailInput:', hasNewEmailInput.value, '| email合法:', emailLegal.value);
-  console.log('hasNewTelephoneInput:', hasNewTelephoneInput.value, '| tel合法:', telLegal.value);
-  console.log('hasNewLocationInput:', hasNewLocationInput.value);
-
-  const result = hasNewNameInput.value ||
-      hasNewAvatarInput.value ||
-      hasNewRoleInput.value ||
-      (hasNewEmailInput.value && emailLegal.value) ||
-      (hasNewTelephoneInput.value && telLegal.value) ||
-      hasNewLocationInput.value;
-
-  console.log('总判断结果 hasAnyFieldChanged:', result);
-});
+const beforeUpload = (file: File) => {
+  const isLt5M = file.size / 1024 / 1024 < 10;
+  if (!isLt5M) {
+    ElMessage.error('上传的文件不能超过 10MB 哦~');
+  }
+  return isLt5M;
+};
 </script>
 
 <template>
@@ -260,7 +282,7 @@ watchEffect(() => {
 
       <el-form>
         <el-form-item>
-          <label for="newPassword">密码</label>
+          <label for="newPassword">请输入新密码</label>
           <el-input type="password" id="newPassword" v-model="newPassword" placeholder="•••••••••" required/>
         </el-form-item>
         <el-form-item>
@@ -285,7 +307,7 @@ watchEffect(() => {
 
       <el-form>
         <el-form-item>
-          <label for="newName">姓名</label>
+          <label for="newName">请输入新姓名</label>
           <el-input type="text" id="newName" v-model="newName"/>
         </el-form-item>
       </el-form>
@@ -301,7 +323,15 @@ watchEffect(() => {
 
       <el-form>
         <el-form-item>
-          <label for="newTelephone">手机号</label>
+          <label v-if="!hasNewTelephoneInput" for="newTelephone">
+            请输入新手机号
+          </label>
+          <label v-else-if="!telLegal" for="newTelephone" class="error-warn">
+            手机号不合法
+          </label>
+          <label v-else for="newTelephone">
+            请输入新手机号
+          </label>
           <el-input type="text" id="newTelephone" v-model="newTelephone"/>
         </el-form-item>
       </el-form>
@@ -317,7 +347,15 @@ watchEffect(() => {
 
       <el-form>
         <el-form-item>
-          <label for="newEmail">邮箱</label>
+          <label v-if="!hasNewEmailInput" for="newEmail">
+            请输入新邮箱
+          </label>
+          <label v-else-if="!emailLegal" for="newEmail" class="error-warn">
+            邮箱不合法
+          </label>
+          <label v-else for="newEmail">
+            请输入新邮箱
+          </label>
           <el-input type="text" id="newEmail" v-model="newEmail"/>
         </el-form-item>
       </el-form>
@@ -333,7 +371,7 @@ watchEffect(() => {
 
       <el-form>
         <el-form-item>
-          <label for="newLocation">地址</label>
+          <label for="newLocation">请输入新地址</label>
           <el-input type="text" id="newLocation" v-model="newLocation"/>
         </el-form-item>
       </el-form>
@@ -358,6 +396,7 @@ watchEffect(() => {
               :auto-upload="false"
               drag
               style="width: 100%;"
+              :before-upload="beforeUpload"
           >
             <el-icon class="el-icon--upload">
               <upload-filled/>
@@ -380,7 +419,7 @@ watchEffect(() => {
 
       <el-form>
         <el-form-item>
-          <label for="newRole">类型</label>
+          <label for="newRole">请选择类型</label>
           <el-select id="newRole"
                      v-model="newRole"
                      placeholder="请选择"

@@ -27,6 +27,9 @@ public class LoginInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler){
         // 排除注册和登录路径
+        logger.info("Request URI: {}", request.getRequestURI());
+        logger.info("Method: {}", request.getMethod());
+        logger.info("Content-Type: {}", request.getContentType());
         String uri = request.getRequestURI();
         logger.info("Request URI: {}", uri);
         if (uri.equals("/api/accounts") || uri.equals("/api/accounts/login") || uri.equals("/api/images")) {
@@ -51,9 +54,15 @@ public class LoginInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/api/accounts/")) {
             String[] parts = uri.split("/");
             String requestUsername = parts[parts.length - 1];
-            Integer accountId = TokenUtil.getUserIdFromToken(token);// token 中其实是 id
+            logger.info("Request username/telephone: {}", requestUsername);
+
+            Integer accountId = TokenUtil.getUserIdFromToken(token); // token 中是 id
             Account account = userRepository.findById(accountId).orElseThrow(TomatoException::notLogin);
-            if (!account.getUsername().equals(requestUsername)) {
+            logger.info("Actual username: {}, telephone: {}", account.getUsername(), account.getTelephone());
+
+            // 允许 requestUsername 是 username 或 telephone
+            if (!account.getUsername().equals(requestUsername) &&
+                    !account.getTelephone().equals(requestUsername)) {
                 throw TomatoException.notLogin();
             }
         }
