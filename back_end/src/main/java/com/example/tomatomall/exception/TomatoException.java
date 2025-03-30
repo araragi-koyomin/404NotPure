@@ -40,4 +40,6 @@ public class TomatoException extends RuntimeException{
         return new TomatoException("无权限!", "403");
     }
 
+    public static TomatoException telephoneExist() { return new TomatoException("电话号码已存在！","409");}
+
 }
