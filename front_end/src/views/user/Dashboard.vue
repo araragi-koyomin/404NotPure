@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue';
+import { computed, ref } from 'vue';
 import { userInfo, userInfoUpdate } from "../../api/user.ts";
-import { parseRole } from "../../utils";
+import { parseRole, runWithTimeout } from "../../utils";
 import { router } from "../../router";
 import { UploadFilled, InfoFilled } from "@element-plus/icons-vue";
-import {uploadImage} from "../../api/tools.ts";
+import { uploadImage } from "../../api/tools.ts";
 
 const username = sessionStorage.getItem("username") || ''
 const name = ref(sessionStorage.getItem("name")|| '')
@@ -79,6 +79,9 @@ function getUserInfo() {
     telephone.value = sessionStorage.getItem("telephone") || '';
     email.value = sessionStorage.getItem("email") || '';
     location.value = sessionStorage.getItem("location") || '';
+    window.dispatchEvent(new CustomEvent('sessionstorage-local-update', {
+      detail: { key: 'role', value: res.data.data.role }
+    }));
   });
 }
 
@@ -150,15 +153,6 @@ async function updatePassword() {
       confirmPassword.value = '';
     }
   });
-}
-
-function runWithTimeout(task: () => Promise<void>, timeout: number): Promise<void> {
-  return Promise.race([
-    task(),
-    new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), timeout)
-    )
-  ]);
 }
 
 const loading = ref(false);

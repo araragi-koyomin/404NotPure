@@ -111,14 +111,13 @@ router.beforeEach((to, _, next) => {
             next();
         }
     } else {
-        // if (to.path === '/login') {
-        //     next();
-        // } else if (to.path === '/register') {
-        //     next();
-        // } else {
-        //     next('/login');
-        // }
-        next();
+        if (to.path === '/login') {
+            next();
+        } else if (to.path === '/register') {
+            next();
+        } else {
+            next('/login');
+        }
     }
 })
 

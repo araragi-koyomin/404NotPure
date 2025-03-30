@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import {ref, computed } from 'vue'
-import {router} from '../../router'
-import {uploadImage} from '../../api/tools';
-import {userRegister} from "../../api/user.ts"
-import {UploadFilled} from "@element-plus/icons-vue";
+import { ref, computed } from 'vue'
+import { router } from '../../router'
+import { uploadImage } from '../../api/tools';
+import { userRegister } from "../../api/user.ts"
+import { runWithTimeout } from "../../utils";
+import { UploadFilled } from "@element-plus/icons-vue";
 import "../../style/base.css";
 
 const username = ref('')
@@ -66,15 +67,6 @@ async function handleRegister() {
       });
     }
   });
-}
-
-function runWithTimeout(task: () => Promise<void>, timeout: number): Promise<void> {
-  return Promise.race([
-    task(),
-    new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), timeout)
-    )
-  ]);
 }
 
 //file
