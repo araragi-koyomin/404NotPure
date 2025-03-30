@@ -32,6 +32,11 @@ public class AccountServiceImpl implements AccountService {
         if (existingAccount.isPresent()) {
             throw TomatoException.userNameExist();
         }
+        //检查电话号码重复
+        Optional<Account> existingTelephone= userRepository.findByTelephone(account.getTelephone());
+        if (existingTelephone.isPresent()) {
+            throw TomatoException.telephoneExist();
+        }
         // 加密密码
         account.setPassword(passwordEncoder.encode(account.getPassword()));
         userRepository.save(account);
