@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import {router} from '../router';
-// import {parseRole} from "../utils";
+import { router } from '../router';
+import { ref, onMounted, onUnmounted } from "vue";
+// import { useReactiveSessionStorage } from "../utils/storage.ts";
 import {
   User,
   SwitchButton,
@@ -10,9 +11,39 @@ import {
   ShoppingCart
 } from "@element-plus/icons-vue";
 
-//const role = sessionStorage.getItem('role');    //登录的时候插入的
-const role = 'admin'
+const role = ref(sessionStorage.getItem('role') || '');
 
+const updateRoleFromStorage = () => {
+  const newVal = sessionStorage.getItem('role') || '';
+  if (role.value !== newVal) {
+    role.value = newVal;
+  }
+};
+
+const handleStorageChange = (e: StorageEvent) => {
+  if (e.key === 'role') {
+    updateRoleFromStorage();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('storage', handleStorageChange);
+
+  // 使用类型断言确保类型安全
+  window.addEventListener(
+      'sessionstorage-local-update',
+      (e: CustomEvent<{ key: string; value: string }>) => {
+        if (e.detail.key === 'role') {
+          role.value = e.detail.value;
+        }
+      }
+  );
+});
+
+onUnmounted(() => {
+  window.removeEventListener('storage', handleStorageChange);
+  // clearInterval(pollInterval);
+});
 
 //退出登录
 function logout() {
@@ -56,7 +87,7 @@ function logout() {
 
       <div class="flex-grow"/>
 
-      <el-sub-menu index="product" v-if="role=='admin'">
+      <el-sub-menu index="product" v-if="role=='ADMIN'">
         <template #title>
           <el-icon :size="20">
             <reading />
@@ -68,14 +99,21 @@ function logout() {
         <el-menu-item index="/allProduct">所有商品</el-menu-item>
       </el-sub-menu>
 
+      <el-menu-item index="/allProduct" v-if="role=='USER'">
+        <el-icon :size="20">
+          <reading />
+        </el-icon>
+        商品
+      </el-menu-item>
+
       <el-menu-item index="/Cart">
-        <el-icon :size="21">
+        <el-icon :size="20">
           <ShoppingCart/>
         </el-icon>
         购物车
       </el-menu-item>
 
-      <el-sub-menu index="advertisement" v-if="role=='admin'">
+      <el-sub-menu index="advertisement" v-if="role=='ADMIN'">
         <template #title>
           <el-icon :size="20">
             <promotion />
