@@ -33,7 +33,7 @@ public class AccountServiceImpl implements AccountService {
             throw TomatoException.userNameExist();
         }
         //检查电话号码重复
-        Optional<Account> existingTelephone= userRepository.findByTelephone(account.getTelephone());
+        Optional<Account> existingTelephone = userRepository.findByTelephone(account.getTelephone());
         if (existingTelephone.isPresent()) {
             throw TomatoException.telephoneExist();
         }
@@ -75,7 +75,13 @@ public class AccountServiceImpl implements AccountService {
         if (accountUpdateDTO.getPassword() != null) account.setPassword(passwordEncoder.encode(accountUpdateDTO.getPassword()));
         if (accountUpdateDTO.getName() != null) account.setName(accountUpdateDTO.getName());
         if (accountUpdateDTO.getAvatar() != null) account.setAvatar(accountUpdateDTO.getAvatar());
-        if (accountUpdateDTO.getTelephone() != null) account.setTelephone(accountUpdateDTO.getTelephone());
+        if (accountUpdateDTO.getTelephone() != null) {
+            Optional<Account> existingTelephone = userRepository.findByTelephone(accountUpdateDTO.getTelephone());
+            if (existingTelephone.isPresent()) {
+                throw TomatoException.telephoneExist();
+            }
+            account.setTelephone(accountUpdateDTO.getTelephone());
+        }
         if (accountUpdateDTO.getEmail() != null) account.setEmail(accountUpdateDTO.getEmail());
         if (accountUpdateDTO.getLocation() != null) account.setLocation(accountUpdateDTO.getLocation());
         if (accountUpdateDTO.getRole() != null) account.setRole(accountUpdateDTO.getRole());
