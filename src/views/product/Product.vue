@@ -48,13 +48,13 @@
       <div class="product-actions">
         <!-- 消费者视角按钮 -->
         <el-button
-            v-if="userRole === 'Customer'"
+            v-if="userRole === 'USER'"
             type="primary"
             @click="createOrder"
         >创建订单</el-button>
 
         <!-- 管理员视角按钮 -->
-        <template v-if="userRole === 'Manager'">
+        <template v-if="userRole === 'ADMIN'">
           <el-button type="primary" @click="createOrder">创建订单</el-button>
           <el-button type="warning" @click="updateProductInfo">更改产品信息</el-button>
           <el-button type="danger" @click="confirmDeleteProduct">删除产品</el-button>
@@ -79,7 +79,7 @@
         <div class="comments-header">
           <h2>用户评论</h2>
           <el-button
-              v-if="userRole === 'Customer'"
+              v-if="userRole === 'USER'"
               type="primary"
               size="small"
               @click="showCreateCommentDialog"
@@ -102,7 +102,7 @@
             </div>
             <div class="comment-actions">
               <el-button
-                  v-if="userRole === 'Manager' || (userRole === 'Customer' && comment.userId === userId)"
+                  v-if="userRole === 'ADMIN' || (userRole === 'USER' && comment.userId === userId)"
                   type="danger"
                   size="small"
                   @click="confirmDeleteComment(comment.id)"
@@ -215,7 +215,7 @@ const router = useRouter();
 const productId = computed(() => route.params.id as string);
 
 // 用户信息
-const userRole = ref(localStorage.getItem('userRole') || sessionStorage.getItem('role') || 'Customer');
+const userRole = ref(localStorage.getItem('userRole') || sessionStorage.getItem('role') || 'USER');
 const userId = ref(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '');
 
 // 产品数据
