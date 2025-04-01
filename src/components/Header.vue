@@ -11,7 +11,8 @@ import {
   ShoppingCart
 } from "@element-plus/icons-vue";
 
-const role = ref(sessionStorage.getItem('role') || '');
+// const role = ref(sessionStorage.getItem('role') || '');
+const role = ref("ADMIN");
 
 const updateRoleFromStorage = () => {
   const newVal = sessionStorage.getItem('role') || '';
