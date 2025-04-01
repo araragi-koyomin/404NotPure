@@ -1,14 +1,15 @@
 import { axios } from "../utils/request.ts";
 import { PRODUCT_MODULE } from "./_prefix.ts";
 
-// 基于Lab2规范定义的商品类型
+// 基于Lab2规范定义的商品类型，更新支持多图片
 export type Product = {
     id: string;
     title: string;
     price: number;
     rate: number;
     description: string;
-    cover: string;
+    cover: string; // 主封面图
+    images: string[]; // 新增：多张产品图片
     detail: string;
     specifications?: Specification[];
 };
@@ -27,6 +28,17 @@ export type Stockpile = {
     productId: string;
     amount: number;
     frozen: number;
+};
+
+// 评论类型
+export type Comment = {
+    id: string;
+    userId: string;
+    userName: string; // 用户昵称
+    productId: string;
+    content: string; // 评论内容
+    rate: number; // 用户打分
+    createTime: string; // 创建时间
 };
 
 // 获取所有商品列表
@@ -105,6 +117,30 @@ export const updateProductStockpile = async (productId: string, stockpile: Stock
 export const getProductStockpile = async (productId: string) => {
     return axios
         .get(`${PRODUCT_MODULE}/stockpile/${productId}`)
+        .then((res) => {
+            return res;
+        })
+        .catch((err) => {
+            return err.response;
+        });
+};
+
+// 创建评论
+export const createComment = async (comment: Omit<Comment, 'id' | 'createTime'>) => {
+    return axios
+        .post(`${PRODUCT_MODULE}/comments`, comment)
+        .then((res) => {
+            return res;
+        })
+        .catch((err) => {
+            return err.response;
+        });
+};
+
+// 删除评论
+export const deleteComment = async (commentId: string) => {
+    return axios
+        .delete(`${PRODUCT_MODULE}/comments/${commentId}`)
         .then((res) => {
             return res;
         })
