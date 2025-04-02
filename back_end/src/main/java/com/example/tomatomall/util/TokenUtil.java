@@ -5,6 +5,7 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.example.tomatomall.exception.TomatoException;
+import com.example.tomatomall.po.Account;
 import com.example.tomatomall.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -48,5 +49,11 @@ public class TokenUtil {
         } catch (Exception e) {
             throw TomatoException.notLogin(); // 或自定义异常
         }
+    }
+
+    public String getUserRoleFromToken(String token) {
+        Integer userId = getUserIdFromToken(token);
+        Account account = userRepository.findById(userId).orElseThrow(TomatoException::notLogin);
+        return account.getRole();
     }
 }
