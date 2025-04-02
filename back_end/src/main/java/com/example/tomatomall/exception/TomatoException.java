@@ -42,4 +42,8 @@ public class TomatoException extends RuntimeException{
 
     public static TomatoException telephoneExist() { return new TomatoException("电话号码已存在！","409");}
 
+    public static TomatoException productNotExist(){
+        return new TomatoException("商品不存在！","404");
+    }
+
 }
