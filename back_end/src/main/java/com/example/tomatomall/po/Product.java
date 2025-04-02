@@ -29,6 +29,7 @@ public class Product {
     private String description;
     private String detail;
     private String cover;
+    private String category;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     @JsonManagedReference
@@ -47,6 +48,7 @@ public class Product {
         vo.setDetail(detail);
         vo.setDescription(description);
         vo.setCover(cover);
+        vo.setCategory(category);
         vo.setSpecifications(specifications.stream().map(ProductSpecification::toVO).collect(Collectors.toList()));
         vo.setContentImages(contentImages.stream().map(ProductContentImage::toVO).collect(Collectors.toList()));
         return vo;
