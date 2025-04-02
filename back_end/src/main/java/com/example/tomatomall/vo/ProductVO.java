@@ -16,6 +16,7 @@ public class ProductVO {
     private String description;
     private String detail;
     private String cover;
+    private String category;
     private List<SpecificationVO> specifications;
     private List<ProductContentImageVO> contentImages;
 }
