@@ -339,7 +339,7 @@ async function deleteProduct() {
     if (response.data.code === 200) {
       ElMessage.success('删除产品成功');
       deleteProductDialogVisible.value = false;
-      router.push('/product'); // 假设产品列表页路径
+      router.push('/allProduct'); // 假设产品列表页路径
     } else {
       ElMessage.error('删除产品失败：' + response.data.msg);
     }
