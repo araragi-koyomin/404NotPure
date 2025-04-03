@@ -1,23 +1,20 @@
 import axios from 'axios'
-axios.defaults.withCredentials = true;
-const service = axios.create()
+const service = axios.create({
+    timeout: 10000,
+    withCredentials: true,
+});
 
 //当前实例的拦截器，对所有要发送给后端的请求进行处理，在其中加入token
 service.interceptors.request.use(
     config => {
-        // ✅ 让请求默认携带 cookie（支持方案 A）
-        config.withCredentials = true;
-
-        // ✅ 支持方案 B：如果 sessionStorage 中有 token，就加到 headers 中
         const token = sessionStorage.getItem('token'); // 或 localStorage
         if (token) {
             config.headers['token'] = token;
         }
-
         return config;
     },
     error => {
-        console.log(error);
+        console.log('请求拦截器出错：', error);
         return Promise.reject(error);
     }
 );
