@@ -21,14 +21,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // 使用 antMatchers 匹配路径
                         // 排除注册登录的拦截
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/api/accounts", "POST"),
-                                new AntPathRequestMatcher("/api/accounts/login", "POST"),
-                                new AntPathRequestMatcher("/api/accounts/{username}", "GET"),
-                                new AntPathRequestMatcher("/api/accounts", "PUT"),
-                                new AntPathRequestMatcher("/api/images","POST")
-                        ).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
+                        //.anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable()) // 测试环境禁用 CSRF
                 .formLogin(formLogin -> formLogin.disable())
