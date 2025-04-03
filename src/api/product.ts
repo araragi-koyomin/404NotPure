@@ -12,6 +12,7 @@ export type Product = {
     images: string[]; // 新增：多张产品图片
     detail: string;
     specifications?: Specification[];
+    category?: string;
 };
 
 // 规格说明类型
