@@ -48,7 +48,7 @@ const loadProducts = async () => {
 }
 
 // Helpers
-const normalize = (str) => str.trim().toLowerCase()
+const normalize = (str: string) => str.trim().toLowerCase()
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }
@@ -66,13 +66,21 @@ const filteredProducts = computed(() =>
 )
 
 // Handle add-to-cart event
-const addToCart = (product) => {
+const addToCart = (product: Product) => {
   ElMessage.success(`${product.title} 已加入购物车！`)
 }
 
 const goToProduct = (id: string) => {
   router.push(`/product/${id}`)
 }
+const handleCardClick = (product: Product) => {
+  if (product.id) {
+    goToProduct(product.id)
+  } else {
+    ElMessage.warning("商品 ID 缺失，无法跳转详情页")
+  }
+}
+
 
 onMounted(() => {
   loadProducts()
@@ -135,7 +143,7 @@ onMounted(() => {
       </div>
 
       <!-- Logo + Assistant + Carousel -->
-      <el-row class="logo-carousel-row" align="top" gutter="20">
+      <el-row class="logo-carousel-row" align="top" :gutter="20">
         <el-col :span="1"></el-col>
 
         <!-- Logo -->
@@ -187,7 +195,7 @@ onMounted(() => {
                 v-for="product in filteredProducts"
                 :key="product.id"
                 shadow="hover"
-                @click="goToProduct(product.id)"
+                @click="handleCardClick(product)"
             >
               <div class="product-image-wrapper">
                 <el-image
@@ -199,7 +207,7 @@ onMounted(() => {
               </div>
               <div class="product-title">{{ product.title }}</div>
               <div class="product-author">
-                作者：{{ product.specifications.find(spec => spec.item === '作者')?.value || '未知' }}
+                作者：{{ product.specifications?.find(spec => spec.item === '作者')?.value || '未知' }}
               </div>
               <el-rate
                   :model-value="product.rate / 2"
@@ -397,13 +405,25 @@ onMounted(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s, transform 0.3s;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
-.fade-enter-from,
-.fade-leave-to {
+.fade-enter-from {
   opacity: 0;
+  transform: translateY(20px); /* 初始位置：下方 */
+}
+.fade-enter-to {
+  opacity: 1;
   transform: translateY(0);
 }
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px); /* 离开时往下滑 */
+}
+
 
 .product-display {
   width: 100%;
