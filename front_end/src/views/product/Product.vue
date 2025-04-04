@@ -267,7 +267,7 @@ async function loadProductData() {
 
       // 如果产品没有图片数组，将cover图片作为第一张
       if (!product.value.images || product.value.images.length === 0) {
-        product.value.images = [product.value.cover];
+        product.value.images = [product.value.cover!];
       }
 
       // 加载评论数据（假设评论在产品数据中）
