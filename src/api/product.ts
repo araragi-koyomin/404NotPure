@@ -3,24 +3,24 @@ import { PRODUCT_MODULE } from "./_prefix.ts";
 
 // 基于Lab2规范定义的商品类型，更新支持多图片
 export type Product = {
-    id: string;
+    id?: string;
     title: string;
     price: number;
     rate: number;
-    description: string;
-    cover: string; // 主封面图
-    images: string[]; // 新增：多张产品图片
-    detail: string;
+    description?: string;
+    cover?: string; // 主封面图
+    images?: string[]; // 新增：多张产品图片
+    detail?: string;
     specifications?: Specification[];
     category?: string;
 };
 
 // 规格说明类型
 export type Specification = {
-    id: string;
+    id?: string;
     item: string;
     value: string;
-    productId: string;
+    productId?: string;
 };
 
 // 库存类型
@@ -83,12 +83,15 @@ export const createProduct = async (product: Product) => {
     return axios
         .post(`${PRODUCT_MODULE}`, product)
         .then((res) => {
+            console.log('%c✅ 创建成功，后端返回：', 'color: #00c1ff; font-weight: bold;', res.data);
             return res;
         })
         .catch((err) => {
+            console.error('%c❌ 创建失败，错误信息：', 'color: red; font-weight: bold;', err.response?.data || err);
             return err.response;
         });
 };
+
 
 // 删除商品
 export const deleteProduct = async (id: string) => {
