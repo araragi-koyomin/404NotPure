@@ -9,7 +9,7 @@ export type Product = {
     rate: number;
     description?: string;
     cover?: string; // 主封面图
-    contentImages?: string[]; // 新增：多张产品图片
+    contentImages?: { imageUrl: string }[]; // 新增：多张产品图片
     detail?: string;
     specifications?: Specification[];
     category?: string;
