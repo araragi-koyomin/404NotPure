@@ -43,7 +43,7 @@ const product = ref<Product>({
   rate: 0,
   description: '',
   cover: '',
-  images: [],
+  contentImages: [],
   detail: '',
   specifications: [],
   category: '',
@@ -121,7 +121,7 @@ const resetImgCache = () => {
     rate: 0,
     description: '',
     cover: '',
-    images: [],
+    contentImages: [],
     detail: '',
     specifications: product.value.specifications = fixedSpecifications.map(spec => ({
       item: spec.label,
@@ -160,7 +160,7 @@ const handleSubmit = async () => {
     await loopUpload();
     const payload: Product = {
       ...product.value,
-      images: [...imgURLs.value],
+      contentImages: [...imgURLs.value],
       cover: coverURL.value,
       specifications: (product.value.specifications ?? []).map(s => ({ item: s.item, value: s.value })),
     };
