@@ -22,10 +22,3 @@ server:
   error:
     include-message: always
     include-binding-errors: always
-
-aliyun:
-  oss:
-    endpoint: oss-cn-nanjing.aliyuncs.com
-    accessKeyId: LTAI5tMf8DAzL83j1W9XSNBc
-    accessKeySecret: Jmr0ilqTRtuansbdueGjfFs8ifab38
-    bucketName: seecoder
