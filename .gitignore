@@ -15,8 +15,6 @@ out/
 
 # --- 构建系统文件 ---
 # Maven 构建输出
-backend/target/
-!backend/target/*.jar  # 排除例外：如果需要保留最终打包的 jar
 back_end/target/
 !back_end/target/*.jar
 
