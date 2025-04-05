@@ -1,0 +1,50 @@
+# --- 通用开发环境文件 ---
+.DS_Store
+Thumbs.db
+
+# --- IDE 配置文件 ---
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# --- 构建系统文件 ---
+# Maven 构建输出
+backend/target/
+!backend/target/*.jar  # 排除例外：如果需要保留最终打包的 jar
+
+# 编译类文件
+*.class
+
+# --- 依赖管理 ---
+# Maven 本地仓库（可选）
+# ~/.m2/
+
+# --- 日志文件 ---
+*.log
+logs/
+
+# --- 环境配置文件 ---
+.env
+*.properties
+*.keystore
+
+# --- 测试覆盖率报告 ---
+coverage/
+*.lcov
+
+# --- 其他生成文件 ---
+# 前端构建产物（如果混合项目）
+dist/
+node_modules/
+
+# --- 临时文件 ---
+*.tmp
+*.bak
+*.swp
+*.swo
