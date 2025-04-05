@@ -57,6 +57,7 @@
         <!-- 管理员视角按钮 -->
         <template v-if="userRole === 'ADMIN'">
           <el-button type="primary" @click="createOrder">创建订单</el-button>
+          <el-button type="warning" @click="updateProductInfo">更改信息</el-button>
           <el-button type="danger" @click="confirmDeleteProduct">删除产品</el-button>
           <el-button type="info" @click="showAdjustStockDialog">调整库存</el-button>
         </template>
