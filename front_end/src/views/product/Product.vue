@@ -10,11 +10,12 @@
       <!-- 产品评分 -->
       <div class="product-rating">
         <el-rate
-            v-model="product.rate"
-            disabled
-            show-score
-            text-color="#ff9900"
-            score-template="{value} points"
+          v-model="starRating"
+          :max="5"
+          allow-half
+          show-score
+          disabled
+          :score-template="`${product.rate} 分`"
         />
       </div>
 
@@ -56,7 +57,7 @@
         <!-- 管理员视角按钮 -->
         <template v-if="userRole === 'ADMIN'">
           <el-button type="primary" @click="createOrder">创建订单</el-button>
-          <el-button type="warning" @click="updateProductInfo">更改产品信息</el-button>
+          <el-button type="warning" @click="updateProductInfo">更改信息</el-button>
           <el-button type="danger" @click="confirmDeleteProduct">删除产品</el-button>
           <el-button type="info" @click="showAdjustStockDialog">调整库存</el-button>
         </template>
@@ -212,7 +213,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const productId = computed(() => route.params.id as string);
+const productId = computed(() => route.params.productId as string);
 
 // 用户信息
 const userRole = ref(localStorage.getItem('userRole') || sessionStorage.getItem('role') || 'USER');
@@ -258,11 +259,16 @@ const commentForm = ref({
 });
 const currentCommentId = ref('');
 
+
+// 将原始评分转换为 0~5 的星级评分
+const starRating = computed(() => product.value.rate / 2);
+
+
 // 加载产品数据
 async function loadProductData() {
   try {
     const response = await getProductById(productId.value);
-    if (response.data.code === 200) {
+    if (response.data.code === "200") {
       product.value = response.data.data;
 
       // 如果产品没有图片数组，将cover图片作为第一张
@@ -289,7 +295,7 @@ async function loadProductData() {
 async function loadStockpileData() {
   try {
     const response = await getProductStockpile(productId.value);
-    if (response.data.code === 200) {
+    if (response.data.code === "200") {
       stockpile.value = response.data.data;
       // 初始化表单数据
       stockForm.value.amount = stockpile.value.amount;
@@ -336,7 +342,7 @@ function confirmDeleteProduct() {
 async function deleteProduct() {
   try {
     const response = await apiDeleteProduct(productId.value);
-    if (response.data.code === 200) {
+    if (response.data.code === "200") {
       ElMessage.success('删除产品成功');
       deleteProductDialogVisible.value = false;
       router.push('/product'); // 假设产品列表页路径
@@ -366,7 +372,7 @@ async function updateStock() {
 
     const response = await updateProductStockpile(productId.value, newStockpile);
 
-    if (response.data.code === 200) {
+    if (response.data.code === "200") {
       ElMessage.success('调整库存成功');
       adjustStockDialogVisible.value = false;
       // Reload the entire product data to refresh the page
@@ -405,7 +411,7 @@ async function submitComment() {
     };
 
     const response = await apiCreateComment(newComment);
-    if (response.data.code === 200) {
+    if (response.data.code === "200") {
       ElMessage.success('评论提交成功');
       createCommentDialogVisible.value = false;
       // 重新加载评论数据或将新评论添加到列表
@@ -428,7 +434,7 @@ function confirmDeleteComment(commentId: string) {
 async function deleteComment() {
   try {
     const response = await apiDeleteComment(currentCommentId.value);
-    if (response.data.code === 200) {
+    if (response.data.code === "200") {
       ElMessage.success('删除评论成功');
       deleteCommentDialogVisible.value = false;
       // 从列表中移除该评论
@@ -479,7 +485,8 @@ onMounted(() => {
 }
 
 .product-rating {
-  margin-bottom: 20px;
+  margin-top: 1px;
+  margin-bottom: 30px;
 }
 
 .product-description {
@@ -505,9 +512,22 @@ onMounted(() => {
 
 .product-actions {
   margin-top: auto;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+  width: 100%; /* 确保容器占据全宽 */
+}
+
+.product-actions :deep(.el-button) {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 12px 20px !important;
+  display: flex !important; /* 改为flex布局 */
+  justify-content: center !important; /* 水平居中 */
+  align-items: center !important; /* 垂直居中 */
+  box-sizing: border-box !important;
+  height: 40px !important; /* 统一高度 */
+  line-height: 1 !important; /* 重置行高 */
 }
 
 .product-content-panel {
