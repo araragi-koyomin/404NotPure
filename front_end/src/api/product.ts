@@ -106,9 +106,9 @@ export const deleteProduct = async (id: string) => {
 };
 
 // 调整指定商品的库存
-export const updateProductStockpile = async (productId: string, stockpile: Stockpile) => {
+export const updateProductStockpile = async (productId: string, numberStockpile: number) => {
     return axios
-        .patch(`${PRODUCT_MODULE}/stockpile/${productId}`, stockpile)
+        .patch(`${PRODUCT_MODULE}/stockpile/${productId}`, numberStockpile)
         .then((res) => {
             return res;
         })

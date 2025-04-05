@@ -329,12 +329,10 @@ function createOrder() {
 
 // 更新产品信息
 function updateProductInfo() {
-  router.push({
-    path: '/updateProduct',
-    query: {
-      product: JSON.stringify(product.value)
-    }
-  });
+  // 存储数据
+  sessionStorage.setItem('product', JSON.stringify(product.value));
+  router.push({ path: '/updateProduct' });
+
 }
 
 // 确认删除产品
@@ -374,7 +372,7 @@ async function updateStock() {
       frozen: stockForm.value.frozen
     };
 
-    const response = await updateProductStockpile(productId.value, newStockpile);
+    const response = await updateProductStockpile(productId.value, newStockpile.amount);
 
     if (response.data.code === "200") {
       ElMessage.success('调整库存成功');
