@@ -43,7 +43,7 @@ const product = ref<Product>({
   rate: 0,
   description: '',
   cover: '',
-  images: [],
+  contentImages: [],
   detail: '',
   specifications: [],
   category: '',
@@ -121,7 +121,7 @@ const resetImgCache = () => {
     rate: 0,
     description: '',
     cover: '',
-    images: [],
+    contentImages: [],
     detail: '',
     specifications: product.value.specifications = fixedSpecifications.map(spec => ({
       item: spec.label,
@@ -134,19 +134,34 @@ const resetImgCache = () => {
 // 上传图片至后端并获取 URL
 async function loopUpload() {
   imgURLs.value = [];
+
   for (const image of imageFileList.value) {
     const formData = new FormData();
     formData.append('file', image.raw as UploadRawFile);
+
     const res = await uploadImage(formData);
-    imgURLs.value.push(res.data.data);
+    const url = res.data.data?.imageUrl || res.data.data; // ✅ 同时兼容 string / 对象
+    if (typeof url === 'string') {
+      imgURLs.value.push(url);
+    } else {
+      console.warn('上传返回格式不合法:', res.data.data);
+    }
   }
+
   if (coverFileList.value.length > 0) {
     const formData = new FormData();
     formData.append('file', coverFileList.value[0].raw as UploadRawFile);
+
     const res = await uploadImage(formData);
-    coverURL.value = res.data.data;
+    const url = res.data.data?.imageUrl || res.data.data;
+    if (typeof url === 'string') {
+      coverURL.value = url;
+    } else {
+      console.warn('封面图上传返回格式不合法:', res.data.data);
+    }
   }
 }
+
 
 // 表单提交
 const handleSubmit = async () => {
@@ -160,16 +175,16 @@ const handleSubmit = async () => {
     await loopUpload();
     const payload: Product = {
       ...product.value,
-      images: [...imgURLs.value],
+      contentImages: imgURLs.value.map(url => ({ imageUrl: url })),
       cover: coverURL.value,
       specifications: (product.value.specifications ?? []).map(s => ({ item: s.item, value: s.value })),
     };
     const res = await createProduct(payload);
-    if (res.code === 200) {
-      ElMessage.success('创建成功！产品ID：' + res.data.id);
+    if (res.data.code === '200') {
+      ElMessage.success('创建成功！产品ID：' + res.data.data.productId);
       resetImgCache();
     } else {
-      ElMessage.error('创建失败：' + (res.msg || '未知错误'));
+      ElMessage.error('创建失败：' + (res.data.msg || '未知错误'));
     }
   } catch (err) {
     ElMessage.error('创建失败，请稍后再试');
