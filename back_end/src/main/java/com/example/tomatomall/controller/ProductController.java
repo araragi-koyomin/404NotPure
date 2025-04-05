@@ -99,4 +99,32 @@ public class ProductController {
 
         return Response.buildSuccess(productService.update(product.toVO()));
     }
+
+    /**
+     * 删除商品
+     */
+    @DeleteMapping("/{id}")
+    public Response<String> deleteProduct(@PathVariable int id, HttpServletRequest request) {
+        String token = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (token == null) {
+            throw TomatoException.notLogin();
+        }
+
+        String role = tokenUtil.getUserRoleFromToken(token);
+        if (!"admin".equals(role)) {
+            throw TomatoException.noPermission();
+        }
+
+        return Response.buildSuccess(productService.delete(id));
+    }
 }

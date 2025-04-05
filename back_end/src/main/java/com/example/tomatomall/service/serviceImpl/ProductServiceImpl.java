@@ -4,9 +4,11 @@ import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Product;
 import com.example.tomatomall.po.ProductContentImage;
 import com.example.tomatomall.po.ProductSpecification;
+import com.example.tomatomall.po.StockPile;
 import com.example.tomatomall.repository.ContentImageRepository;
 import com.example.tomatomall.repository.ProductRepository;
 import com.example.tomatomall.repository.SpecificationRepository;
+import com.example.tomatomall.repository.StockPileRepository;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.vo.ProductContentImageVO;
 import com.example.tomatomall.vo.ProductVO;
@@ -14,6 +16,7 @@ import com.example.tomatomall.vo.SpecificationVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,7 +33,11 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private ContentImageRepository contentImageRepository;
 
+    @Autowired
+    private StockPileRepository stockPileRepository;
+
     @Override
+    @Transactional
     public Product createProduct(ProductVO productVO) {
         Product product = new Product();
         product.setTitle(productVO.getTitle());
@@ -63,7 +70,18 @@ public class ProductServiceImpl implements ProductService {
             product.setContentImages(contentImages);
         }
 
-        return productRepository.save(product);
+        // 保存产品
+        Product savedProduct = productRepository.save(product);
+
+        // 创建并保存对应的库存记录
+        StockPile stockPile = StockPile.builder()
+            .productId(savedProduct.getId())
+            .amount(0)
+            .frozen(0)
+            .build();
+        stockPileRepository.save(stockPile);
+
+        return savedProduct;
     }
 
     @Override
@@ -83,6 +101,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public String update(ProductVO productVO) {
         Product product = productRepository.findById(productVO.getId());
         if (productVO.getTitle() != null) product.setTitle(productVO.getTitle());
@@ -131,5 +150,15 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
         return "更新成功";
+    }
+
+    @Override
+    @Transactional
+    public String delete(int id) {
+        stockPileRepository.deleteByProductId(id);
+
+        productRepository.deleteById(id);
+
+        return "删除成功";
     }
 }
