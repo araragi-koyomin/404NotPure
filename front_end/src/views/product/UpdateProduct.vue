@@ -163,7 +163,7 @@ const handleExceed_2 = () => ElMessage.warning('最多只能上传 5 张图片')
 const handlePreview = (file: any) => window.open(file.url || file.response?.data || '', '_blank');
 
 // 删除已上传的图片
-const handleRemove = (file: UploadFile, uploadFiles: UploadFile[]) => {
+const handleRemove = (file: UploadFile) => {
   // 从 imgURLs 中移除
   const index = imgURLs.value.indexOf(file.url || '');
   if (index !== -1) {
@@ -172,7 +172,7 @@ const handleRemove = (file: UploadFile, uploadFiles: UploadFile[]) => {
 };
 
 // 删除已上传的封面图
-const handleCoverRemove = (file: UploadFile, uploadFiles: UploadFile[]) => {
+const handleCoverRemove = () => {
   coverURL.value = '';
 };
 
