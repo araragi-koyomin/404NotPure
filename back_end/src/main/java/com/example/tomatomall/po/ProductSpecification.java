@@ -17,7 +17,7 @@ import javax.persistence.*;
 public class ProductSpecification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
@@ -29,7 +29,7 @@ public class ProductSpecification {
     private String value;
 
     public Integer getProductId() {
-        return (product != null) ? product.getProductId() : null;
+        return (product != null) ? product.getId() : null;
     }
 
     public SpecificationVO toVO(){
