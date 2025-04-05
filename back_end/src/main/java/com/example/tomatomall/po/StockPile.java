@@ -1,5 +1,6 @@
 package com.example.tomatomall.po;
 
+import com.example.tomatomall.vo.StockPileVO;
 import lombok.*;
 
 import javax.persistence.*;
@@ -21,5 +22,12 @@ public class StockPile {
     private int productId;
     private int amount;
     private int frozen;
-    
+
+    public StockPileVO toVO() {
+        StockPileVO vo = new StockPileVO();
+        vo.setProductId(productId);
+        vo.setAmount(amount);
+        vo.setFrozen(frozen);
+        return vo;
+    }
 }
