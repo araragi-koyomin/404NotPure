@@ -44,7 +44,7 @@ public class ProductController {
         }
 
         String role = tokenUtil.getUserRoleFromToken(token);
-        if (!"admin".equals(role)) {
+        if (!("admin".equals(role) || "ADMIN".equals(role))  ) {
             throw TomatoException.noPermission();
         }
 
