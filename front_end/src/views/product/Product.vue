@@ -69,8 +69,8 @@
       <!-- 产品图片轮播 -->
       <div class="product-images-carousel">
         <el-carousel height="400px" indicator-position="outside" arrow="always">
-          <el-carousel-item v-for="(image, index) in product.images" :key="index">
-            <el-image :src="image" fit="contain" class="carousel-image" />
+          <el-carousel-item v-for="(image, index) in product.contentImages" :key="index">
+            <el-image :src="image.imageUrl" fit="contain" class="carousel-image" />
           </el-carousel-item>
         </el-carousel>
       </div>
@@ -227,7 +227,7 @@ const product = ref<Product>({
   rate: 0,
   description: '',
   cover: '',
-  images: [],
+  contentImages: [],
   detail: '',
   specifications: []
 });
@@ -272,9 +272,13 @@ async function loadProductData() {
       product.value = response.data.data;
 
       // 如果产品没有图片数组，将cover图片作为第一张
-      if (!product.value.images || product.value.images.length === 0) {
-        product.value.images = [product.value.cover!];
+      if (
+          (!product.value.contentImages || product.value.contentImages.length === 0) &&
+          product.value.cover
+      ) {
+        product.value.contentImages = [{ imageUrl: product.value.cover }];
       }
+
 
       // 加载评论数据（假设评论在产品数据中）
       if (response.data.data.comments) {
