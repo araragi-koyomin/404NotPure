@@ -47,6 +47,7 @@ export const getAllProducts = async () => {
     return axios
         .get(`${PRODUCT_MODULE}`)
         .then((res) => {
+            console.log(res.data);
             return res;
         })
         .catch((err) => {
@@ -68,6 +69,7 @@ export const getProductById = async (id: string) => {
 
 // 更新商品信息
 export const updateProduct = async (product: Product) => {
+    console.log('%c📦 准备发送到后端的 product 数据：', 'color: #00c1ff; font-weight: bold;', JSON.stringify(product, null, 2));
     return axios
         .put(`${PRODUCT_MODULE}`, product)
         .then((res) => {
@@ -80,6 +82,7 @@ export const updateProduct = async (product: Product) => {
 
 // 增加商品
 export const createProduct = async (product: Product) => {
+    console.log('%c📦 准备发送到后端的 product 数据：', 'color: #00c1ff; font-weight: bold;', JSON.stringify(product, null, 2));
     return axios
         .post(`${PRODUCT_MODULE}`, product)
         .then((res) => {
@@ -107,15 +110,14 @@ export const deleteProduct = async (id: string) => {
 
 // 调整指定商品的库存
 export const updateProductStockpile = async (productId: string, numberStockpile: number) => {
-    return axios
-        .patch(`${PRODUCT_MODULE}/stockpile/${productId}`, numberStockpile)
-        .then((res) => {
-            return res;
-        })
-        .catch((err) => {
-            return err.response;
-        });
+    return axios.patch(
+        `${PRODUCT_MODULE}/stockpile/${productId}`,
+        { amount: numberStockpile } // 🔥 必须是对象！
+    )
+        .then(res => res)
+        .catch(err => err.response);
 };
+
 
 // 查询指定商品的库存
 export const getProductStockpile = async (productId: string) => {

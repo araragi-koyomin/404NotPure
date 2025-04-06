@@ -18,7 +18,9 @@ public class SpecificationVO {
 
     public ProductSpecification toPO(){
         ProductSpecification productSpecification = new ProductSpecification();
-        productSpecification.setId(id);
+        if (id > 0) {
+            productSpecification.setId(id); // 只有更新场景才需要
+        }
         productSpecification.setItem(item);
         productSpecification.setValue(value);
         return productSpecification;
