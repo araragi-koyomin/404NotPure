@@ -3,7 +3,9 @@
     <!-- 左侧信息面板 -->
     <el-aside width="33%" class="product-info-panel">
       <div class="product-header">
-        <el-button @click="goBack" icon="el-icon-arrow-left" circle></el-button>
+        <div class="sidebar-toggle-icon" @click="goBack">
+          <el-icon><DArrowLeft /></el-icon>
+        </div>
         <h1 class="product-title">{{ product.title }}</h1>
       </div>
 
@@ -140,9 +142,9 @@
       <el-form-item label="当前库存">
         <el-input-number v-model="stockForm.amount" :min="0" :step="1"></el-input-number>
       </el-form-item>
-      <el-form-item label="冻结库存">
-        <el-input-number v-model="stockForm.frozen" :min="0" :step="1"></el-input-number>
-      </el-form-item>
+<!--      <el-form-item label="冻结库存">-->
+<!--        <el-input-number v-model="stockForm.frozen" :min="0" :step="1"></el-input-number>-->
+<!--      </el-form-item>-->
     </el-form>
     <template #footer>
       <span class="dialog-footer">
@@ -197,6 +199,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { DArrowLeft } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import {
@@ -270,7 +273,8 @@ async function loadProductData() {
     const response = await getProductById(productId.value);
     if (response.data.code === "200") {
       product.value = response.data.data;
-
+      // 存储数据
+      sessionStorage.setItem('product', JSON.stringify(product.value));
       // 如果产品没有图片数组，将cover图片作为第一张
       if (
           (!product.value.contentImages || product.value.contentImages.length === 0) &&
@@ -329,10 +333,7 @@ function createOrder() {
 
 // 更新产品信息
 function updateProductInfo() {
-  // 存储数据
-  sessionStorage.setItem('product', JSON.stringify(product.value));
   router.push({ path: '/updateProduct' });
-
 }
 
 // 确认删除产品
@@ -346,8 +347,9 @@ async function deleteProduct() {
     const response = await apiDeleteProduct(productId.value);
     if (response.data.code === "200") {
       ElMessage.success('删除产品成功');
+      sessionStorage.removeItem('product');
       deleteProductDialogVisible.value = false;
-      router.push('/product'); // 假设产品列表页路径
+      await router.push({path: '/allProduct'}); // 假设产品列表页路径
     } else {
       ElMessage.error('删除产品失败：' + response.data.msg);
     }
@@ -378,7 +380,7 @@ async function updateStock() {
       ElMessage.success('调整库存成功');
       adjustStockDialogVisible.value = false;
       // Reload the entire product data to refresh the page
-      loadProductData();
+      await loadProductData();
     } else {
       ElMessage.error('调整库存失败：' + response.data.msg);
     }
@@ -601,5 +603,17 @@ onMounted(() => {
   background-color: rgba(31, 45, 61, 0.5);
   width: 40px;
   height: 40px;
+}
+
+.sidebar-toggle-icon {
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  color: #333;
+  transition: all 0.2s ease;
+}
+.sidebar-toggle-icon:hover {
+  color: #f44336;
+  transform: scale(1.1);
 }
 </style>

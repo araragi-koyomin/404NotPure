@@ -197,6 +197,14 @@ onMounted(() => {
                 shadow="hover"
                 @click="handleCardClick(product)"
             >
+              <el-tag
+                  class="card-tag"
+                  type="success"
+                  effect="dark"
+                  size="small"
+              >
+                {{ parseBookCategory(product.category || null) }}
+              </el-tag>
               <div class="product-image-wrapper">
                 <el-image
                     :src="product.cover"
@@ -447,6 +455,7 @@ onMounted(() => {
   justify-content: space-between;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   cursor: pointer;
+  position: relative; /* 让标签定位基于卡片 */
 }
 .product-card:hover {
   transform: translateY(-6px);
@@ -509,5 +518,12 @@ onMounted(() => {
   color: #999;
   font-size: 18px;
   margin-top: 40px;
+}
+.card-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  background-color: sandybrown;
 }
 </style>

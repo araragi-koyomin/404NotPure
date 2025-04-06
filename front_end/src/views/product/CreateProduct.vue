@@ -4,6 +4,7 @@ import { ElMessage, UploadFile, UploadRawFile } from 'element-plus';
 import { UploadFilled, Plus, Delete } from '@element-plus/icons-vue';
 import { uploadImage } from '../../api/tools.ts';
 import { createProduct, Product } from '../../api/product.ts';
+import {router} from "../../router";
 
 // 分类选项
 const categoryOptions = [
@@ -181,8 +182,9 @@ const handleSubmit = async () => {
     };
     const res = await createProduct(payload);
     if (res.data.code === '200') {
-      ElMessage.success('创建成功！产品ID：' + res.data.data.productId);
+      ElMessage.success('创建成功！产品名称：' + res.data.data.title);
       resetImgCache();
+      await router.push({name: 'allProduct'});
     } else {
       ElMessage.error('创建失败：' + (res.data.msg || '未知错误'));
     }

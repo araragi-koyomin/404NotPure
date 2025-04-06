@@ -2,6 +2,10 @@
 import Header from "../components/Header.vue"
 import { onMounted } from 'vue';
 import * as live2d from 'live2d-render';
+import { useRoute, useRouter } from 'vue-router';
+
+const route = useRoute();
+const router = useRouter();
 onMounted(async () => {
   await live2d.initializeLive2D({
     // live2d 所在区域的背景颜色
@@ -30,7 +34,7 @@ onMounted(async () => {
 
 <template>
   <Header/>
-  <router-view />
+  <router-view :key="route.fullPath" />
 </template>
 
 

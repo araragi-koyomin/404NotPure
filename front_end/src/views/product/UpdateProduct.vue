@@ -4,6 +4,7 @@ import { ElMessage, UploadFile, UploadRawFile } from 'element-plus';
 import { UploadFilled, Plus, Delete } from '@element-plus/icons-vue';
 import { uploadImage } from '../../api/tools.ts';
 import { updateProduct, Product } from '../../api/product.ts';
+import {router} from "../../router";
 
 // 分类选项
 const categoryOptions = [
@@ -275,9 +276,10 @@ const handleSubmit = async () => {
 
     const res = await updateProduct(payload);
     if (res.data.code === '200') {
-      ElMessage.success('更新成功！产品ID：' + res.data.data.productId);
+      ElMessage.success('更新成功！');
       // 根据需要，可清理 sessionStorage 中存储的 product 数据
-      // sessionStorage.removeItem('product');
+      sessionStorage.removeItem('product');
+      await router.push({ name: 'allProduct' });
     } else {
       ElMessage.error('更新失败：' + (res.data.msg || '未知错误'));
     }
