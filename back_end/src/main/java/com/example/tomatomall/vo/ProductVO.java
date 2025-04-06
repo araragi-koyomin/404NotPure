@@ -9,7 +9,7 @@ import java.util.Set;
 
 @Data
 public class ProductVO {
-    private int productId;
+    private int id;
     private String title;
     private BigDecimal price;
     private Double rate;
