@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, onMounted } from 'vue';
+import { ref, watchEffect, onMounted, computed } from 'vue';
 import { ElMessage, UploadFile, UploadRawFile } from 'element-plus';
 import { UploadFilled, Plus, Delete } from '@element-plus/icons-vue';
 import { uploadImage } from '../../api/tools.ts';
@@ -32,6 +32,12 @@ const fixedSpecifications = [
   { key: 'publisher', label: '出版社', placeholder: '如 机械工业出版社' },
   { key: 'pub_date', label: '出版日期', placeholder: '如 2013-09-01' },
 ];
+
+const currentCategoryLabel = computed(() => {
+  if (!product.value.category) return '请选择图书分类';
+  const found = categoryOptions.find(opt => opt.value === product.value.category);
+  return found?.label || '无效分类';
+});
 
 // 从 sessionStorage 获取当前待更新的产品数据
 const storedProductStr = sessionStorage.getItem('product');
@@ -292,7 +298,7 @@ const handleSubmit = async () => {
       <div class="form-title">📦 更新商品</div>
       <el-form label-width="100px" class="product-form">
         <el-form-item label="商品标题">
-          <el-input v-model="product.title" placeholder="请输入商品名称" />
+          <el-input v-model="product.title" placeholder="商品标题" />
         </el-form-item>
 
         <el-form-item label="价格">
@@ -311,7 +317,9 @@ const handleSubmit = async () => {
         </el-form-item>
 
         <el-form-item label="分类">
-          <el-select v-model="product.category" placeholder="请选择图书分类" filterable style="width: 100%">
+          <el-select v-model="product.category" 
+          :placeholder="currentCategoryLabel" 
+          filterable style="width: 100%">
             <el-option
                 v-for="option in categoryOptions"
                 :key="option.value"
