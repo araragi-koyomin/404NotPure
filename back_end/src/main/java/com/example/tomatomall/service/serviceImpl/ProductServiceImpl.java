@@ -130,22 +130,18 @@ public class ProductServiceImpl implements ProductService {
             specificationRepository.saveAll(specsToSave);
         }
         if (productVO.getContentImages() != null) {
-            Map<Integer, ProductContentImage> existingImagesMap = product.getContentImages().stream()
-                .collect(Collectors.toMap(ProductContentImage::getId, image -> image));
+            contentImageRepository.deleteByProduct_Id(product.getId());
 
-            List<ProductContentImage> imagesToSave = new ArrayList<>();
+            List<ProductContentImage> newContentImages = new ArrayList<>();
             for (ProductContentImageVO imageVO : productVO.getContentImages()) {
-                Integer imageId = imageVO.getId();
-                if (imageId != null && existingImagesMap.containsKey(imageId)) {
-                    ProductContentImage existingImage = existingImagesMap.get(imageId);
-                    existingImage.setImageUrl(existingImage.getImageUrl());
-                    imagesToSave.add(existingImage);
-                } else {
-                    throw TomatoException.productNotExist();
-                }
+                ProductContentImage contentImage = new ProductContentImage();
+                contentImage.setProduct(product);
+                contentImage.setImageUrl(imageVO.getImageUrl());
+                newContentImages.add(contentImage);
             }
 
-            contentImageRepository.saveAll(imagesToSave);
+            // 保存新的contentImage
+            contentImageRepository.saveAll(newContentImages);
         }
 
         productRepository.save(product);
