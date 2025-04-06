@@ -310,9 +310,16 @@ const handleSubmit = async () => {
               :max="5"
               allow-half
               show-score
-              :score-template="`${product.rate} 分`"
+              :score-template="`${product.rate || 0} 分`"
               @change="handleRateChange"
           />
+          <el-button
+              type="text"
+              @click="product.rate = 0"
+              style="margin-left: 10px"
+          >
+            0分
+          </el-button>
         </el-form-item>
 
         <el-form-item label="分类">
@@ -400,19 +407,19 @@ const handleSubmit = async () => {
           </el-row>
         </div>
 
-        <el-row :gutter="10" class="add-spec-row">
-          <el-col :span="3" class="flex-center">
-            <!--              <el-button type="danger" circle size="small" @click="removeSpecification(index)">-->
-            <!--                <el-icon><Delete /></el-icon>-->
-            <!--              </el-button>-->
-          </el-col>
-          <el-col :span="6">
-            <el-button type="primary" plain size="small" @click="addSpecification">
-              <el-icon><Plus /></el-icon>
-              添加规格
-            </el-button>
-          </el-col>
-        </el-row>
+<!--        <el-row :gutter="10" class="add-spec-row">-->
+<!--          <el-col :span="3" class="flex-center">-->
+<!--            &lt;!&ndash;              <el-button type="danger" circle size="small" @click="removeSpecification(index)">&ndash;&gt;-->
+<!--            &lt;!&ndash;                <el-icon><Delete /></el-icon>&ndash;&gt;-->
+<!--            &lt;!&ndash;              </el-button>&ndash;&gt;-->
+<!--          </el-col>-->
+<!--          <el-col :span="6">-->
+<!--            <el-button type="primary" plain size="small" @click="addSpecification">-->
+<!--              <el-icon><Plus /></el-icon>-->
+<!--              添加规格-->
+<!--            </el-button>-->
+<!--          </el-col>-->
+<!--        </el-row>-->
 
         <div class="form-footer">
           <el-button type="primary" :loading="loading" @click="handleSubmit">更新</el-button>

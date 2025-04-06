@@ -221,9 +221,16 @@ const handleSubmit = async () => {
               :max="5"
               allow-half
               show-score
-              :score-template="`${product.rate} 分`"
+              :score-template="`${product.rate || 0} 分`"
               @change="handleRateChange"
           />
+          <el-button
+              type="text"
+              @click="product.rate = 0"
+              style="margin-left: 10px"
+          >
+            0分
+          </el-button>
         </el-form-item>
 
         <el-form-item label="分类">
