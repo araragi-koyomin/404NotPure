@@ -1,6 +1,8 @@
 package com.example.tomatomall.controller;
 
+import com.example.tomatomall.dto.AccountUpdateDTO;
 import com.example.tomatomall.exception.TomatoException;
+import com.example.tomatomall.po.Account;
 import com.example.tomatomall.po.Product;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.util.TokenUtil;
@@ -68,5 +70,61 @@ public class ProductController {
     public Response<ProductVO> getProductById(@PathVariable int id) {
         ProductVO productVO = productService.getProductById(id);
         return Response.buildSuccess(productVO);
+    }
+
+    /**
+     * 更新商品信息
+     */
+    @PutMapping()
+    public Response<String> updateProduct(@RequestBody Product product, HttpServletRequest request) {
+        String token = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (token == null) {
+            throw TomatoException.notLogin();
+        }
+
+        String role = tokenUtil.getUserRoleFromToken(token);
+        if (!"admin".equals(role)) {
+            throw TomatoException.noPermission();
+        }
+
+        return Response.buildSuccess(productService.update(product.toVO()));
+    }
+
+    /**
+     * 删除商品
+     */
+    @DeleteMapping("/{id}")
+    public Response<String> deleteProduct(@PathVariable int id, HttpServletRequest request) {
+        String token = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (token == null) {
+            throw TomatoException.notLogin();
+        }
+
+        String role = tokenUtil.getUserRoleFromToken(token);
+        if (!"admin".equals(role)) {
+            throw TomatoException.noPermission();
+        }
+
+        return Response.buildSuccess(productService.delete(id));
     }
 }

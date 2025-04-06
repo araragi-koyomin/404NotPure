@@ -16,7 +16,7 @@ import javax.persistence.*;
 public class ProductContentImage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
@@ -27,7 +27,7 @@ public class ProductContentImage {
     private String imageUrl;
 
     public Integer getProductId() {
-        return (product != null) ? product.getProductId() : null;
+        return (product != null) ? product.getId() : null;
     }
 
     public ProductContentImageVO toVO(){
