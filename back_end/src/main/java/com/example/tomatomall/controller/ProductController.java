@@ -76,7 +76,7 @@ public class ProductController {
      * 更新商品信息
      */
     @PutMapping()
-    public Response<String> updateProduct(@RequestBody Product product, HttpServletRequest request) {
+    public Response<String> updateProduct(@RequestBody ProductVO product, HttpServletRequest request) {
         String token = null;
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -97,7 +97,7 @@ public class ProductController {
             throw TomatoException.noPermission();
         }
 
-        return Response.buildSuccess(productService.update(product.toVO()));
+        return Response.buildSuccess(productService.update(product));
     }
 
     /**

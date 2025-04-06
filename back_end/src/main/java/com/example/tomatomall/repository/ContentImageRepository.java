@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ContentImageRepository extends JpaRepository<ProductContentImage, Integer>{
+    void deleteByProduct_Id(int productId);
 }
