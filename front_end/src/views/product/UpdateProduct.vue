@@ -136,11 +136,6 @@ const handleRateChange = (val: number) => {
 const addSpecification = () => {
   product.value.specifications?.push({ item: '', value: '' });
 };
-
-const removeSpecification = (index: number) => {
-  product.value.specifications?.splice(index, 1);
-};
-
 // 校验规格项
 const validateSpecifications = () => {
   const specs = product.value.specifications ?? [];
@@ -271,8 +266,10 @@ const handleSubmit = async () => {
       contentImages: imgURLs.value.map(url => ({ imageUrl: url })),
       cover: coverURL.value,
       specifications: (product.value.specifications ?? []).map(s => ({
+        id: s.id,
         item: s.item,
         value: s.value,
+        productId: s.productId
       })),
     };
 
@@ -383,25 +380,30 @@ const handleSubmit = async () => {
 
         <el-divider content-position="left">规格信息</el-divider>
         <div v-for="(spec, index) in product.specifications" :key="index" class="spec-item">
-          <el-row :gutter="10">
-            <el-col :span="6">
+          <el-row :gutter="11">
+            <el-col :span="3" class="flex-center">
+<!--              <el-button type="danger" circle size="small" @click="removeSpecification(index)">-->
+<!--                <el-icon><Delete /></el-icon>-->
+<!--              </el-button>-->
+            </el-col>
+            <el-col :span="7">
               <el-input v-model="spec.item" placeholder="规格名，如 作者/出版社" />
             </el-col>
-            <el-col :span="14">
+            <el-col :span="13">
               <el-input
                   v-model="spec.value"
                   :placeholder="specPlaceholderMap[spec.item] || '请输入规格值'"
               />
             </el-col>
-            <el-col :span="4" class="flex-center">
-              <el-button type="danger" circle size="small" @click="removeSpecification(index)">
-                <el-icon><Delete /></el-icon>
-              </el-button>
-            </el-col>
           </el-row>
         </div>
 
         <el-row :gutter="10" class="add-spec-row">
+          <el-col :span="3" class="flex-center">
+            <!--              <el-button type="danger" circle size="small" @click="removeSpecification(index)">-->
+            <!--                <el-icon><Delete /></el-icon>-->
+            <!--              </el-button>-->
+          </el-col>
           <el-col :span="6">
             <el-button type="primary" plain size="small" @click="addSpecification">
               <el-icon><Plus /></el-icon>

@@ -50,12 +50,12 @@ public class ProductServiceImpl implements ProductService {
 
         if (productVO.getSpecifications() != null) {
             List<ProductSpecification> specifications = productVO.getSpecifications().stream()
-                .map(specificationVO -> {
-                    ProductSpecification specification = specificationVO.toPO();
-                    specification.setProduct(product);
-                    return specification;
-                })
-                .collect(Collectors.toList());
+                    .map(specificationVO -> {
+                        ProductSpecification specification = specificationVO.toPO();
+                        specification.setProduct(product);
+                        return specification;
+                    })
+                    .collect(Collectors.toList());
             product.setSpecifications(specifications);
         }
 

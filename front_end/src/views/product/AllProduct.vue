@@ -31,8 +31,8 @@ const loadProducts = async () => {
   loading.value = true
   try {
     const res = await getAllProducts()
-    if (res.code === 200 && Array.isArray(res.data)) {
-      products.value = res.data
+    if (res.data.code === '200') {
+      products.value = res.data.data
     } else {
       ElMessage({
         message: res.data.code + res.data.msg,
