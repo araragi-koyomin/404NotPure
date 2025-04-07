@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watchEffect, onMounted, computed } from 'vue';
 import { ElMessage, UploadFile, UploadRawFile } from 'element-plus';
-import { UploadFilled, Plus, Delete } from '@element-plus/icons-vue';
+import { UploadFilled } from '@element-plus/icons-vue';
 import { uploadImage } from '../../api/tools.ts';
 import { updateProduct, Product } from '../../api/product.ts';
 import {router} from "../../router";
@@ -133,10 +133,6 @@ const handleRateChange = (val: number) => {
   product.value.rate = Math.round(val * 2 * 10) / 10;
 };
 
-// 添加/删除规格项
-const addSpecification = () => {
-  product.value.specifications?.push({ item: '', value: '' });
-};
 // 校验规格项
 const validateSpecifications = () => {
   const specs = product.value.specifications ?? [];

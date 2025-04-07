@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // Vue & Element Plus
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { DArrowLeft, DArrowRight, Search, ShoppingCart } from '@element-plus/icons-vue'
 import { router } from '../../router';
 import { getAllProducts, Product } from "../../api/product.ts";
+import { callTomatoAssistant } from "../../api/tools.ts";
 import { parseBookCategory } from "../../utils";
 
 // Assets
@@ -15,7 +16,31 @@ const searchKeyword = ref('')
 const activeCategory = ref<string | null>(null)
 const showAssistant = ref(true)
 const sidebarOpen = ref(true)
+const input = ref('')
+const messages = ref([
+  { role: 'assistant', content: '你好，我是番茄助手 🍅 有什么想问我的吗？'}
+])
+const boxRef = ref<HTMLElement | null>(null)
 
+const sendMessage = async () => {
+  const text = input.value.trim()
+  if (!text) return
+
+  messages.value.push({ role: 'user', content: text })
+  input.value = ''
+
+  try {
+    const res = await callTomatoAssistant(text)
+    messages.value.push({ role: 'assistant', content: res.answer })
+  } catch (e) {
+    messages.value.push({ role: 'assistant', content: '出错啦，请稍后再试 🍅' })
+  }
+
+  await nextTick()
+  if (boxRef.value) {
+    boxRef.value.scrollTop = boxRef.value.scrollHeight
+  }
+}
 // Static book categories
 const bookCategories = [
   "文学小说", "历史传记", "哲学宗教", "艺术设计", "科学技术",
@@ -143,8 +168,7 @@ onMounted(() => {
       </div>
 
       <!-- Logo + Assistant + Carousel -->
-      <el-row class="logo-carousel-row" align="top" :gutter="20">
-        <el-col :span="1"></el-col>
+      <el-row class="logo-carousel-row" align="top" :gutter="20" wrap>
 
         <!-- Logo -->
         <el-col :span="4" class="logo-box">
@@ -161,19 +185,28 @@ onMounted(() => {
             </div>
             <transition name="fade">
               <div v-if="showAssistant" class="assistant-box">
-                <p>你好，我是番茄助手 🍅</p>
-                <p>今天不如读一读《Educated》？</p>
-                <p>或是来点轻松的《Gone Girl》～</p>
-                <p>（可以添加更多内容来测试滚动效果）</p>
-                <p>……</p>
+                <div class="conversation" ref="boxRef">
+                  <p v-for="(msg, i) in messages" :key="i" :class="msg.role">
+                    {{ msg.content }}
+                  </p>
+                </div>
+                <div class="input-area">
+                  <input
+                      v-model="input"
+                      @keyup.enter="sendMessage"
+                      placeholder="输入你的问题吧～"
+                  />
+                  <button @click="sendMessage">发送</button>
+                </div>
               </div>
             </transition>
           </div>
         </el-col>
 
+        <el-col :span="1"></el-col>
         <!-- Carousel -->
         <el-col :span="10" class="carousel-wrapper">
-          <el-carousel height="200px" indicator-position="outside">
+          <el-carousel height="250px" indicator-position="outside">
             <el-carousel-item>
               <img src="../../assets/pexels-padrinan-19670.jpg" class="carousel-image" alt="轮播图1" />
             </el-carousel-item>
@@ -340,15 +373,18 @@ onMounted(() => {
 .logo-carousel-row {
   width: 100%;
   max-width: 1200px;
-  padding: 0 20px;
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap; /* ✅ 允许换行 */
+  height: 250px; /* ✅ 新增：确保高度固定 */
+  overflow: hidden; /* ✅ 防止撑开后挤压下方元素 */
 }
 
 .logo-box {
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 200px;
 }
 
 .logo-link {
@@ -364,12 +400,12 @@ onMounted(() => {
 }
 
 .carousel-wrapper {
-  height: 200px;
+  height: 100%;
 }
 
 .carousel-image {
   width: 100%;
-  height: 200px;
+  height: 250px;
   object-fit: cover;
   border-radius: 8px;
 }
@@ -378,37 +414,98 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  position: relative;
-  height: 200px;
+  height: 100%;
 }
+
 .assistant-box {
+  width: 100%;
   background: #ffeeee;
   border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2%;
+  box-shadow: 0 0.15em 0.5em rgba(0, 0, 0, 0.1);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 95%;           /* 固定高度 */
+  max-height: 250px;      /* 控制对话框最大高度 */
+}
+
+.assistant-column {
+  width: 100%;
+  height: 100%; /* 或设置为 100% 并由父级撑高 */
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation {
+  width: 100%;
+  flex: 1;
   overflow-y: auto;
+  margin-bottom: 1%;
+  padding-right: 4px;     /* 给滚动条一点空间 */
   scrollbar-width: thin;
   scrollbar-color: #ccc transparent;
 }
-.assistant-box::-webkit-scrollbar {
-  width: 6px;
+
+.conversation::-webkit-scrollbar {
+  width: 0.4em;
 }
-.assistant-box::-webkit-scrollbar-thumb {
+.conversation::-webkit-scrollbar-thumb {
   background-color: #ccc;
-  border-radius: 4px;
+  border-radius: 0.3em;
 }
+
+p.assistant {
+  background: #fff4f4;
+  padding: 0.5em 0.8em;
+  border-radius: 0.5em;
+  margin-bottom: 0.5em;
+}
+p.user {
+  background: #e0f7fa;
+  padding: 0.5em 0.8em;
+  border-radius: 0.5em;
+  text-align: right;
+  margin-bottom: 0.5em;
+}
+
+.input-area {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1%;
+  margin-top: 4px;
+}
+.input-area input {
+  width: 100%;
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 0.5em;
+  padding: 0.5em;
+  font-size: 1em;
+}
+.input-area button {
+  flex-shrink: 0;
+  padding: 0.5em 1em;
+  background: #ff6347;
+  color: #fff;
+  border: none;
+  border-radius: 0.5em;
+  cursor: pointer;
+}
+
 .assistant-toggle {
   cursor: pointer;
   font-weight: bold;
   color: #f44336;
   background-color: #fff8f0;
-  padding: 10px 16px;
+  padding: 1em;
   border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  margin-bottom: 8px;
-  line-height: 1.2;
+  box-shadow: 0 0.2em 0.4em rgba(0, 0, 0, 0.08);
+  margin-bottom: 1%;
   display: flex;
   align-items: center;
+  height: 5%;
 }
 
 .fade-enter-active,
