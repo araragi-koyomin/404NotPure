@@ -23,17 +23,6 @@ const categoryOptions = [
   { label: '儿童读物', value: 'children' },
 ];
 
-// 固定规格项（作为默认规格项）
-const fixedSpecifications = [
-  { key: 'author', label: '作者', placeholder: '如 周志明' },
-  { key: 'subtitle', label: '副标题', placeholder: '如 JVM高级特性与最佳实践' },
-  { key: 'isbn', label: 'ISBN', placeholder: '如 9787111421900' },
-  { key: 'binding', label: '装帧', placeholder: '如 平装' },
-  { key: 'pages', label: '页数', placeholder: '如 540' },
-  { key: 'publisher', label: '出版社', placeholder: '如 机械工业出版社' },
-  { key: 'pub_date', label: '出版日期', placeholder: '如 2013-09-01' },
-];
-
 const currentCategoryLabel = computed(() => {
   if (!product.value.category) return '请选择图书分类';
   const found = categoryOptions.find(opt => opt.value === product.value.category);
@@ -71,14 +60,6 @@ const rateStar = ref(0);
 
 // 根据当前产品数据初始化页面
 onMounted(() => {
-  // 如果规格信息为空，则使用默认规格项填充
-  if (!product.value.specifications?.length) {
-    product.value.specifications = fixedSpecifications.map(spec => ({
-      item: spec.label,
-      value: '',
-    }));
-  }
-
   // 生成以当前产品规格值为提示的占位符映射
   updateSpecPlaceholderMap();
 
@@ -113,13 +94,6 @@ const updateSpecPlaceholderMap = () => {
       }
     });
   }
-
-  // 将没有值的项使用默认提示
-  fixedSpecifications.forEach(spec => {
-    if (!map[spec.label]) {
-      map[spec.label] = spec.placeholder;
-    }
-  });
 
   specPlaceholderMap.value = map;
 };
