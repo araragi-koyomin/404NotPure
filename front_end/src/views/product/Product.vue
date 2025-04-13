@@ -51,6 +51,11 @@
       <div class="product-actions">
         <!-- 消费者视角按钮 -->
         <el-button
+            type="success"
+            @click="showAddToCartDialog"
+        >加入购物车</el-button>
+
+        <el-button
             v-if="userRole === 'USER'"
             type="primary"
             @click="createOrder"
@@ -58,6 +63,7 @@
 
         <!-- 管理员视角按钮 -->
         <template v-if="userRole === 'ADMIN'">
+          <el-button type="success" @click="showAddToCartDialog">加入购物车</el-button>
           <el-button type="primary" @click="createOrder">创建订单</el-button>
           <el-button type="warning" @click="updateProductInfo">更改信息</el-button>
           <el-button type="danger" @click="confirmDeleteProduct">删除产品</el-button>
@@ -195,6 +201,30 @@
       </span>
     </template>
   </el-dialog>
+
+  <!-- 加入购物车对话框 -->
+  <el-dialog
+      title="加入购物车"
+      v-model="addToCartDialogVisible"
+      width="30%"
+  >
+    <el-form :model="cartForm" label-width="100px">
+      <el-form-item label="数量">
+        <el-input-number
+            v-model="cartForm.quantity"
+            :min="1"
+            :max="stockpile.amount"
+            :step="1"
+        ></el-input-number>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+    <span class="dialog-footer">
+      <el-button @click="addToCartDialogVisible = false">取消</el-button>
+      <el-button type="success" @click="confirmAddToCart">确认</el-button>
+    </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -206,6 +236,7 @@ import {
   getProductById,
   getProductStockpile,
   updateProductStockpile,
+  addToCart,
   deleteProduct as apiDeleteProduct,
   createComment as apiCreateComment,
   deleteComment as apiDeleteComment,
@@ -250,6 +281,8 @@ const deleteProductDialogVisible = ref(false);
 const adjustStockDialogVisible = ref(false);
 const createCommentDialogVisible = ref(false);
 const deleteCommentDialogVisible = ref(false);
+// 加入购物车对话框状态
+const addToCartDialogVisible = ref(false);
 
 // 表单数据
 const stockForm = ref({
@@ -261,6 +294,10 @@ const commentForm = ref({
   content: ''
 });
 const currentCommentId = ref('');
+// 购物车表单数据
+const cartForm = ref({
+  quantity: 1
+});
 
 
 // 将原始评分转换为 0~5 的星级评分
@@ -445,6 +482,37 @@ async function deleteComment() {
       comments.value = comments.value.filter(item => item.id !== currentCommentId.value);
     } else {
       ElMessage.error('删除评论失败：' + response.data.msg);
+    }
+  } catch (error) {
+    ElMessage.error('系统错误：' + error);
+  }
+}
+
+// 显示加入购物车对话框
+function showAddToCartDialog() {
+  cartForm.value.quantity = 1; // 默认数量为1
+  addToCartDialogVisible.value = true;
+}
+
+// 确认加入购物车
+async function confirmAddToCart() {
+  if (cartForm.value.quantity <= 0) {
+    ElMessage.warning('商品数量必须大于0');
+    return;
+  }
+
+  if (cartForm.value.quantity > stockpile.value.amount) {
+    ElMessage.warning(`库存不足，当前库存为${stockpile.value.amount}件`);
+    return;
+  }
+
+  try {
+    const response = await addToCart(productId.value, cartForm.value.quantity);
+    if (response.data.code === "200") {
+      ElMessage.success('成功加入购物车');
+      addToCartDialogVisible.value = false;
+    } else {
+      ElMessage.error('加入购物车失败：' + response.data.msg);
     }
   } catch (error) {
     ElMessage.error('系统错误：' + error);

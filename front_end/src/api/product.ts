@@ -154,3 +154,17 @@ export const deleteComment = async (commentId: string) => {
             return err.response;
         });
 };
+
+// 将商品添加到购物车
+export const addToCart = async (productId: string, quantity: number) => {
+    return axios
+        .post(`/api/cart`, { productId, quantity })
+        .then((res) => {
+            console.log('%c🛒 添加到购物车成功：', 'color: #4CAF50; font-weight: bold;', res.data);
+            return res;
+        })
+        .catch((err) => {
+            console.error('%c❌ 添加到购物车失败：', 'color: red; font-weight: bold;', err.response?.data || err);
+            return err.response;
+        });
+};
