@@ -4,7 +4,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { DArrowLeft, DArrowRight, Search, ShoppingCart } from '@element-plus/icons-vue'
 import { router } from '../../router';
-import { getAllProducts, Product } from "../../api/product.ts";
+import { addToCart as apiAddToCart, getProductStockpile, getAllProducts, Product } from "../../api/product.ts";
 import { callTomatoAssistant } from "../../api/tools.ts";
 import { parseBookCategory } from "../../utils";
 
@@ -17,23 +17,35 @@ const activeCategory = ref<string | null>(null)
 const showAssistant = ref(true)
 const sidebarOpen = ref(true)
 const input = ref('')
+const addCartDialogVisible = ref(false)
+const cartQuantity = ref(1)
+const selectedProduct = ref<Product | null>(null)
+const selectedStock = ref(0)
 const messages = ref([
   { role: 'assistant', content: '你好，我是番茄助手 🍅 有什么想问我的吗？'}
 ])
 const boxRef = ref<HTMLElement | null>(null)
+
+const LOCAL_STORAGE_KEY = 'tomato-chat-messages'
+const saveMessages = () => {
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(messages.value))
+}
 
 const sendMessage = async () => {
   const text = input.value.trim()
   if (!text) return
 
   messages.value.push({ role: 'user', content: text })
+  saveMessages()
   input.value = ''
 
   try {
     const res = await callTomatoAssistant(text)
     messages.value.push({ role: 'assistant', content: res.answer })
+    saveMessages()
   } catch (e) {
     messages.value.push({ role: 'assistant', content: '出错啦，请稍后再试 🍅' })
+    saveMessages()
   }
 
   await nextTick()
@@ -91,8 +103,47 @@ const filteredProducts = computed(() =>
 )
 
 // Handle add-to-cart event
-const addToCart = (product: Product) => {
-  ElMessage.success(`${product.title} 已加入购物车！`)
+const addToCart = async (product: Product) => {
+  selectedProduct.value = product
+  cartQuantity.value = 1
+
+  try {
+    const res = await getProductStockpile(product.id!)
+    if (res.data.code === "200") {
+      selectedStock.value = res.data.data.amount - res.data.data.frozen
+      addCartDialogVisible.value = true
+    } else {
+      ElMessage.error("加载库存失败：" + res.data.msg)
+    }
+  } catch (error) {
+    ElMessage.error("请求错误：" + error)
+  }
+}
+
+const confirmAddToCart = async () => {
+  if (!selectedProduct.value) return
+
+  if (cartQuantity.value < 1) {
+    ElMessage.warning('商品数量必须大于等于 1')
+    return
+  }
+
+  if (cartQuantity.value > selectedStock.value) {
+    ElMessage.warning(`库存不足，当前库存为 ${selectedStock.value} 件`)
+    return
+  }
+
+  try {
+    const res = await apiAddToCart(selectedProduct.value.id!, cartQuantity.value)
+    if (res.data.code === "200") {
+      ElMessage.success("成功加入购物车！")
+      addCartDialogVisible.value = false
+    } else {
+      ElMessage.error("加入购物车失败：" + res.data.msg)
+    }
+  } catch (error) {
+    ElMessage.error("系统错误：" + error)
+  }
 }
 
 const goToProduct = (id: string) => {
@@ -106,9 +157,16 @@ const handleCardClick = (product: Product) => {
   }
 }
 
-
 onMounted(() => {
   loadProducts()
+  const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
+  if (saved) {
+    try {
+      messages.value = JSON.parse(saved)
+    } catch (e) {
+      console.error("聊天记录恢复失败", e)
+    }
+  }
 })
 </script>
 
@@ -280,6 +338,32 @@ onMounted(() => {
       </div>
     </el-main>
   </el-container>
+
+  <el-dialog
+      v-model="addCartDialogVisible"
+      title="加入购物车"
+      width="30%"
+  >
+    <el-form label-width="100px">
+      <el-form-item label="购买数量">
+        <el-input-number
+            v-model="cartQuantity"
+            :min="1"
+            :step="1"
+        />
+        <div style="margin-top: 6px; font-size: 12px; color: #999">
+          当前库存：{{ selectedStock }} 件
+        </div>
+      </el-form-item>
+    </el-form>
+
+    <template #footer>
+    <span class="dialog-footer">
+      <el-button @click="addCartDialogVisible = false">取消</el-button>
+      <el-button type="success" @click="confirmAddToCart">确认</el-button>
+    </span>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
@@ -426,8 +510,9 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 95%;           /* 固定高度 */
+  height: 100%;           /* 固定高度 */
   max-height: 250px;      /* 控制对话框最大高度 */
+  overflow: hidden;
 }
 
 .assistant-column {

@@ -63,7 +63,6 @@
 
         <!-- 管理员视角按钮 -->
         <template v-if="userRole === 'ADMIN'">
-          <el-button type="success" @click="showAddToCartDialog">加入购物车</el-button>
           <el-button type="primary" @click="createOrder">创建订单</el-button>
           <el-button type="warning" @click="updateProductInfo">更改信息</el-button>
           <el-button type="danger" @click="confirmDeleteProduct">删除产品</el-button>
@@ -213,7 +212,6 @@
         <el-input-number
             v-model="cartForm.quantity"
             :min="1"
-            :max="stockpile.amount"
             :step="1"
         ></el-input-number>
       </el-form-item>
@@ -327,7 +325,7 @@ async function loadProductData() {
       }
 
       // 加载库存数据
-      loadStockpileData();
+      await loadStockpileData();
     } else {
       ElMessage.error('加载产品信息失败：' + response.data.msg);
     }
@@ -501,8 +499,8 @@ async function confirmAddToCart() {
     return;
   }
 
-  if (cartForm.value.quantity > stockpile.value.amount) {
-    ElMessage.warning(`库存不足，当前库存为${stockpile.value.amount}件`);
+  if (cartForm.value.quantity > stockpile.value.amount - stockpile.value.frozen) {
+    ElMessage.warning(`库存不足，当前库存为 ${stockpile.value.amount - stockpile.value.frozen} 件（不含冻结商品）`);
     return;
   }
 
