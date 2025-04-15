@@ -46,6 +46,12 @@ public class CartsServiceImpl implements CartsService {
         Account account = accountRepository.findById(userId)
                 .orElseThrow(TomatoException::notLogin);
 
+        List<Carts> cartItems = cartsRepository.findByAccount(account);
+        for (Carts cartItem : cartItems) {
+            if (cartItem.getProduct().getId() == productId) {
+                throw new TomatoException("商品已存在于购物车中", "400");
+            }
+        }
         Carts cartItem = new Carts();
         cartItem.setAccount(account);
         cartItem.setProduct(product);
