@@ -1,10 +1,14 @@
 <script setup lang="ts">
 
-import {ArrowRight, Goods} from "@element-plus/icons-vue";
+import {ArrowRight, Goods, User} from "@element-plus/icons-vue";
 import {router} from "../router";
 
 function handleClick() {
   router.push({path: "/allProduct"});
+}
+
+function handleClick_2() {
+  router.push({path: "/dashboard"});
 }
 </script>
 
@@ -28,7 +32,17 @@ function handleClick() {
         <el-icon size="16" style="margin-right: 5px;margin-left: 2px">
           <Goods/>
         </el-icon>
-        商店
+        书城
+        <el-icon style="margin-right: 2px;margin-left: 2px">
+          <ArrowRight/>
+        </el-icon>
+      </el-button>
+
+      <el-button size="large" @click.prevent="handleClick_2">
+        <el-icon size="16" style="margin-right: 5px;margin-left: 2px">
+          <User/>
+        </el-icon>
+        个人
         <el-icon style="margin-right: 2px;margin-left: 2px">
           <ArrowRight/>
         </el-icon>

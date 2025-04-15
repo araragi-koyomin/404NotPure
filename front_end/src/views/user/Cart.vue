@@ -1,126 +1,225 @@
 <script setup lang="ts">
 import {computed, onMounted, ref, watch} from 'vue'
-import {ElButton, ElCard, ElCheckbox, ElCol, ElImage, ElInput, ElInputNumber, ElMessage, ElRow} from 'element-plus'
+import {ElMessage} from 'element-plus'
 import {getCartList, removeFromCart as apiRemoveFromCart, updateCartQuantity} from '../../api/cart'
-import {getProductStockpile} from '../../api/product' // 引入库存查询 API
+import {getProductStockpile} from '../../api/product'
 import {Search} from '@element-plus/icons-vue'
+import {router} from '../../router'
 
-// 为 cartList 添加正确的类型声明
+// -------------------------
+// 🛒 购物车相关状态
+// -------------------------
 const cartList = ref<{ items: any[]; total: number; totalAmount: number }>({
   items: [],
   total: 0,
   totalAmount: 0
 })
-
 const searchKeyword = ref('')
-const selectedItems = ref<string[]>([]) // 存储选中的商品ID
-const isAllSelected = ref(false) // 是否全选
-const isIndeterminate = ref(false) // 是否部分选中
+const selectedItems = ref<string[]>([])
+const isAllSelected = ref(false)
+const isIndeterminate = ref(false)
 
-// 获取购物车数据并为每个商品动态添加 amount 和 frozen 属性
+// -------------------------
+// 📦 加载购物车 + 库存信息
+// -------------------------
 const loadCart = async () => {
   try {
-    // 明确指定返回数据类型
-    cartList.value = await getCartList() as { items: any[]; total: number; totalAmount: number }
+    cartList.value = await getCartList()
 
-    // 获取每个商品的库存信息
-    for (let item of cartList.value.items) {
-      const stockRes = await getProductStockpile(item.productId)
-      if (stockRes.data.code === '200') {
-        // 动态添加 amount 和 frozen 属性
-        item.amount = stockRes.data.data.amount
-        item.frozen = stockRes.data.data.frozen
-      } else {
-        ElMessage.error('加载库存失败：' + stockRes.data.msg)
-        item.amount = 0
-        item.frozen = 0
-      }
-    }
+    await Promise.all(
+        cartList.value.items.map(async (item) => {
+          try {
+            const stockRes = await getProductStockpile(item.productId)
+            const { amount = 0, frozen = 0 } = stockRes.data.code === '200' ? stockRes.data.data : {}
+            item.amount = amount
+            item.frozen = frozen
+          } catch {
+            ElMessage.error(`商品 ${item.title} 库存加载失败`)
+            item.amount = 0
+            item.frozen = 0
+          }
+        })
+    )
   } catch (error) {
     ElMessage.error('获取购物车数据失败！')
   }
 }
 
-// 删除购物车商品
+// -------------------------
+// 🧹 删除 + 修改数量
+// -------------------------
 const removeItemFromCart = async (cartItemId: string) => {
   try {
     await apiRemoveFromCart(cartItemId)
     ElMessage.success('商品已删除')
     await loadCart()
-  } catch (error) {
+  } catch {
     ElMessage.error('删除商品失败')
   }
 }
 
-// 修改商品数量
 const updateQuantity = async (cartItemId: string, quantity: number) => {
   try {
     await updateCartQuantity(cartItemId, quantity)
     ElMessage.success('商品数量已更新')
-    loadCart()
-  } catch (error) {
+    await loadCart()
+  } catch {
     ElMessage.error('修改商品数量失败')
   }
 }
 
-// 选择全部商品
+// -------------------------
+// ✅ 勾选操作
+// -------------------------
 const toggleSelectAll = () => {
-  if (isAllSelected.value) {
-    selectedItems.value = cartList.value.items.map(item => item.cartItemId)
-  } else {
-    selectedItems.value = []
-  }
+  selectedItems.value = isAllSelected.value ? cartList.value.items.map(i => i.cartItemId) : []
   isIndeterminate.value = false
 }
 
-// 计算总金额
-const totalAmount = computed(() => {
-  return cartList.value.items
-      .filter(item => selectedItems.value.includes(item.cartItemId))
-      .reduce((total, item) => total + item.price * item.quantity, 0)
+watch(selectedItems, () => {
+  const total = cartList.value.items.length
+  const selected = selectedItems.value.length
+  isAllSelected.value = selected === total
+  isIndeterminate.value = selected > 0 && selected < total
 })
 
-// 过滤符合搜索关键字的商品
-const filteredCartItems = computed(() => {
-  return cartList.value.items.filter(item => item.title.toLowerCase().includes(searchKeyword.value.toLowerCase()))
-})
+// -------------------------
+// 💰 结算 + 跳转
+// -------------------------
+const totalAmount = computed(() =>
+    selectedItems.value.reduce((sum, id) => {
+      const item = cartList.value.items.find(i => i.cartItemId === id)
+      return item ? sum + item.price * item.quantity : sum
+    }, 0)
+)
 
-// 结算功能
 const checkout = () => {
   if (selectedItems.value.length === 0) {
     ElMessage.warning('请先选择商品')
     return
   }
-
-  // 模拟结算
   ElMessage.success(`结算成功，总金额 ¥${totalAmount.value}`)
-  selectedItems.value = [] // 重置选中的商品
+  selectedItems.value = []
 }
 
-// 全选状态变化时更新部分选中状态
-watch(selectedItems, () => {
-  const selectedCount = selectedItems.value.length
-  isAllSelected.value = selectedCount === cartList.value.items.length
-  isIndeterminate.value = selectedCount > 0 && selectedCount < cartList.value.items.length
-})
+const goToProduct = (id: string) => router.push(`/product/${id}`)
 
-onMounted(() => {
-  loadCart()
-})
+const handleCardClick = (item: any, e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (
+      target.closest('.el-button') ||
+      target.closest('.el-input-number') ||
+      target.closest('.el-checkbox')
+  ) return
+
+  if (item.productId) {
+    goToProduct(item.productId)
+  } else {
+    ElMessage.warning('商品 ID 缺失，无法跳转详情页')
+  }
+}
+
+// -------------------------
+// 🔍 搜索过滤
+// -------------------------
+const filteredCartItems = computed(() =>
+    cartList.value.items.filter(item =>
+        item.title.toLowerCase().includes(searchKeyword.value.toLowerCase())
+    )
+)
+
+// -------------------------
+onMounted(loadCart)
 </script>
 
 <template>
   <el-container class="cart-container">
-    <!-- Sidebar -->
-    <el-aside width="200px" class="sidebar">
-      <div class="sidebar-header">
-        <h3 class="sidebar-title">购物车</h3>
+    <!-- Sidebar (左侧购物车商品展示) -->
+    <el-aside width="70%" class="sidebar">
+      <el-row class="sidebar-header">
+        <el-col :span="1"></el-col>
+        <el-col :span="23" class="sidebar-title">购物车</el-col>
+      </el-row>
+      <div v-if="cartList.items.length > 0">
+        <div v-if="filteredCartItems.length == 0">
+          <div class="empty-cart">暂无商品</div>
+        </div>
+        <div v-else>
+          <!-- 全选框 -->
+          <el-row>
+            <el-col :span="1"></el-col>
+            <el-col :span="23">
+              <el-checkbox
+                  v-model="isAllSelected"
+                  :indeterminate="isIndeterminate"
+                  @change="toggleSelectAll"
+                  class="select-all"
+              >全选</el-checkbox>
+            </el-col>
+          </el-row>
+          <el-checkbox-group v-model="selectedItems" class="cart-checkbox-group">
+            <el-row :gutter="20" class="cart-row" v-for="item in filteredCartItems" :key="item.cartItemId">
+              <!-- 商品信息 -->
+              <el-col :span="1"></el-col>
+              <el-col :span="23">
+                <el-card
+                    class="product-card"
+                    shadow="hover"
+                    @click="(e) => handleCardClick(item, e)"
+                >
+                  <el-row :gutter="10" class="product-info" wrap>
+                    <el-col :span="1">
+                      <el-checkbox :label="item.cartItemId">&nbsp;</el-checkbox>
+                    </el-col>
+                    <el-col :span="3" class="image-col">
+                      <el-image :src="item.cover" class="product-image" fit="contain" />
+                    </el-col>
+                    <el-col :span="13" class="product-details">
+                      <div class="product-title">{{ item.title }}</div>
+                      <div class="product-price">¥{{ item.price }}</div>
+                      <div class="product-description">描述：{{ item.description }}</div>
+                      <!-- 展示库存信息 -->
+                      <div class="product-stock">
+                        <span>库存: {{ item.amount }}件 </span>
+                        <span>冻结: {{ item.frozen }}件</span>
+                      </div>
+                    </el-col>
+                    <el-col :span="5" class="quantity-wrapper">
+                      <el-input-number
+                          v-model="item.quantity"
+                          :min="1"
+                          :step="1"
+                          @change.stop="updateQuantity(item.cartItemId, item.quantity)"
+                      />
+                    </el-col>
+                    <el-col :span="2" class="product-actions">
+                      <el-button type="danger" @click.stop="removeItemFromCart(item.cartItemId)">删除</el-button>
+                    </el-col>
+                  </el-row>
+                </el-card>
+              </el-col>
+            </el-row>
+          </el-checkbox-group>
+        </div>
+      </div>
+      <div v-else>
+        <div class="empty-cart">购物车是空的，赶紧去购物吧！</div>
       </div>
     </el-aside>
 
-    <!-- Main Content -->
+    <el-divider
+        direction="vertical"
+        style="
+          height: 80%;
+          align-self: center;
+          margin: 0 10px;
+          border-left: 2px solid rgba(0, 0, 0, 0.15);
+        "
+    />
+
+    <!-- Main Content (右侧搜索框和结算明细) -->
     <el-main class="cart-main">
-      <!-- Search Box -->
+      <!-- 搜索框 -->
       <div class="search-wrapper">
         <el-input
             v-model="searchKeyword"
@@ -134,59 +233,27 @@ onMounted(() => {
         </el-input>
       </div>
 
-      <!-- Cart Items List -->
-      <div v-if="cartList.items.length > 0">
-        <el-checkbox-group v-model="selectedItems" class="cart-checkbox-group">
-          <el-row :gutter="20" class="cart-row" v-for="item in filteredCartItems" :key="item.cartItemId">
-            <el-col :span="24">
-              <el-card class="product-card" shadow="hover">
-                <el-checkbox :label="item.cartItemId"></el-checkbox>
-                <el-row :gutter="10" class="product-info">
-                  <el-col :span="4">
-                    <el-image :src="item.cover" class="product-image" fit="contain" />
-                  </el-col>
-                  <el-col :span="12" class="product-details">
-                    <div class="product-title">{{ item.title }}</div>
-                    <div class="product-price">¥{{ item.price }}</div>
-                  </el-col>
-                  <el-col :span="4" class="quantity-wrapper">
-                    <el-input-number
-                        v-model="item.quantity"
-                        :min="1"
-                        :step="1"
-                        @change="updateQuantity(item.cartItemId, item.quantity)"
-                    />
-                  </el-col>
-                  <el-col :span="4" class="product-actions">
-                    <el-button type="danger" @click="removeItemFromCart(item.cartItemId)">删除</el-button>
-                  </el-col>
-                </el-row>
-              </el-card>
+      <!-- 结算信息 (放在 el-card 中) -->
+      <el-card class="checkout-card" shadow="hover">
+        <div class="checkout-header">
+          <span>结算明细</span>
+        </div>
+        <div class="checkout-body">
+          <!-- 展示已选中商品的图片列表 -->
+          <el-row :gutter="10">
+            <el-col :span="8" v-for="item in cartList.items.filter(i => selectedItems.includes(i.cartItemId))" :key="item.cartItemId">
+              <el-image :src="item.cover" class="checkout-image" fit="contain" />
             </el-col>
           </el-row>
-        </el-checkbox-group>
-
-        <!-- Select All Checkbox -->
-        <el-checkbox
-            v-model="isAllSelected"
-            :indeterminate="isIndeterminate"
-            @change="toggleSelectAll"
-        >全选</el-checkbox>
-
-        <!-- Cart Footer -->
-        <div class="cart-footer">
-          <div class="checkout-info">
-            <span>已选商品：{{ selectedItems.length }} 件</span>
+          <div class="checkout-total">
+            <span>已选商品：{{ selectedItems.length }} 种</span>
             <span>总金额：¥{{ totalAmount }}</span>
           </div>
+        </div>
+        <div class="checkout-footer">
           <el-button type="primary" @click="checkout" :disabled="selectedItems.length === 0">结算</el-button>
         </div>
-      </div>
-
-      <!-- Empty Cart Message -->
-      <div v-else>
-        <div class="empty-cart">购物车是空的，赶紧去购物吧！</div>
-      </div>
+      </el-card>
     </el-main>
   </el-container>
 </template>
@@ -196,103 +263,189 @@ onMounted(() => {
   display: flex;
   width: 100%;
   min-height: 100vh;
+  background-image: url("../../assets/pexels-padrinan-19670.jpg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
 }
 
-.cart-main {
-  width: 100%;
+.sidebar {
+  width: 70%; /* el-aside 占 70% */
   padding: 20px;
-  background-color: #f8f8f8;
+  background-color: transparent;
 }
 
-.search-wrapper {
-  margin-bottom: 20px;
+.sidebar-title {
+  font-weight: bold;
+  font-size: 22px;
+  color: #303133;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.02);
+  padding: 15px 4px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.select-all {
+  padding: 12px 2px;
+  border-radius: 8px;
+}
+
+/deep/ .el-checkbox__label {
+  font-size: 16px;
+}
+
+.cart-checkbox-group {
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
 }
 
 .product-card {
-  margin-bottom: 15px;
-  padding: 10px;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: rgba(255, 255, 255, 0.7); /* 半透明白色 */
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .product-info {
+  overflow: hidden;
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  max-width: 1500px;
+  width: 100%;
+  height: 120px;
+}
+
+.image-col {
+  padding-left: 0 !important;
+  display: flex;
+  justify-content: flex-start;
   align-items: center;
 }
 
 .product-image {
-  width: 50px;
-  height: 50px;
+  width: 90px;
+  height: 90px;
   object-fit: cover;
+  display: block;
 }
 
 .product-details {
+  width: 90%;
+  height: 90%;
+  display: flex;
   flex: 1;
-  padding-left: 10px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-left: 4px;
 }
 
 .product-title {
   font-weight: bold;
-  font-size: 14px;
-  color: #333;
+  font-size: 18px;
+  color: #303133;
+  margin-bottom: 4px;
 }
 
 .product-price {
-  font-size: 14px;
-  color: #ff5722;
+  color: #f56c6c;
+  font-size: 16px;
+  font-weight: 500;
 }
 
-.quantity-wrapper {
-  width: 100px;
+.product-description {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.product-stock {
+  font-size: 13px;
+  color: #999;
+  display: flex;
+  gap: 10px;
 }
 
 .product-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  align-items: center;     /* 垂直居中 */
+  height: 100%;            /* 让它填满父元素高度 */
+}
+
+.cart-main {
+  width: 30%; /* el-main 占 30% */
+  padding: 20px;
+}
+
+.search-wrapper {
+  margin-bottom: 20px;
+}
+
+.checkout-card {
+  background-color: rgba(255, 255, 255, 0.7); /* 半透明 */
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.checkout-header {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.checkout-body {
+  margin-top: 10px;
+}
+
+.checkout-image {
+  width: 100%;
+  height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.checkout-total {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between; /* 左右对齐 */
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  padding: 8px 0;
+  border-top: 1px solid #eee;
+}
+
+.checkout-total span:last-child {
+  color: #f56c6c;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.checkout-footer {
+  margin-top: 20px;
   display: flex;
   justify-content: center;
 }
 
-.cart-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.checkout-info {
+.checkout-footer .el-button {
+  width: 100%;
+  max-width: 320px;
   font-size: 16px;
+  padding: 14px 0;
   font-weight: bold;
+  border-radius: 8px;
 }
 
 .empty-cart {
   text-align: center;
   font-size: 18px;
   color: #999;
-}
-
-.sidebar {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.sidebar-header {
-  margin-bottom: 10px;
-}
-
-.sidebar-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-}
-
-.search-input {
-  background-color: #fff;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 </style>
