@@ -3,10 +3,12 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { router } from '../../router'
 import { submitOrder as apiSubmitOrder, initiatePayment as apiInitiatePayment, OrderRequest } from '../../api/order'
+import { removeFromCart } from '../../api/cart' // Import removeFromCart
 
 // Types
 type CartItem = {
   productId: string;
+  cartItemId: string; // 增加 cartItemId 属性
   title: string;
   price: number;
   description: string;
@@ -20,7 +22,7 @@ const cartItems = ref<CartItem[]>([])
 const loading = ref(false)
 const submitting = ref(false)
 const orderId = ref<string>('')
-const orderStatus = ref('PENDING')
+//const orderStatus = ref('PENDING')
 const paymentFormHtml = ref('')
 
 // 计算属性
@@ -38,7 +40,6 @@ const loadCartItems = () => {
     const storedItems = sessionStorage.getItem('cartItems')
     if (storedItems) {
       cartItems.value = JSON.parse(storedItems)
-      
       if (!cartItems.value.length) {
         ElMessage.warning('没有选择任何商品，无法结算')
         router.push('/cart')
@@ -75,11 +76,9 @@ const submitOrder = async () => {
   try {
     submitting.value = true
     const orderData = prepareOrderData()
-    
     const orderResponse = await apiSubmitOrder(orderData)
     orderId.value = orderResponse.orderId
     ElMessage.success('订单创建成功，准备跳转支付')
-      
     // 发起支付
     await initiatePayment(orderId.value)
   } catch (error) {
@@ -94,23 +93,43 @@ const submitOrder = async () => {
 const initiatePayment = async (orderId: string) => {
   try {
     loading.value = true
-    
     const paymentResponse = await apiInitiatePayment(orderId)
     paymentFormHtml.value = paymentResponse.paymentForm
-    
+
     // 创建临时div来渲染支付表单
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = paymentFormHtml.value
     document.body.appendChild(tempDiv)
-    
+
     // 提交表单以重定向到支付宝
     const form = tempDiv.querySelector('form')
     if (form) {
+      // 提交表单（支付发起）
       form.submit()
+
+      try {
+        // 从购物车中逐个删除已结算的商品
+        await Promise.all(
+            cartItems.value.map(async (item) => {
+              if (item.cartItemId) {
+                try {
+                  await removeFromCart(item.cartItemId)
+                } catch (error) {
+                  console.error(`删除购物车商品失败: ${item.cartItemId}`, error)
+                }
+              }
+            })
+        )
+        // 支付发起后清除sessionStorage中的商品
+        clearCartItems()
+      } catch (error) {
+        console.error('清理购物车失败:', error)
+        // 继续处理支付，即使清理购物车失败
+      }
     } else {
       ElMessage.error('支付表单生成失败，请重试')
     }
-    
+
     // 清理临时元素
     setTimeout(() => {
       document.body.removeChild(tempDiv)
@@ -152,30 +171,26 @@ onMounted(() => {
     <div class="order-header">
       <h1>订单结算</h1>
     </div>
-    
     <el-card class="order-content" shadow="hover">
       <!-- Order items section -->
       <div class="order-items">
         <h2>已选商品</h2>
         <el-divider />
-        
         <div v-if="cartItems.length === 0" class="empty-order">
           <p>暂无商品，请返回购物车选择商品</p>
           <el-button type="primary" @click="router.push('/cart')">返回购物车</el-button>
         </div>
-        
         <div v-else>
           <el-table :data="cartItems" style="width: 100%">
             <el-table-column width="120">
               <template #default="scope">
-                <el-image 
-                  :src="scope.row.cover" 
-                  fit="cover" 
-                  class="product-image"
+                <el-image
+                    :src="scope.row.cover"
+                    fit="cover"
+                    class="product-image"
                 />
               </template>
             </el-table-column>
-            
             <el-table-column prop="title" label="商品名称">
               <template #default="scope">
                 <div class="product-info">
@@ -184,19 +199,16 @@ onMounted(() => {
                 </div>
               </template>
             </el-table-column>
-            
             <el-table-column prop="price" label="单价" width="120">
               <template #default="scope">
                 <span class="price">¥{{ scope.row.price }}</span>
               </template>
             </el-table-column>
-            
             <el-table-column prop="amount" label="数量" width="120">
               <template #default="scope">
                 <span class="quantity">{{ scope.row.amount }}</span>
               </template>
             </el-table-column>
-            
             <el-table-column label="小计" width="120">
               <template #default="scope">
                 <span class="subtotal">¥{{ (scope.row.price * scope.row.amount).toFixed(2) }}</span>
@@ -205,7 +217,7 @@ onMounted(() => {
           </el-table>
         </div>
       </div>
-      
+
       <!-- Order summary section -->
       <div class="order-summary">
         <el-divider />
@@ -218,24 +230,23 @@ onMounted(() => {
           <span class="total-amount">¥{{ totalAmount }}</span>
         </div>
       </div>
-      
+
       <!-- Order actions section -->
       <div class="order-actions">
-        <el-button 
-          type="default" 
-          size="large" 
-          @click="cancelOrder" 
-          :disabled="submitting || loading"
+        <el-button
+            type="default"
+            size="large"
+            @click="cancelOrder"
+            :disabled="submitting || loading"
         >
           取消订单
         </el-button>
-        
-        <el-button 
-          type="primary" 
-          size="large" 
-          @click="submitOrder" 
-          :loading="submitting || loading"
-          :disabled="cartItems.length === 0"
+        <el-button
+            type="primary"
+            size="large"
+            @click="submitOrder"
+            :loading="submitting || loading"
+            :disabled="cartItems.length === 0"
         >
           确认支付
         </el-button>
