@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
-import {CartItem, getCartList, removeFromCart as apiRemoveFromCart, updateCartQuantity} from '../../api/cart'
+import {getCartList, removeFromCart as apiRemoveFromCart, updateCartQuantity} from '../../api/cart'
 import {getProductStockpile} from '../../api/product'
 import {Search} from '@element-plus/icons-vue'
 import {router} from '../../router'
@@ -114,7 +114,7 @@ const checkout = () => {
   }
 
   // 映射为 CartItem 类型（不包含 amount 和 frozen）
-  const selectedCartItems: CartItem[] = rawSelectedItems.map(item => ({
+  const selectedCartItems: any[] = rawSelectedItems.map(item => ({
     cartItemId: item.cartItemId,
     productId: item.productId,
     title: item.title,
@@ -122,7 +122,7 @@ const checkout = () => {
     description: item.description,
     cover: item.cover,
     detail: item.detail || '',
-    quantity: item.quantity
+    amount: item.quantity
   }))
 
   // 存入 sessionStorage
