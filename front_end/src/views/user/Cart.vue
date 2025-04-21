@@ -98,8 +98,37 @@ const checkout = () => {
     ElMessage.warning('请先选择商品')
     return
   }
-  ElMessage.success(`结算成功，总金额 ¥${totalAmount.value}`)
+
+  // 先从 cartList 中找到选中的原始商品（包含 amount、frozen）
+  const rawSelectedItems = cartList.value.items.filter(item =>
+      selectedItems.value.includes(item.cartItemId)
+  )
+
+  // 校验库存：quantity 是否超过 (amount - frozen)
+  for (const item of rawSelectedItems) {
+    const availableStock = item.amount - item.frozen
+    if (item.quantity > availableStock) {
+      ElMessage.error(`${item.title} 库存不足，当前可用库存为 ${availableStock} 件`)
+      return
+    }
+  }
+
+  // 映射为 CartItem 类型（不包含 amount 和 frozen）
+  const selectedCartItems: any[] = rawSelectedItems.map(item => ({
+    cartItemId: item.cartItemId,
+    productId: item.productId,
+    title: item.title,
+    price: item.price,
+    description: item.description,
+    cover: item.cover,
+    detail: item.detail || '',
+    amount: item.quantity
+  }))
+
+  sessionStorage.setItem('cartItems', JSON.stringify(selectedCartItems))
+  sessionStorage.setItem('fromProductPage', 'false'); // 添加来源标识
   selectedItems.value = []
+  router.push('/order')
 }
 
 const goToProduct = (id: string) => router.push(`/product/${id}`)
@@ -290,7 +319,7 @@ onMounted(loadCart)
   border-radius: 8px;
 }
 
-/deep/ .el-checkbox__label {
+:deep(.el-checkbox__label) {
   font-size: 16px;
 }
 
