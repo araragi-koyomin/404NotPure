@@ -1,9 +1,6 @@
 import { axios } from "../utils/request.ts";
-import { API_MODULE } from "./_prefix.ts";
+import { API_MODULE, ORDER_MODULE } from "./_prefix.ts";
 import { ElMessage } from "element-plus";
-
-// Define the order API module path
-export const ORDER_MODULE = `${API_MODULE}/orders`;
 
 // Types
 export type BaseResponse<T = any> = {
