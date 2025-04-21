@@ -46,4 +46,7 @@ public class TomatoException extends RuntimeException{
         return new TomatoException("商品不存在！","404");
     }
 
+    public static TomatoException stockNotEnough(){
+        return new TomatoException("库存不足！", "404");
+    }
 }

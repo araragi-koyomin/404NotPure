@@ -1,11 +1,14 @@
 package com.example.tomatomall.po;
 
+import com.example.tomatomall.vo.OrdersVO;
 import lombok.Data;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -31,4 +34,18 @@ public class Orders implements Serializable{
 
     @Column(name = "create_time", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Timestamp createTime;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems = new ArrayList<OrderItem>();
+
+    public OrdersVO toVO() {
+        OrdersVO vo = new OrdersVO();
+        vo.setOrderId(orderId);
+        vo.setUserId(account.getId());
+        vo.setTotalAmount(totalAmount);
+        vo.setPaymentMethod(paymentMethod);
+        vo.setStatus(status);
+        vo.setCreateTime(createTime);
+        return vo;
+    }
 }
