@@ -125,12 +125,8 @@ const checkout = () => {
     amount: item.quantity
   }))
 
-  // 存入 sessionStorage
   sessionStorage.setItem('cartItems', JSON.stringify(selectedCartItems))
   sessionStorage.setItem('fromProductPage', 'false'); // 添加来源标识
-
-  // 成功后跳转
-  ElMessage.success(`结算成功，总金额 ¥${totalAmount.value}`)
   selectedItems.value = []
   router.push('/order')
 }
