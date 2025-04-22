@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { router } from '../../router'
@@ -22,9 +23,9 @@ const cartItems = ref<CartItem[]>([])
 const loading = ref(false)
 const submitting = ref(false)
 const orderId = ref<string>('')
-//const orderStatus = ref('PENDING')
 const paymentFormHtml = ref('')
 const isFromProductPage = ref(false) // 标记是否从产品页面来的
+const returnPage = ref<string>('') // 新增：存储支付后要返回的页面
 
 // 计算属性
 const totalAmount = computed(() => {
@@ -47,18 +48,21 @@ const loadCartItems = () => {
       // 判断是否从产品页面来的
       isFromProductPage.value = fromProduct === 'true'
 
+      // 设置返回页面
+      returnPage.value = isFromProductPage.value ? '/allProduct' : '/cart'
+
       if (!cartItems.value.length) {
         ElMessage.warning('没有选择任何商品，无法结算')
-        router.back()  // 修改为 router.back()
+        router.back()
       }
     } else {
       ElMessage.warning('没有选择任何商品，无法结算')
-      router.back()  // 修改为 router.back()
+      router.back()
     }
   } catch (error) {
     console.error('加载商品失败:', error)
     ElMessage.error('加载商品失败')
-    router.back()  // 修改为 router.back()
+    router.back()
   }
 }
 
@@ -85,6 +89,11 @@ const submitOrder = async () => {
     const orderData = prepareOrderData()
     const orderResponse = await apiSubmitOrder(orderData)
     orderId.value = orderResponse.orderId
+
+    // 保存订单信息和来源页面到 sessionStorage
+    sessionStorage.setItem('pendingOrderId', orderResponse.orderId)
+    sessionStorage.setItem('returnPage', returnPage.value)
+
     ElMessage.success('订单创建成功，准备跳转支付')
 
     // 发起支付
@@ -112,32 +121,21 @@ const initiatePayment = async (orderId: string) => {
     // 提交表单以重定向到支付宝
     const form = tempDiv.querySelector('form')
     if (form) {
+      // 将要删除的商品ID存储到 sessionStorage，以便支付成功后处理
+      if (!isFromProductPage.value) {
+        const cartItemIds = cartItems.value
+            .filter(item => item.cartItemId && item.cartItemId !== "0")
+            .map(item => item.cartItemId);
+
+        sessionStorage.setItem('cartItemsToRemove', JSON.stringify(cartItemIds))
+      }
+
       // 提交表单（支付发起）
       form.submit()
 
-      try {
-        // 如果是从购物车来的，则删除购物车中的商品
-        if (!isFromProductPage.value) {
-          // 从购物车中逐个删除已结算的商品
-          await Promise.all(
-              cartItems.value.map(async (item) => {
-                if (item.cartItemId && item.cartItemId !== "0") { // 确保不是从Product页面来的
-                  try {
-                    await removeFromCart(item.cartItemId)
-                  } catch (error) {
-                    console.error(`删除购物车商品失败: ${item.cartItemId}`, error)
-                  }
-                }
-              })
-          )
-        }
+      // 注意：这里不再立即删除购物车中的商品和清除sessionStorage
+      // 因为我们需要确认支付成功后才执行这些操作
 
-        // 清除sessionStorage中的商品
-        clearCartItems()
-      } catch (error) {
-        console.error('清理购物车失败:', error)
-        // 继续处理支付，即使清理购物车失败
-      }
     } else {
       ElMessage.error('支付表单生成失败，请重试')
     }
@@ -186,12 +184,64 @@ const updateItemAmount = (index: number, amount: number) => {
 const clearCartItems = () => {
   sessionStorage.removeItem('cartItems')
   sessionStorage.removeItem('fromProductPage')
+  sessionStorage.removeItem('pendingOrderId')
+  sessionStorage.removeItem('cartItemsToRemove')
+  sessionStorage.removeItem('returnPage')
+}
+
+// 检查是否从支付页面返回
+const checkPaymentReturn = async () => {
+  const pendingOrderId = sessionStorage.getItem('pendingOrderId')
+  const cartItemsToRemove = sessionStorage.getItem('cartItemsToRemove')
+  const savedReturnPage = sessionStorage.getItem('returnPage')
+  const paymentSuccess = sessionStorage.getItem('payment_success')
+  const paymentOrderId = sessionStorage.getItem('payment_order_id')
+
+  // 检查由路由守卫设置的支付成功标记
+  if (paymentSuccess === 'true' && paymentOrderId) {
+    // 确认这是我们的待处理订单
+    if (pendingOrderId && pendingOrderId === paymentOrderId) {
+      ElMessage.success('支付成功')
+
+      // 如果是从购物车来的，则删除购物车中的商品
+      if (cartItemsToRemove) {
+        try {
+          const itemIds = JSON.parse(cartItemsToRemove)
+          await Promise.all(
+              itemIds.map(async (id: string) => {
+                try {
+                  await removeFromCart(id)
+                } catch (error) {
+                  console.error(`删除购物车商品失败: ${id}`, error)
+                }
+              })
+          )
+        } catch (error) {
+          console.error('处理购物车商品失败:', error)
+        }
+      }
+
+      // 清除会话存储
+      clearCartItems()
+      sessionStorage.removeItem('payment_success')
+      sessionStorage.removeItem('payment_order_id')
+
+      // 根据来源跳转到相应页面
+      if (savedReturnPage) {
+        router.push(savedReturnPage)
+      } else {
+        router.push('/allProduct') // 默认跳转
+      }
+    }
+  }
 }
 
 // 生命周期钩子
 onMounted(() => {
   loadCartItems()
+  checkPaymentReturn() // 检查是否从支付页面返回
 })
+
 </script>
 
 <template>
@@ -200,82 +250,73 @@ onMounted(() => {
       <div class="order-header">
         <h1>订单结算</h1>
       </div>
-
-    <el-card class="order-content" shadow="hover">
-      <!-- Order items section -->
-      <div class="order-items">
-        <h2>已选商品</h2>
-        <el-divider />
-
+      <el-card class="order-content" shadow="hover">
+        <!-- Order items section -->
+        <div class="order-items">
+          <h2>已选商品</h2>
+          <el-divider />
           <div v-if="cartItems.length === 0" class="empty-order">
             <p>暂无商品，请返回选择商品</p>
-            <el-button type="primary" @click="router.back()">返回</el-button>  <!-- 修改为 router.back() -->
+            <el-button type="primary" @click="router.back()">返回</el-button> <!-- 修改为 router.back() -->
           </div>
-
-        <div v-else>
-          <el-table :data="cartItems" style="width: 100%">
-            <el-table-column width="120">
-              <template #default="scope">
-                <el-image
-                    :src="scope.row.cover"
-                    fit="cover"
-                    class="product-image"
-                />
-              </template>
-            </el-table-column>
-
-            <el-table-column prop="title" label="商品名称">
-              <template #default="scope">
-                <div class="product-info">
-                  <h3>{{ scope.row.title }}</h3>
-                  <p class="description">{{ scope.row.description }}</p>
-                </div>
-              </template>
-            </el-table-column>
-
-            <el-table-column prop="price" label="单价" width="120">
-              <template #default="scope">
-                <span class="price">¥{{ scope.row.price }}</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column prop="amount" label="数量" width="160">
-              <template #default="scope">
-                <!-- 如果是从产品页面来的，显示数量调整输入框 -->
-                <el-input-number
-                    v-if="isFromProductPage"
-                    v-model="scope.row.amount"
-                    :min="1"
-                    @change="updateItemAmount(scope.$index, scope.row.amount)"
-                    size="small"
-                />
-                <!-- 否则只显示数量 -->
-                <span v-else class="quantity">{{ scope.row.amount }}</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column label="小计" width="120">
-              <template #default="scope">
-                <span class="subtotal">¥{{ (scope.row.price * scope.row.amount).toFixed(2) }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div v-else>
+            <el-table :data="cartItems" style="width: 100%">
+              <el-table-column width="120">
+                <template #default="scope">
+                  <el-image
+                      :src="scope.row.cover"
+                      fit="cover"
+                      class="product-image"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column prop="title" label="商品名称">
+                <template #default="scope">
+                  <div class="product-info">
+                    <h3>{{ scope.row.title }}</h3>
+                    <p class="description">{{ scope.row.description }}</p>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="price" label="单价" width="120">
+                <template #default="scope">
+                  <span class="price">¥{{ scope.row.price }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="amount" label="数量" width="160">
+                <template #default="scope">
+                  <!-- 如果是从产品页面来的，显示数量调整输入框 -->
+                  <el-input-number
+                      v-if="isFromProductPage"
+                      v-model="scope.row.amount"
+                      :min="1"
+                      @change="updateItemAmount(scope.$index, scope.row.amount)"
+                      size="small"
+                  />
+                  <!-- 否则只显示数量 -->
+                  <span v-else class="quantity">{{ scope.row.amount }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="小计" width="120">
+                <template #default="scope">
+                  <span class="subtotal">¥{{ (scope.row.price * scope.row.amount).toFixed(2) }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
-      </div>
-
-      <!-- Order summary section -->
-      <div class="order-summary">
-        <el-divider />
-        <div class="summary-row">
-          <span>商品总数:</span>
-          <span>{{ totalItems }} 件</span>
+        <!-- Order summary section -->
+        <div class="order-summary">
+          <el-divider />
+          <div class="summary-row">
+            <span>商品总数:</span>
+            <span>{{ totalItems }} 件</span>
+          </div>
+          <div class="summary-row total">
+            <span>订单总金额:</span>
+            <span class="total-amount">¥{{ totalAmount }}</span>
+          </div>
         </div>
-        <div class="summary-row total">
-          <span>订单总金额:</span>
-          <span class="total-amount">¥{{ totalAmount }}</span>
-        </div>
-      </div>
-
         <!-- Order actions section -->
         <div class="order-actions">
           <el-button

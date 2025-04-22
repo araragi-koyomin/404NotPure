@@ -92,7 +92,36 @@ const router = createRouter({
     }]
 });
 
+// 处理支付宝支付返回
+const handlePaymentReturn = (next: any) => {
+    // 检查URL查询参数是否包含支付相关信息
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.has('payment_success');
+    const orderId = urlParams.get('orderId');
+
+    if (paymentSuccess && orderId) {
+        // 从URL中删除查询参数，防止刷新页面时重复处理
+        const cleanUrl = window.location.href.split('?')[0];
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        // 设置会话存储标记，供订单页面检测
+        sessionStorage.setItem('payment_success', 'true');
+        sessionStorage.setItem('payment_order_id', orderId);
+
+        // 重定向到订单页面
+        next('/order');
+        return true; // 表示处理了支付返回
+    }
+    return false; // 表示没有处理支付返回
+};
+
 router.beforeEach((to, _, next) => {
+    // 首先检查是否是支付返回
+    if (handlePaymentReturn(next)) {
+        return; // 如果是支付返回，已经在handlePaymentReturn中处理了路由
+    }
+
+    // 原有的路由守卫逻辑
     const token: string | null = sessionStorage.getItem('token');
     const role: string | null = sessionStorage.getItem('role');
 
@@ -119,6 +148,6 @@ router.beforeEach((to, _, next) => {
             next('/login');
         }
     }
-})
+});
 
 export {router};
