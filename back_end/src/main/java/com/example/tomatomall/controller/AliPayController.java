@@ -6,12 +6,13 @@ import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
+import com.example.tomatomall.dto.PaymentData;
 import com.example.tomatomall.po.AliPay;
 //import com.xdong.shopping.dao.pojo.ShoppingDd;
 import com.example.tomatomall.po.Orders;
 import com.example.tomatomall.repository.OrdersRepository;
-import com.example.tomatomall.service.PaymentServiceImpl;
 import com.example.tomatomall.service.serviceImpl.PaymentService;
+import com.example.tomatomall.vo.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -80,7 +80,7 @@ public class AliPayController {
   }
 
   @PostMapping("/{orderId}/pay")
-  public void createPaymentForm(
+  public Response<PaymentData> createPaymentForm(
       @PathVariable Integer orderId,
       HttpServletResponse response
   ) throws IOException, AlipayApiException {
@@ -107,10 +107,15 @@ public class AliPayController {
 
     // 4. 生成支付表单
     String form = alipayClient.pageExecute(request).getBody();
-    response.setContentType("text/html;charset=UTF-8");
-    response.getWriter().write(form);
-    response.getWriter().flush();
-    response.getWriter().close();
+
+    // 5. 构建响应对象
+    PaymentData paymentData = new PaymentData();
+    paymentData.setPaymentForm(form);
+    paymentData.setOrderId(orderId.toString());
+    paymentData.setTotalAmount(order.getTotalAmount().toString());
+    paymentData.setPaymentMethod("Alipay");
+
+    return Response.buildSuccess(paymentData);
   }
 
   @PostMapping("/notify")
@@ -149,7 +154,15 @@ public class AliPayController {
     response.getWriter().print("success");
   }
   @GetMapping("/returnUrl")
-  public String returnUrl() {
-    return "支付成功了";
+  public void returnUrl(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    // 获取支付宝传递的参数
+    String orderId = request.getParameter("out_trade_no");
+
+    // 重定向到前端应用的基础URL，并添加支付成功的查询参数
+    // 这里我们不使用哈希路径，因为后端无法直接重定向到带有#的URL
+    // 前端路由守卫会检测这些参数并进行内部处理
+    String redirectUrl = "http://localhost:3000/?payment_success=true&orderId=" + orderId;
+
+    response.sendRedirect(redirectUrl);
   }
 }
