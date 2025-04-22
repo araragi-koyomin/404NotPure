@@ -1,13 +1,5 @@
 import { axios } from "../utils/request.ts";
-import { API_MODULE, ORDER_MODULE } from "./_prefix.ts";
-import { ElMessage } from "element-plus";
-
-// Types
-export type BaseResponse<T = any> = {
-    code: string;
-    data: T;
-    msg: string | null;
-};
+import { handleError, BaseResponse, API_MODULE, ORDER_MODULE } from "./_prefix.ts";
 
 export type OrderItem = {
     productId: string;
@@ -33,13 +25,6 @@ export type PaymentResponse = {
     orderId: string;
     totalAmount: number;
     paymentMethod: string;
-};
-
-const handleError = (code: string, msg: string) => {
-    ElMessage.error(msg);
-    const error = new Error(msg);
-    (error as any).code = code;
-    throw error;
 };
 
 /**

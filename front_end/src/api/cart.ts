@@ -1,12 +1,5 @@
 import { axios } from "../utils/request.ts";
-import { CART_MODULE } from "./_prefix.ts";
-import { ElMessage } from "element-plus";
-
-export type BaseResponse<T = any> = {
-    code: string;
-    data: T;
-    msg: string | null;
-};
+import { handleError, BaseResponse, CART_MODULE } from "./_prefix.ts";
 
 export type CartItem = {
     cartItemId: string;
@@ -23,13 +16,6 @@ export type CartList = {
     items: CartItem[];
     total: number;
     totalAmount: number;
-};
-
-const handleError = (code: string, msg: string) => {
-    ElMessage.error(msg);
-    const error = new Error(msg);
-    (error as any).code = code;
-    throw error;
 };
 
 export const removeFromCart = async (cartItemId: string): Promise<string> => {
