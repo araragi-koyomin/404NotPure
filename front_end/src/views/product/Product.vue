@@ -12,12 +12,12 @@
       <!-- 产品评分 -->
       <div class="product-rating">
         <el-rate
-          v-model="starRating"
-          :max="5"
-          allow-half
-          show-score
-          disabled
-          :score-template="`${product.rate} 分`"
+            v-model="starRating"
+            :max="5"
+            allow-half
+            show-score
+            disabled
+            :score-template="`${product.rate} 分`"
         />
       </div>
 
@@ -50,11 +50,8 @@
       <!-- 操作按钮区域 -->
       <div class="product-actions">
         <!-- 消费者视角按钮 -->
-        <el-button
-            v-if="userRole === 'USER'"
-            type="primary"
-            @click="createOrder"
-        >创建订单</el-button>
+        <el-button type="success" @click="showAddToCartDialog">加入购物车</el-button>
+        <el-button v-if="userRole === 'USER'" type="primary" @click="createOrder">创建订单</el-button>
 
         <!-- 管理员视角按钮 -->
         <template v-if="userRole === 'ADMIN'">
@@ -142,9 +139,9 @@
       <el-form-item label="当前库存">
         <el-input-number v-model="stockForm.amount" :min="0" :step="1"></el-input-number>
       </el-form-item>
-<!--      <el-form-item label="冻结库存">-->
-<!--        <el-input-number v-model="stockForm.frozen" :min="0" :step="1"></el-input-number>-->
-<!--      </el-form-item>-->
+      <!-- <el-form-item label="冻结库存">-->
+      <!--   <el-input-number v-model="stockForm.frozen" :min="0" :step="1"></el-input-number>-->
+      <!-- </el-form-item>-->
     </el-form>
     <template #footer>
       <span class="dialog-footer">
@@ -195,6 +192,29 @@
       </span>
     </template>
   </el-dialog>
+
+  <!-- 加入购物车对话框 -->
+  <el-dialog
+      title="加入购物车"
+      v-model="addToCartDialogVisible"
+      width="30%"
+  >
+    <el-form :model="cartForm" label-width="100px">
+      <el-form-item label="数量">
+        <el-input-number
+            v-model="cartForm.quantity"
+            :min="1"
+            :step="1"
+        ></el-input-number>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="addToCartDialogVisible = false">取消</el-button>
+        <el-button type="success" @click="confirmAddToCart">确认</el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -206,6 +226,7 @@ import {
   getProductById,
   getProductStockpile,
   updateProductStockpile,
+  addToCart,
   deleteProduct as apiDeleteProduct,
   createComment as apiCreateComment,
   deleteComment as apiDeleteComment,
@@ -251,38 +272,44 @@ const adjustStockDialogVisible = ref(false);
 const createCommentDialogVisible = ref(false);
 const deleteCommentDialogVisible = ref(false);
 
+// 加入购物车对话框状态
+const addToCartDialogVisible = ref(false);
+
 // 表单数据
 const stockForm = ref({
   amount: 0,
   frozen: 0
 });
+
 const commentForm = ref({
   rate: 5,
   content: ''
 });
+
 const currentCommentId = ref('');
 
+// 购物车表单数据
+const cartForm = ref({
+  quantity: 1
+});
 
 // 将原始评分转换为 0~5 的星级评分
 const starRating = computed(() => product.value.rate / 2);
 
-
-// 加载产品数据
+// 加载产品数据并保存到sessionStorage
 async function loadProductData() {
   try {
     const response = await getProductById(productId.value);
     if (response.data.code === "200") {
       product.value = response.data.data;
-      // 存储数据
+
+      // 存储数据到session中
       sessionStorage.setItem('product', JSON.stringify(product.value));
+
       // 如果产品没有图片数组，将cover图片作为第一张
-      if (
-          (!product.value.contentImages || product.value.contentImages.length === 0) &&
-          product.value.cover
-      ) {
+      if ((!product.value.contentImages || product.value.contentImages.length === 0) && product.value.cover) {
         product.value.contentImages = [{ imageUrl: product.value.cover }];
       }
-
 
       // 加载评论数据（假设评论在产品数据中）
       if (response.data.data.comments) {
@@ -290,13 +317,35 @@ async function loadProductData() {
       }
 
       // 加载库存数据
-      loadStockpileData();
+      await loadStockpileData();
+
+      // 按照Cart.vue的格式保存到sessionStorage，作为一个单元素数组
+      saveProductToSessionStorage();
+
     } else {
       ElMessage.error('加载产品信息失败：' + response.data.msg);
     }
   } catch (error) {
     ElMessage.error('系统错误：' + error);
   }
+}
+
+// 新增函数：将当前产品信息保存到sessionStorage（模仿Cart.vue格式）
+function saveProductToSessionStorage() {
+  const cartItem = {
+    cartItemId: "0", // 设置为"0"作为标识
+    productId: product.value.id,
+    title: product.value.title,
+    price: product.value.price,
+    description: product.value.description,
+    cover: product.value.cover,
+    detail: product.value.detail || '',
+    amount: 1 // 默认数量为1
+  };
+
+  // 保存为数组格式，模仿Cart.vue中的cartItems
+  sessionStorage.setItem('cartItems', JSON.stringify([cartItem]));
+  sessionStorage.setItem('fromProductPage', 'true'); // 添加来源标识
 }
 
 // 加载库存数据
@@ -318,16 +367,19 @@ async function loadStockpileData() {
 
 // 返回上一页
 function goBack() {
+  sessionStorage.removeItem('product');
+  sessionStorage.removeItem('cartItems');
+  sessionStorage.removeItem('fromProductPage'); // 清除来源标识
   router.back();
 }
 
-// 创建订单
+// 创建订单 - 更新版本
 function createOrder() {
+  // 确保session中有最新的产品信息
+  saveProductToSessionStorage();
+
   router.push({
-    path: '/order',
-    query: {
-      product: JSON.stringify(product.value)
-    }
+    path: '/order'
   });
 }
 
@@ -348,6 +400,8 @@ async function deleteProduct() {
     if (response.data.code === "200") {
       ElMessage.success('删除产品成功');
       sessionStorage.removeItem('product');
+      sessionStorage.removeItem('cartItems');
+      sessionStorage.removeItem('fromProductPage'); // 清除来源标识
       deleteProductDialogVisible.value = false;
       await router.push({path: '/allProduct'}); // 假设产品列表页路径
     } else {
@@ -375,7 +429,6 @@ async function updateStock() {
     };
 
     const response = await updateProductStockpile(productId.value, newStockpile.amount);
-
     if (response.data.code === "200") {
       ElMessage.success('调整库存成功');
       adjustStockDialogVisible.value = false;
@@ -445,6 +498,37 @@ async function deleteComment() {
       comments.value = comments.value.filter(item => item.id !== currentCommentId.value);
     } else {
       ElMessage.error('删除评论失败：' + response.data.msg);
+    }
+  } catch (error) {
+    ElMessage.error('系统错误：' + error);
+  }
+}
+
+// 显示加入购物车对话框
+function showAddToCartDialog() {
+  cartForm.value.quantity = 1; // 默认数量为1
+  addToCartDialogVisible.value = true;
+}
+
+// 确认加入购物车
+async function confirmAddToCart() {
+  if (cartForm.value.quantity <= 0) {
+    ElMessage.warning('商品数量必须大于0');
+    return;
+  }
+
+  if (cartForm.value.quantity > stockpile.value.amount - stockpile.value.frozen) {
+    ElMessage.warning(`库存不足，当前库存为 ${stockpile.value.amount - stockpile.value.frozen} 件（不含冻结商品）`);
+    return;
+  }
+
+  try {
+    const response = await addToCart(productId.value, cartForm.value.quantity);
+    if (response.data.code === "200") {
+      ElMessage.success('成功加入购物车');
+      addToCartDialogVisible.value = false;
+    } else {
+      ElMessage.error('加入购物车失败：' + response.data.msg);
     }
   } catch (error) {
     ElMessage.error('系统错误：' + error);
@@ -612,6 +696,7 @@ onMounted(() => {
   color: #333;
   transition: all 0.2s ease;
 }
+
 .sidebar-toggle-icon:hover {
   color: #f44336;
   transform: scale(1.1);
