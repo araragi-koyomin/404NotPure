@@ -85,6 +85,11 @@ const submitOrder = async () => {
   }
 
   try {
+    // 保存当前登录状态，以便支付返回时恢复
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      localStorage.setItem('payment_temp_token', token);
+    }
     submitting.value = true
     const orderData = prepareOrderData()
     const orderResponse = await apiSubmitOrder(orderData)
@@ -199,6 +204,9 @@ const checkPaymentReturn = async () => {
 
   // 检查由路由守卫设置的支付成功标记
   if (paymentSuccess === 'true' && paymentOrderId) {
+    // 立即清除支付相关的会话存储，防止循环重定向
+    sessionStorage.removeItem('payment_success');
+    sessionStorage.removeItem('payment_order_id');
     // 确认这是我们的待处理订单
     if (pendingOrderId && pendingOrderId === paymentOrderId) {
       ElMessage.success('支付成功')

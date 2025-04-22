@@ -100,6 +100,12 @@ const handlePaymentReturn = (next: any) => {
     const orderId = urlParams.get('orderId');
 
     if (paymentSuccess && orderId) {
+        // 恢复登录状态
+        const savedToken = localStorage.getItem('payment_temp_token');
+        if (savedToken) {
+            sessionStorage.setItem('token', savedToken);
+            localStorage.removeItem('payment_temp_token'); // 用完即删
+        }
         // 从URL中删除查询参数，防止刷新页面时重复处理
         const cleanUrl = window.location.href.split('?')[0];
         window.history.replaceState({}, document.title, cleanUrl);
