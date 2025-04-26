@@ -15,6 +15,7 @@ import com.example.tomatomall.vo.ProductVO;
 import com.example.tomatomall.vo.SpecificationVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private StockPileRepository stockPileRepository;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Override
     @Transactional
@@ -92,7 +96,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductVO getProductById(int id) {
-        Product product = productRepository.findById(id);
+        String redisKey = "advertisement:product:" + id;
+        Product product = (Product) redisTemplate.opsForValue().get(redisKey);
+        if (product == null) {
+            //找不到再去数据库里找
+            product = productRepository.findById(id);
+        }
         ProductVO productVO = product != null ? product.toVO() : null;
         if (productVO == null) {
             throw TomatoException.productNotExist();

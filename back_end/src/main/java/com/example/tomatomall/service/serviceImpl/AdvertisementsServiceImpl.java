@@ -7,8 +7,10 @@ import com.example.tomatomall.repository.AdvertisementsRepository;
 import com.example.tomatomall.repository.ProductRepository;
 import com.example.tomatomall.service.AdvertisementsService;
 import com.example.tomatomall.vo.AdvertisementsVO;
+import org.hibernate.Hibernate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,9 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Override
     public List<AdvertisementsVO> getAllAdvertisements() {
@@ -41,11 +46,21 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         BeanUtils.copyProperties(advertisementsVO, advertisements);
         advertisements.setImageUrl(advertisementsVO.getImgUrl());
         Advertisements savedAdvertisement = advertisementsRepository.save(advertisements);
+        //取消 Hibernate 代理
+        Hibernate.initialize(product);
+        String redisKey = "advertisement:product:" + savedAdvertisement.getProductId();
+        redisTemplate.opsForValue().set(redisKey, product.get());
         return savedAdvertisement.toVO();
     }
 
     @Override
     public String deleteAdvertisement(int id) {
+        Advertisements advertisements = advertisementsRepository.findById(id).orElse(null);
+        if (advertisements == null) {
+            throw TomatoException.advertisementNotExist();
+        }
+        String redisKey = "advertisement:product:" + advertisements.getProductId();
+        redisTemplate.delete(redisKey);
         advertisementsRepository.deleteById(id);
         return "删除成功";
     }
@@ -70,6 +85,10 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         advertisement.setProductId(advertisementsVO.getProductId());
 
         advertisementsRepository.save(advertisement);
+
+        String redisKey = "advertisement:product:" + advertisement.getProductId();
+        redisTemplate.opsForValue().set(redisKey, product);
+
         return "更新成功";
     }
 }
