@@ -1,5 +1,6 @@
 package com.example.tomatomall.service.serviceImpl;
 
+import com.example.tomatomall.dto.ProductDTO;
 import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Product;
 import com.example.tomatomall.po.ProductContentImage;
@@ -97,12 +98,17 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductVO getProductById(int id) {
         String redisKey = "advertisement:product:" + id;
-        Product product = (Product) redisTemplate.opsForValue().get(redisKey);
-        if (product == null) {
-            //找不到再去数据库里找
-            product = productRepository.findById(id);
+        ProductDTO productDTO = (ProductDTO) redisTemplate.opsForValue().get(redisKey);
+        if (productDTO != null) {
+            // 将 ProductDTO 转换为 ProductVO
+            return convertToVO(productDTO);
         }
-        ProductVO productVO = product != null ? product.toVO() : null;
+        Product product = productRepository.findById(id);
+        if (product == null) {
+            throw TomatoException.productNotExist();
+        }
+        // 将 Product 转换为 ProductVO
+        ProductVO productVO = product.toVO();
         if (productVO == null) {
             throw TomatoException.productNotExist();
         }
@@ -165,5 +171,37 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
 
         return "删除成功";
+    }
+
+    private ProductVO convertToVO(ProductDTO dto) {
+        ProductVO vo = new ProductVO();
+        vo.setId(dto.getId());
+        vo.setTitle(dto.getTitle());
+        vo.setPrice(dto.getPrice());
+        vo.setRate(dto.getRate());
+        vo.setDescription(dto.getDescription());
+        vo.setDetail(dto.getDetail());
+        vo.setCover(dto.getCover());
+        vo.setCategory(dto.getCategory());
+        vo.setSpecifications(dto.getSpecifications().stream()
+                .map(specDTO -> {
+                    SpecificationVO specVO = new SpecificationVO();
+                    specVO.setId(specDTO.getId());
+                    specVO.setItem(specDTO.getItem());
+                    specVO.setValue(specDTO.getValue());
+                    specVO.setProductId(specDTO.getProductId());
+                    return specVO;
+                })
+                .collect(Collectors.toList()));
+        vo.setContentImages(dto.getContentImages().stream()
+                .map(imageDTO -> {
+                    ProductContentImageVO imageVO = new ProductContentImageVO();
+                    imageVO.setId(imageDTO.getId());
+                    imageVO.setProductId(imageDTO.getProductId());
+                    imageVO.setImageUrl(imageDTO.getImageUrl());
+                    return imageVO;
+                })
+                .collect(Collectors.toList()));
+        return vo;
     }
 }

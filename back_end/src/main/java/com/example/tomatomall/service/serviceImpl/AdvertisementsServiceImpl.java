@@ -1,5 +1,8 @@
 package com.example.tomatomall.service.serviceImpl;
 
+import com.example.tomatomall.dto.ContentImageDTO;
+import com.example.tomatomall.dto.ProductDTO;
+import com.example.tomatomall.dto.SpecificationDTO;
 import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Advertisements;
 import com.example.tomatomall.po.Product;
@@ -46,10 +49,12 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         BeanUtils.copyProperties(advertisementsVO, advertisements);
         advertisements.setImageUrl(advertisementsVO.getImgUrl());
         Advertisements savedAdvertisement = advertisementsRepository.save(advertisements);
-        //取消 Hibernate 代理
-        Hibernate.initialize(product);
+
+        Product initializedProduct = product.get();
+        ProductDTO productDTO = convertToDTO(initializedProduct);
+
         String redisKey = "advertisement:product:" + savedAdvertisement.getProductId();
-        redisTemplate.opsForValue().set(redisKey, product.get());
+        redisTemplate.opsForValue().set(redisKey, productDTO);
         return savedAdvertisement.toVO();
     }
 
@@ -90,5 +95,40 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         redisTemplate.opsForValue().set(redisKey, product);
 
         return "更新成功";
+    }
+
+    private ProductDTO convertToDTO(Product product) {
+        ProductDTO dto = new ProductDTO();
+        dto.setId(product.getId());
+        dto.setTitle(product.getTitle());
+        dto.setPrice(product.getPrice());
+        dto.setRate(product.getRate());
+        dto.setDescription(product.getDescription());
+        dto.setDetail(product.getDetail());
+        dto.setCover(product.getCover());
+        dto.setCategory(product.getCategory());
+
+        dto.setSpecifications(product.getSpecifications().stream()
+                .map(spec -> {
+                    SpecificationDTO specDTO = new SpecificationDTO();
+                    specDTO.setId(spec.getId());
+                    specDTO.setItem(spec.getItem());
+                    specDTO.setValue(spec.getValue());
+                    specDTO.setProductId(spec.getProductId());
+                    return specDTO;
+                })
+                .collect(Collectors.toList()));
+
+        dto.setContentImages(product.getContentImages().stream()
+                .map(image -> {
+                    ContentImageDTO imageDTO = new ContentImageDTO();
+                    imageDTO.setId(image.getId());
+                    imageDTO.setProductId(image.getProductId());
+                    imageDTO.setImageUrl(image.getImageUrl());
+                    return imageDTO;
+                })
+                .collect(Collectors.toList()));
+
+        return dto;
     }
 }
