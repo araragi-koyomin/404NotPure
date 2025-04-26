@@ -91,8 +91,12 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
 
         advertisementsRepository.save(advertisement);
 
+        // 生成 Redis 缓存的键
         String redisKey = "advertisement:product:" + advertisement.getProductId();
-        redisTemplate.opsForValue().set(redisKey, product);
+        // 将 Product 对象转换为 ProductDTO
+        ProductDTO productDTO = convertToDTO(product.get());
+        // 将 ProductDTO 存入 Redis 缓存
+        redisTemplate.opsForValue().set(redisKey, productDTO);
 
         return "更新成功";
     }
