@@ -349,7 +349,6 @@ const handleSubmit = async () => {
   </el-main>
 </template>
 
-
 <style scoped>
 .main-container {
   padding: 40px 20px;
