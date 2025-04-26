@@ -73,7 +73,7 @@ const router = createRouter({
                 path: '/updateAdvertisement',
                 name: 'updateAdvertisement',
                 component: () => import('../views/advertisement/UpdateAdvertisement.vue'),
-                meta: {title: '创建广告'}
+                meta: {title: '更新广告'}
             }, {
                 path: '/cart',
                 name: 'cart',

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // Vue & Element Plus
-import { ref, computed, onMounted, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
-import { DArrowLeft, DArrowRight, Search, ShoppingCart } from '@element-plus/icons-vue'
-import { router } from '../../router';
-import { addToCart as apiAddToCart, getProductStockpile, getAllProducts, Product } from "../../api/product.ts";
-import { callTomatoAssistant } from "../../api/tools.ts";
-import { parseBookCategory } from "../../utils";
+import {computed, nextTick, onMounted, ref} from 'vue'
+import {ElMessage} from 'element-plus'
+import {DArrowLeft, DArrowRight, Search, ShoppingCart} from '@element-plus/icons-vue'
+import {router} from '../../router';
+import {addToCart as apiAddToCart, getAllProducts, getProductStockpile, Product} from "../../api/product.ts";
+import {AdvertisementInfo, getAdvertisements} from "../../api/advertisement.ts";
+import {callTomatoAssistant} from "../../api/tools.ts";
+import {parseBookCategory} from "../../utils";
 
 // Assets
 import logo from '../../assets/img.png'
@@ -60,7 +61,7 @@ const bookCategories = [
   "政治法律", "社会科学", "旅行与地理", "儿童读物"
 ]
 
-// Product list
+// Product and advertisement list
 const products = ref<Product[]>([])
 const loading = ref(false)
 
@@ -83,6 +84,17 @@ const loadProducts = async () => {
     loading.value = false
   }
 }
+
+const advertisements = ref<AdvertisementInfo[]>([]);
+
+const loadAdvertisements = async () => {
+  try {
+    advertisements.value = await getAdvertisements();
+  } catch (error) {
+    console.error('获取广告失败:', error);
+    ElMessage.error('加载广告失败，请稍后重试');
+  }
+};
 
 // Helpers
 const normalize = (str: string) => str.trim().toLowerCase()
@@ -159,6 +171,7 @@ const handleCardClick = (product: Product) => {
 
 onMounted(() => {
   loadProducts()
+  loadAdvertisements()
   const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
   if (saved) {
     try {
@@ -264,12 +277,25 @@ onMounted(() => {
         <el-col :span="1"></el-col>
         <!-- Carousel -->
         <el-col :span="10" class="carousel-wrapper">
-          <el-carousel height="250px" indicator-position="outside">
-            <el-carousel-item>
-              <img src="../../assets/pexels-padrinan-19670.jpg" class="carousel-image" alt="轮播图1" />
-            </el-carousel-item>
-            <el-carousel-item>
-              <img src="../../assets/alipay.svg" class="carousel-image" alt="轮播图2" />
+          <el-carousel height="250px">
+            <el-carousel-item
+              v-for="(item, index) in advertisements"
+              :key="index"
+            >
+              <el-tooltip
+                effect="dark"
+                placement="bottom"
+              >
+                <template #content>
+                  <div v-html="`标题：${item.title}<br/>内容：${item.content}<br/>产品ID：${item.productId}`"></div>
+                </template>
+                <img
+                    :src="item.imgUrl"
+                    class="carousel-image"
+                    :alt="`${item.title}`"
+                    @click="goToProduct(item.productId)"
+                />
+              </el-tooltip>
             </el-carousel-item>
           </el-carousel>
         </el-col>
@@ -492,6 +518,7 @@ onMounted(() => {
   height: 250px;
   object-fit: cover;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 .assistant-wrapper {

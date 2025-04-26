@@ -6,7 +6,8 @@ import { uploadImage } from '../../api/tools.ts';
 import { createAdvertisement, AdvertisementInfo } from '../../api/advertisement.ts';
 import { router } from "../../router";
 
-const formRef = ref()
+// 表单和校验规则
+const formRef = ref();
 const rules = {
   title: [
     { required: true, message: '请输入广告标题', trigger: 'blur' },
@@ -22,7 +23,7 @@ const rules = {
       trigger: 'blur'
     }
   ]
-}
+};
 
 // 表单数据
 const advertisement = ref<AdvertisementInfo>({
@@ -46,57 +47,72 @@ const beforeUpload = (file: File) => {
 const handleExceed = () => ElMessage.warning('当前限制选择 1 个文件');
 const handlePreview = (file: any) => window.open(file.url || file.response?.data || '', '_blank');
 
-// 清空数据
-const resetImgCache = () => {
-  coverURL.value = '';
-  coverFileList.value = [];
-  advertisement.value = {
-    title: '',
-    content: '',
-    imgUrl: '',
-    productId: ''
-  };
-};
-
 // 上传图片至后端并获取 URL
 async function loopUpload() {
   if (coverFileList.value.length > 0) {
     const formData = new FormData();
     formData.append('file', coverFileList.value[0].raw as UploadRawFile);
 
-    const res = await uploadImage(formData);
-    const url = res.data.data?.imageUrl || res.data.data;
-    if (typeof url === 'string') {
-      coverURL.value = url;
-    } else {
-      console.warn('封面图上传返回格式不合法:', res.data.data);
+    try {
+      const res = await uploadImage(formData);
+      const url = res.data.data?.imageUrl || res.data.data;
+      if (typeof url === 'string') {
+        coverURL.value = url;
+      } else {
+        ElMessage.error('封面图上传失败，请稍后重试');
+        console.warn('封面图上传返回格式不合法:', res.data.data);
+      }
+    } catch (error) {
+      ElMessage.error('封面图上传出错，请稍后再试');
+      console.error('封面图上传错误', error);
     }
   }
 }
 
+// 清空表单
+const resetImgCache = () => {
+  advertisement.value = {
+    title: '',
+    content: '',
+    imgUrl: '',
+    productId: ''
+  };
+  coverURL.value = '';
+  coverFileList.value = [];
+  formRef.value?.resetFields(); // 清除表单校验状态
+};
 
 // 表单提交
 const handleSubmit = async () => {
-  if (!advertisement.value.title.trim()) return ElMessage.warning('请输入广告标题');
-  if (!advertisement.value.content.trim()) return ElMessage.warning('请输入广告内容');
-  if (!advertisement.value.productId.trim()) return ElMessage.warning('请输入广告对应商品Id');
+  if (!formRef.value) return;
 
-  loading.value = true;
-  try {
-    await loopUpload();
-    const payload: AdvertisementInfo = {
-      ...advertisement.value,
-      imgUrl: coverURL.value,
-    };
-    const res = await createAdvertisement(payload);
-    ElMessage.success('创建成功！广告名称：' + res.title);
-    resetImgCache();
-    await router.push({name: 'allProduct'});
-  } catch (err) {
-    ElMessage.error('创建失败，请稍后再试');
-  } finally {
-    loading.value = false;
-  }
+  await formRef.value.validate(async (valid: boolean) => {
+    if (!valid) {
+      ElMessage.warning('请完善广告信息再提交');
+      return;
+    }
+
+    loading.value = true;
+    try {
+      await loopUpload();
+
+      const payload: AdvertisementInfo = {
+        ...advertisement.value,
+        imgUrl: coverURL.value,
+      };
+
+      const res = await createAdvertisement(payload);
+
+      ElMessage.success('创建成功！广告名称：' + (res.title || ''));
+      resetImgCache();
+      await router.push({ name: 'allProduct' });
+    } catch (err) {
+      console.error('创建广告失败', err);
+      ElMessage.error('创建失败，请稍后重试');
+    } finally {
+      loading.value = false;
+    }
+  });
 };
 </script>
 
@@ -105,17 +121,13 @@ const handleSubmit = async () => {
     <el-card shadow="hover" class="form-card">
       <div class="form-title">📢 创建新广告</div>
       <el-form
-          label-width="100px"
-          class="product-form"
+          ref="formRef"
           :model="advertisement"
           :rules="rules"
-          ref="formRef"
+          label-width="100px"
+          class="product-form"
       >
-
-        <el-form-item
-            label="产品标题"
-            prop="title"
-        >
+        <el-form-item label="产品标题" prop="title">
           <el-input v-model="advertisement.title" placeholder="请输入产品名称" />
         </el-form-item>
 
@@ -135,10 +147,7 @@ const handleSubmit = async () => {
           </el-upload>
         </el-form-item>
 
-        <el-form-item
-            label="内容"
-            prop="content"
-        >
+        <el-form-item label="内容" prop="content">
           <el-input
               v-model="advertisement.content"
               type="textarea"
@@ -147,23 +156,23 @@ const handleSubmit = async () => {
           />
         </el-form-item>
 
-        <el-form-item
-            label="对应商品id"
-            prop="productId"
-        >
+        <el-form-item label="对应商品ID" prop="productId">
           <el-input
               v-model="advertisement.productId"
               type="textarea"
-              placeholder="输入对应商品id"
+              placeholder="输入对应商品ID"
               :rows="1"
           />
         </el-form-item>
-        <!-- 将按钮组移出 <el-form-item>，放到表单外部的 footer 区域 -->
-        <div class="form-footer">
-          <el-button type="primary" :loading="loading" @click="handleSubmit">提交</el-button>
-          <el-button @click="resetImgCache">重置</el-button>
-        </div>
 
+        <div class="form-footer">
+          <el-button type="primary" :loading="loading" :disabled="loading" @click="handleSubmit">
+            提交
+          </el-button>
+          <el-button :disabled="loading" @click="resetImgCache">
+            重置
+          </el-button>
+        </div>
       </el-form>
     </el-card>
   </el-main>
