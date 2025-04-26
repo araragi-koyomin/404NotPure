@@ -154,15 +154,20 @@ public class AliPayController {
     response.getWriter().print("success");
   }
   @GetMapping("/returnUrl")
+  //此接口无需认证
   public void returnUrl(HttpServletRequest request, HttpServletResponse response) throws IOException {
     // 获取支付宝传递的参数
     String orderId = request.getParameter("out_trade_no");
+    String tradeNo = request.getParameter("trade_no");
 
-    // 重定向到前端应用的基础URL，并添加支付成功的查询参数
-    // 这里我们不使用哈希路径，因为后端无法直接重定向到带有#的URL
-    // 前端路由守卫会检测这些参数并进行内部处理
-    String redirectUrl = "http://localhost:3000/?payment_success=true&orderId=" + orderId;
+    // 构建前端URL，包含所有需要的参数
+    // 注意：修改为您的实际前端地址，比如 http://localhost:3000/
+    String frontendBaseUrl = "http://localhost:3000/";
 
+    // 创建重定向URL，添加支付成功参数
+    String redirectUrl = frontendBaseUrl + "?payment_success=true&orderId=" + orderId + "&tradeNo=" + tradeNo;
+
+    // 重定向到前端应用
     response.sendRedirect(redirectUrl);
   }
 }
