@@ -1,13 +1,5 @@
 import { axios } from "../utils/request.ts";
-import { API_MODULE, ORDER_MODULE } from "./_prefix.ts";
-import { ElMessage } from "element-plus";
-
-// Types
-export type BaseResponse<T = any> = {
-    code: string;
-    data: T;
-    msg: string | null;
-};
+import { handleError, BaseResponse, API_MODULE, ORDER_MODULE } from "./_prefix.ts";
 
 export type OrderItem = {
     productId: string;
@@ -35,13 +27,6 @@ export type PaymentResponse = {
     paymentMethod: string;
 };
 
-const handleError = (code: string, msg: string) => {
-    ElMessage.error(msg);
-    const error = new Error(msg);
-    (error as any).code = code;
-    throw error;
-};
-
 /**
  * 2.3.1提交订单进行结算
  * @param orderData Order data including payment method and items
@@ -49,9 +34,9 @@ const handleError = (code: string, msg: string) => {
  */
 export const submitOrder = async (orderData: OrderRequest): Promise<Order> => {
     const response = await axios.post<BaseResponse<Order>>(`${API_MODULE}/cart/checkout`, orderData);
-    
+
     if (response.data.code === '200') return response.data.data;
-    
+
     return handleError(response.data.code, response.data.msg || '提交订单失败');
 };
 
@@ -62,9 +47,9 @@ export const submitOrder = async (orderData: OrderRequest): Promise<Order> => {
  */
 export const initiatePayment = async (orderId: string): Promise<PaymentResponse> => {
     const response = await axios.post<BaseResponse<PaymentResponse>>(`${ORDER_MODULE}/${orderId}/pay`);
-    
+
     if (response.data.code === '200') return response.data.data;
-    
+
     return handleError(response.data.code, response.data.msg || '发起支付失败');
 };
 
@@ -75,9 +60,9 @@ export const initiatePayment = async (orderId: string): Promise<PaymentResponse>
  */
 export const getOrderById = async (orderId: string): Promise<Order> => {
     const response = await axios.get<BaseResponse<Order>>(`${ORDER_MODULE}/${orderId}`);
-    
+
     if (response.data.code === '200') return response.data.data;
-    
+
     return handleError(response.data.code, response.data.msg || '获取订单详情失败');
 };
 
@@ -87,9 +72,8 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
  */
 export const getUserOrders = async (): Promise<Order[]> => {
     const response = await axios.get<BaseResponse<Order[]>>(`${ORDER_MODULE}`);
-    
+
     if (response.data.code === '200') return response.data.data;
-    
+
     return handleError(response.data.code, response.data.msg || '获取订单列表失败');
 };
-
