@@ -16,6 +16,9 @@ spring:
       enabled: true
       max-file-size: 10MB     # 或更大
       max-request-size: 50MB # 可选：整个请求大小
+  redis:
+    host: localhost
+    port: 6379
 
 server:
   port: 8080

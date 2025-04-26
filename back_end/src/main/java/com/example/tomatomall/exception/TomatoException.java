@@ -1,7 +1,11 @@
 package com.example.tomatomall.exception;
+
+import lombok.Getter;
+
 /*
 全局异常
 */
+@Getter
 public class TomatoException extends RuntimeException{
 
     private String code;
@@ -9,10 +13,6 @@ public class TomatoException extends RuntimeException{
     public TomatoException(String msg,String code) {
         super(msg);
         this.code = code;
-    }
-
-    public String getCode() {
-        return code;
     }
 
     public static TomatoException userNameExist(){
@@ -48,5 +48,8 @@ public class TomatoException extends RuntimeException{
 
     public static TomatoException stockNotEnough(){
         return new TomatoException("库存不足！", "404");
+    }
+    public static TomatoException advertisementNotExist(){
+        return new TomatoException("商品不存在","400");
     }
 }
