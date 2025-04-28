@@ -3,7 +3,7 @@ import {ElForm, ElFormItem} from "element-plus";
 import {ref, computed} from 'vue';
 import {router} from '../../router';
 import {userInfo, userLogin} from "../../api/user.ts";
-import imgUrl from '../../assets/img.png'
+import imgUrl from '../../assets/title.png'
 // 输入框值（需要在前端拦截不合法输入：是否为空+额外规则）
 const username = ref('');
 const password = ref('');
@@ -114,7 +114,7 @@ function handleLogin() {
 }
 
 .bg-image {
-  background-image: url("../../assets/pexels-ekrulila-2203051.jpg");
+  background-image: url("../../assets/pexels-andreea-ch-371539-1166644.jpg");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;

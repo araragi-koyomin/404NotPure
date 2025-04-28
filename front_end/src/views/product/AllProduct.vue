@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Vue & Element Plus
+import "../../style/fade.css"
 import {computed, nextTick, onMounted, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 import {DArrowLeft, DArrowRight, Search, ShoppingCart} from '@element-plus/icons-vue'
@@ -8,9 +8,6 @@ import {addToCart as apiAddToCart, getAllProducts, getProductStockpile, Product}
 import {AdvertisementInfo, getAdvertisements} from "../../api/advertisement.ts";
 import {callTomatoAssistant} from "../../api/tools.ts";
 import {parseBookCategory} from "../../utils";
-
-// Assets
-import logo from '../../assets/img.png'
 
 // Reactive states
 const searchKeyword = ref('')
@@ -192,7 +189,7 @@ onMounted(() => {
           <el-icon><DArrowLeft /></el-icon>
         </div>
         <h3 class="sidebar-title">
-          <img src="../../assets/img_1.png" alt="book icon" class="title-icon" />
+          <img src="../../assets/books.png" alt="book icon" class="title-icon" />
           分类浏览
         </h3>
       </div>
@@ -238,18 +235,33 @@ onMounted(() => {
         </el-input>
       </div>
 
-      <!-- Logo + Assistant + Carousel -->
       <el-row class="logo-carousel-row" align="top" :gutter="20" wrap>
 
-        <!-- Logo -->
-        <el-col :span="4" class="logo-box">
-          <router-link to="/homePage" class="logo-link">
-            <img :src="logo" alt="logo" class="logo animated-logo" />
-          </router-link>
+        <el-col :span="15" class="carousel-wrapper">
+          <el-carousel height="280px" type="card">
+            <el-carousel-item
+                v-for="(item, index) in advertisements"
+                :key="index"
+            >
+              <el-tooltip
+                  effect="dark"
+                  placement="bottom"
+              >
+                <template #content>
+                  <div v-html="`标题：${item.title}<br/>内容：${item.content}<br/>产品ID：${item.productId}`"></div>
+                </template>
+                <img
+                    :src="item.imgUrl"
+                    class="carousel-image"
+                    :alt="`${item.title}`"
+                    @click="goToProduct(item.productId)"
+                />
+              </el-tooltip>
+            </el-carousel-item>
+          </el-carousel>
         </el-col>
-
-        <!-- Assistant -->
-        <el-col :span="8" class="assistant-column">
+        <el-col :span="1"></el-col>
+        <el-col :span="7" class="assistant-column">
           <div class="assistant-wrapper">
             <div class="assistant-toggle" @click="showAssistant = !showAssistant">
               🍅 番茄助手
@@ -273,33 +285,6 @@ onMounted(() => {
             </transition>
           </div>
         </el-col>
-
-        <el-col :span="1"></el-col>
-        <!-- Carousel -->
-        <el-col :span="10" class="carousel-wrapper">
-          <el-carousel height="250px">
-            <el-carousel-item
-              v-for="(item, index) in advertisements"
-              :key="index"
-            >
-              <el-tooltip
-                effect="dark"
-                placement="bottom"
-              >
-                <template #content>
-                  <div v-html="`标题：${item.title}<br/>内容：${item.content}<br/>产品ID：${item.productId}`"></div>
-                </template>
-                <img
-                    :src="item.imgUrl"
-                    class="carousel-image"
-                    :alt="`${item.title}`"
-                    @click="goToProduct(item.productId)"
-                />
-              </el-tooltip>
-            </el-carousel-item>
-          </el-carousel>
-        </el-col>
-
         <el-col :span="1"></el-col>
       </el-row>
 
@@ -396,7 +381,6 @@ onMounted(() => {
 .layout {
   width: 100%;
   min-height: 100vh;
-  background: url("../../assets/pexels-andreea-ch-371539-1166644.jpg") no-repeat center center / cover;
   position: relative;
 }
 
@@ -486,27 +470,8 @@ onMounted(() => {
   margin-bottom: 20px;
   display: flex;
   flex-wrap: wrap; /* ✅ 允许换行 */
-  height: 250px; /* ✅ 新增：确保高度固定 */
+  height: 280px; /* ✅ 新增：确保高度固定 */
   overflow: hidden; /* ✅ 防止撑开后挤压下方元素 */
-}
-
-.logo-box {
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.logo-link {
-  display: block;
-}
-
-.logo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  animation: float 3s ease-in-out infinite;
-  cursor: pointer;
 }
 
 .carousel-wrapper {
@@ -515,7 +480,7 @@ onMounted(() => {
 
 .carousel-image {
   width: 100%;
-  height: 250px;
+  height: 280px;
   object-fit: cover;
   border-radius: 8px;
   cursor: pointer;
@@ -538,7 +503,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;           /* 固定高度 */
-  max-height: 250px;      /* 控制对话框最大高度 */
+  max-height: 280px;      /* 控制对话框最大高度 */
   overflow: hidden;
 }
 
@@ -619,28 +584,6 @@ p.user {
   align-items: center;
   height: 5%;
 }
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(20px); /* 初始位置：下方 */
-}
-.fade-enter-to {
-  opacity: 1;
-  transform: translateY(0);
-}
-.fade-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(20px); /* 离开时往下滑 */
-}
-
 
 .product-display {
   width: 100%;

@@ -292,10 +292,6 @@ onMounted(loadCart)
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-image: url("../../assets/pexels-padrinan-19670.jpg");
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
 }
 
 .sidebar {

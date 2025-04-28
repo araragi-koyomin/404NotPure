@@ -38,12 +38,6 @@ export function parseBookCategory(category: string | null): string {
     }
 }
 
-
-export function parseTime(time: string) {
-    let times = time.split(/T|\./)
-    return times[0] + " " + times[1]
-}
-
 export function runWithTimeout(
     task: () => Promise<void>,
     timeout: number,

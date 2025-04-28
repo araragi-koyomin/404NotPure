@@ -443,10 +443,6 @@ const beforeUpload = (file: File) => {
   padding: 15px;
   gap: 5px;
   justify-content: center;
-  background-image: url("../../assets/pexels-padrinan-19670.jpg");
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
 }
 
 .aside-card{

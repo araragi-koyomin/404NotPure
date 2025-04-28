@@ -302,7 +302,7 @@ const beforeUpload = (file: File) => {
 }
 
 .bg-image {
-  background-image: url("../../assets/pexels-ekrulila-2203051.jpg");
+  background-image: url("../../assets/pexels-andreea-ch-371539-1166644.jpg");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;

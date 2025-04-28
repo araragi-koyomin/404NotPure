@@ -355,11 +355,11 @@ onMounted(() => {
 .order-background {
   width: 100%;
   min-height: 100vh;
-  background-image: url("../../assets/pexels-padrinan-19670.jpg");
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
-  background-attachment: fixed; /* 让背景固定不随滚动移动 */
+  //background-image: url("../../assets/pexels-padrinan-19670.jpg");
+  //background-repeat: no-repeat;
+  //background-position: center center;
+  //background-size: cover;
+  //background-attachment: fixed; /* 让背景固定不随滚动移动 */
 }
 
 .order-container {

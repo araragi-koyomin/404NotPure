@@ -81,7 +81,7 @@ function logout() {
       <el-menu-item index="/homePage">
         <img
             class="bw-icon"
-            src="/src/assets/img.png"
+            src="/src/assets/title.png"
             alt="Element logo"
         />&nbsp;&nbsp; 首页&nbsp;
       </el-menu-item>
@@ -148,7 +148,6 @@ function logout() {
       </el-menu-item>
     </el-menu>
   </el-header>
-
 </template>
 
 
