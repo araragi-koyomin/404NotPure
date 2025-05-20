@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./front_end
+#      target: dev
+    ports:
+      - "5173:3000"  # 前端开发服务器端口
+    volumes:
+      - ./front_end:/app  # 挂载源码实时同步
+      - /app/node_modules  # 避免覆盖容器内的node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # 确保文件变化检测
+    command: ["npm", "run", "dev", "--", "--host"]
+    networks:
+      - tomato-network
+
+  backend:
+    build:
+      context: ./back_end
+#      target: dev
+    volumes:
+      - ./back_end/src:/app/src
+      - ./back_end/pom.xml:/app/pom.xml
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./back_end/.env
+    environment:
+      # 数据库配置
+      - DB_HOST=db
+
+      # Redis配置
+      - REDIS_HOST=redis
+
+      # 阿里云OSS
+      - ALIYUN_OSS_ENDPOINT=${ALIYUN_OSS_ENDPOINT}
+      - ALIYUN_OSS_ACCESS_KEY_ID=${ALIYUN_OSS_ACCESS_KEY_ID}
+      - ALIYUN_OSS_ACCESS_KEY_SECRET=${ALIYUN_OSS_ACCESS_KEY_SECRET}
+      - ALIYUN_OSS_BUCKET_NAME=${ALIYUN_OSS_BUCKET_NAME}
+
+      # 支付宝配置
+      - ALIPAY_APP_ID=${ALIPAY_APP_ID}
+      - ALIPAY_APP_PRIVATE_KEY=${ALIPAY_APP_PRIVATE_KEY}
+      - ALIPAY_ALIPAY_PUBLIC_KEY=${ALIPAY_ALIPAY_PUBLIC_KEY}
+      - ALIPAY_NOTIFY_URL=${ALIPAY_NOTIFY_URL}
+      - ALIPAY_SERVER_URL=${ALIPAY_SERVER_URL}
+      - ALIPAY_RETURN_URL=${ALIPAY_RETURN_URL}
+
+      # 其他通用配置
+      - TZ=Asia/Shanghai
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - tomato-network
+
+  db:
+    image: mysql:8.0
+    command:
+      - --default-authentication-plugin=mysql_native_password  # 使用旧版认证插件
+      - --ssl=0  # 完全禁用SSL
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tomato-network
+
+
+  redis:
+    image: redis:6-alpine
+    command: redis-server
+    volumes:
+      - redis_data:/data
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - tomato-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  tomato-network:
+    driver: bridge
