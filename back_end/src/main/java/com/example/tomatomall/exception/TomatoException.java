@@ -52,4 +52,12 @@ public class TomatoException extends RuntimeException{
     public static TomatoException advertisementNotExist(){
         return new TomatoException("商品不存在","400");
     }
+
+    public static TomatoException commentExist() {
+        return new TomatoException("不能发表重复评论！", "409");
+    }
+
+    public static TomatoException commentNotExist() {
+        return new TomatoException("删除失败，评论不存在", "400");
+    }
 }
