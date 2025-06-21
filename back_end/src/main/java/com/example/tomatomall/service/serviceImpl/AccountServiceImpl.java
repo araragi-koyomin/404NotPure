@@ -42,6 +42,7 @@ public class AccountServiceImpl implements AccountService {
         }
         // 加密密码
         account.setPassword(passwordEncoder.encode(account.getPassword()));
+        account.setPoints(0);
         userRepository.save(account);
         return "注册成功";
     }
@@ -100,6 +101,36 @@ public class AccountServiceImpl implements AccountService {
             throw TomatoException.userNotExist();
         }
         return account.get();
+    }
+
+    @Override
+    public Integer getUserPoints(String username) {
+        Optional<Account> account = !userRepository.findByUsername(username).isPresent() ? userRepository.findByTelephone(username) : userRepository.findByUsername(username);
+        if (!account.isPresent()) {
+            throw TomatoException.userNotExist();
+        }
+        if (account.get() == null) {
+            throw TomatoException.userNotExist();
+        }
+        return account.get().getPoints();
+    }
+
+    @Override
+    public String updateUserPoints(String username, int points) {
+        if (points < 0) {
+            throw TomatoException.pointsInvalid();
+        }
+        Optional<Account> account = !userRepository.findByUsername(username).isPresent() ? userRepository.findByTelephone(username) : userRepository.findByUsername(username);
+        if (!account.isPresent()) {
+            throw TomatoException.userNotExist();
+        }
+        if (account.get() == null) {
+            throw TomatoException.userNotExist();
+        }
+
+        account.get().setPoints(points);
+        userRepository.save(account.get());
+        return "修改成功";
     }
 
 }
