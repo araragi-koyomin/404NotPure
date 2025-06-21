@@ -387,7 +387,6 @@ onMounted(() => {
       <!-- 产品库存 -->
       <div class="product-stock">
         <span>当前库存: {{ stockpile.amount }} 件</span>
-        <span>冻结库存: {{ stockpile.frozen }} 件</span>
       </div>
 
       <!-- 产品规格 -->
