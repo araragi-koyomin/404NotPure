@@ -210,7 +210,6 @@ onMounted(loadCart)
                       <!-- 展示库存信息 -->
                       <div class="product-stock">
                         <span>库存: {{ item.amount }}件 </span>
-                        <span>冻结: {{ item.frozen }}件</span>
                       </div>
                     </el-col>
                     <el-col :span="5" class="quantity-wrapper">

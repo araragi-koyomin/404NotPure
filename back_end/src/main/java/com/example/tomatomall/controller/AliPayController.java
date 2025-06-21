@@ -161,7 +161,7 @@ public class AliPayController {
     // 重定向到前端应用的基础URL，并添加支付成功的查询参数
     // 这里我们不使用哈希路径，因为后端无法直接重定向到带有#的URL
     // 前端路由守卫会检测这些参数并进行内部处理
-    String redirectUrl = "http://localhost:3000/?payment_success=true&orderId=" + orderId;
+    String redirectUrl = "http://localhost:5173/?payment_success=true&orderId=" + orderId;
 
     response.sendRedirect(redirectUrl);
   }

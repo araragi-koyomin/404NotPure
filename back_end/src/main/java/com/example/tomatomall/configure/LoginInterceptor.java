@@ -48,13 +48,18 @@ public class LoginInterceptor implements HandlerInterceptor {
                 }
             }
         }
-        if (token == null || !tokenUtil.verifyToken(token)) {
+        /*if (token == null || !tokenUtil.verifyToken(token)) {
             throw TomatoException.notLogin();
+        }*/
+        if(token==null){
+            return true;
         }
-
         if (uri.startsWith("/api/accounts/")) {
             String[] parts = uri.split("/");
             String requestUsername = parts[parts.length - 1];
+            if(requestUsername.equals("points")){
+                requestUsername=parts[parts.length - 2];
+            }
             logger.info("Request username/telephone: {}", requestUsername);
 
             Integer accountId = TokenUtil.getUserIdFromToken(token); // token 中是 id

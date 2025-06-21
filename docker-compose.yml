@@ -48,6 +48,8 @@ services:
       - ALIPAY_SERVER_URL=${ALIPAY_SERVER_URL}
       - ALIPAY_RETURN_URL=${ALIPAY_RETURN_URL}
 
+      - ARK_API_KEY=${ARK_API_KEY}
+
       # 其他通用配置
       - TZ=Asia/Shanghai
     depends_on:
