@@ -11,6 +11,7 @@ import {
   deleteProduct as apiDeleteProduct,
   createComment as apiCreateComment,
   deleteComment as apiDeleteComment,
+  getProductComments,
   Product,
   Stockpile,
   Comment
@@ -21,8 +22,9 @@ const router = useRouter();
 const productId = computed(() => route.params.productId as string);
 
 // 用户信息
-const userRole = ref(localStorage.getItem('userRole') || sessionStorage.getItem('role') || 'USER');
+const userRole = ref(localStorage.getItem('role') || sessionStorage.getItem('role') || 'USER');
 const userId = ref(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '');
+const userName = ref(localStorage.getItem('username') || sessionStorage.getItem('username') || '');
 
 // 产品数据
 const product = ref<Product>({
@@ -92,10 +94,16 @@ async function loadProductData() {
         product.value.contentImages = [{ imageUrl: product.value.cover }];
       }
 
+      /*
       // 加载评论数据（假设评论在产品数据中）
       if (response.data.data.comments) {
         comments.value = response.data.data.comments;
       }
+
+       */
+
+      // 加载评论数据
+      await loadComments();
 
       // 加载库存数据
       await loadStockpileData();
@@ -143,6 +151,20 @@ async function loadStockpileData() {
     }
   } catch (error) {
     ElMessage.error('系统错误：' + error);
+  }
+}
+
+// ⭐ 新增：加载评论列表
+async function loadComments() {
+  try {
+    const res = await getProductComments(productId.value);
+    if (res.data.code === "200") {
+      comments.value = res.data.data;     // 成功写入本地状态
+    } else {
+      ElMessage.error('加载评论失败：' + res.data.msg);
+    }
+  } catch (err) {
+    ElMessage.error('系统错误：' + err);
   }
 }
 
@@ -242,7 +264,7 @@ async function submitComment() {
   try {
     const newComment = {
       userId: userId.value,
-      userName: 'Current User', // 假设从用户状态获取，可以根据实际情况调整
+      userName: userName.value, // 假设从用户状态获取，可以根据实际情况调整
       productId: productId.value,
       content: commentForm.value.content,
       rate: commentForm.value.rate
@@ -251,11 +273,12 @@ async function submitComment() {
     const response = await apiCreateComment(newComment);
     if (response.data.code === "200") {
       ElMessage.success('评论提交成功');
-      createCommentDialogVisible.value = false;
+      //createCommentDialogVisible.value = false;
       // 重新加载评论数据或将新评论添加到列表
-      loadProductData();
+      //loadProductData();
+      await loadComments();
     } else {
-      ElMessage.error('评论提交失败：' + response.data.msg);
+      ElMessage.error('评论提交失败：' + response.msg);
     }
   } catch (error) {
     ElMessage.error('系统错误：' + error);
@@ -276,7 +299,8 @@ async function deleteComment() {
       ElMessage.success('删除评论成功');
       deleteCommentDialogVisible.value = false;
       // 从列表中移除该评论
-      comments.value = comments.value.filter(item => item.id !== currentCommentId.value);
+      //comments.value = comments.value.filter(item => item.id !== currentCommentId.value);
+      await loadComments();
     } else {
       ElMessage.error('删除评论失败：' + response.data.msg);
     }
@@ -431,7 +455,7 @@ onMounted(() => {
             </div>
             <div class="comment-actions">
               <el-button
-                  v-if="userRole === 'ADMIN' || (userRole === 'USER' && comment.userId === userId)"
+                  v-if="userRole === 'ADMIN' || (userRole === 'USER' && comment.userId == userId)"
                   type="danger"
                   size="small"
                   @click="confirmDeleteComment(comment.id)"
