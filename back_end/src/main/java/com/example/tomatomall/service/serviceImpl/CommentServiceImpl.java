@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * 评论服务实现类
+ * 处理商品评论的增删改查
+ */
 @Service
 public class CommentServiceImpl implements CommentService {
 
@@ -26,6 +30,12 @@ public class CommentServiceImpl implements CommentService {
   @Autowired
   ProductRepository productRepository;
 
+  /**
+   * 创建评论
+   * @param commentCreateDTO 评论创建DTO
+   * @return 操作结果
+   * @throws TomatoException 评论已存在或商品不存在时抛出
+   */
   @Override
   public String createComment(CommentCreateDTO commentCreateDTO) {
     Comment comment = commentRepository.findByUserIdAndProductId(commentCreateDTO.getUserId(), commentCreateDTO.getProductId());
@@ -45,6 +55,12 @@ public class CommentServiceImpl implements CommentService {
     return "创建成功";
   }
 
+  /**
+   * 删除评论
+   * @param id 评论ID
+   * @return 操作结果
+   * @throws TomatoException 评论不存在时抛出
+   */
   @Override
   public String deleteComment(Integer id) {
     Optional<Comment> commentOptional = commentRepository.findById(id);
@@ -56,6 +72,12 @@ public class CommentServiceImpl implements CommentService {
     }
   }
 
+  /**
+   * 获取商品评论列表
+   * @param productId 商品ID
+   * @return 评论视图对象列表
+   * @throws TomatoException 商品不存在时抛出
+   */
   @Override
   public List<CommentVO> getCommentByProductId(Integer productId) {
     Optional<Product> productOptional = productRepository.findById(productId);

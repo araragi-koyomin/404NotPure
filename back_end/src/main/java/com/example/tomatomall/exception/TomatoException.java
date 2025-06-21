@@ -64,4 +64,24 @@ public class TomatoException extends RuntimeException{
     public static TomatoException pointsInvalid() {
         return new TomatoException("积分非法", "400");
     }
+
+    public static TomatoException existInCart() {
+        return new TomatoException("商品已存在于购物车中", "400");
+    }
+
+    public static TomatoException spillStock() {
+        return new TomatoException("修改数量超出库存", "400");
+    }
+
+    public static TomatoException failToUploadFile() {
+        return new TomatoException("文件上传失败", "400");
+    }
+
+    public static TomatoException orderNotExist() {
+        return new TomatoException("订单不存在", "400");
+    }
+
+    public static TomatoException sessionNotExist() {
+        return new TomatoException("绘画不存在", "400");
+    }
 }

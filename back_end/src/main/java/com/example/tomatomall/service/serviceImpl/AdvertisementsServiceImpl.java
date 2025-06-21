@@ -64,8 +64,7 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         BeanUtils.copyProperties(advertisementsVO, advertisements);
         advertisements.setImageUrl(advertisementsVO.getImgUrl());
         Advertisements savedAdvertisement = advertisementsRepository.save(advertisements);
-        Product initializedProduct = product.get();
-        ProductDTO productDTO = convertToDTO(initializedProduct);
+      ProductDTO productDTO = convertToDTO(product);
 
         String redisKey = "advertisement:product:" + savedAdvertisement.getProductId();
         //随机偏移赋值，防止redis雪崩
@@ -112,7 +111,7 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         // 生成 Redis 缓存的键
         String redisKey = "advertisement:product:" + advertisement.getProductId();
         // 将 Product 对象转换为 ProductDTO
-        ProductDTO productDTO = convertToDTO(product.get());
+        ProductDTO productDTO = convertToDTO(product);
         long randomExpiration = 1800 + (long) (Math.random() * 1800);
         // 将 ProductDTO 存入 Redis 缓存
         redisTemplate.opsForValue().set(redisKey, productDTO, randomExpiration, TimeUnit.SECONDS);
