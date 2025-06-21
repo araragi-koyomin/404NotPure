@@ -14,10 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * 用户管理控制器
+ */
 @RestController
 @RequestMapping("/api/accounts")
 public class AccountController {
@@ -29,63 +31,44 @@ public class AccountController {
     private UserRepository userRepository;
 
     /**
-     * 获取用户详情
+     * 根据用户名获取用户信息
+     * @param username 用户名
+     * @return 用户详细信息
      */
     @GetMapping("/{username}")
-    public Response getUser(@PathVariable String username) {
+    public Response<AccountSimpleVO> getAccountByUsername(@PathVariable String username) {
         AccountSimpleVO accountVO = accountService.getAccount(username);
         return Response.buildSuccess(accountVO);
     }
 
     /**
-     * 创建新的用户
+     * 创建新账户
+     * @param accountVO 账户信息视图对象
+     * @return 操作结果
      */
     @PostMapping()
-    public Response<String> createUser(@RequestBody AccountVO accountVO) {
+    public Response<String> createAccount(@RequestBody AccountVO accountVO) {
         return Response.buildSuccess(accountService.register(accountVO.toPO()));
     }
 
     /**
-     * 更新用户信息
+     * 更新账户信息
+     * @param dto 账户更新数据传输对象
+     * @param request HTTP请求对象
+     * @return 操作结果
+     * @throws TomatoException 未登录或权限不足时抛出
      */
     @PutMapping()
-    public Response<String> updateUser(@RequestBody AccountUpdateDTO dto, HttpServletRequest request) {
-        String token = request.getHeader("token");
-
-        if (token == null) {
-            Cookie[] cookies = request.getCookies();
-            if (cookies != null) {
-                for (Cookie cookie : cookies) {
-                    if ("token".equals(cookie.getName())) {
-                        token = cookie.getValue();
-                        System.out.println("已获取token");
-                        break;
-                    }
-                }
-            }
-        }
-
-//      3. Token 不存在 → 返回 401 未授权
+    public Response<String> updateAccount(@RequestBody AccountUpdateDTO dto, HttpServletRequest request) {
+        String token = TokenUtil.extractTokenFromRequest(request);
         if (token == null) {
             throw TomatoException.notLogin();
         }
-
-        // 4. 解析 Token 获取当前用户（假设 Token 直接存储用户名）
-        Integer accountId;
-        try {
-            accountId = TokenUtil.getUserIdFromToken(token); // 现在是取出用户 ID
-            System.out.println("Account ID from Token: " + accountId);
-        } catch (Exception e) {
-            throw TomatoException.notLogin();
-        }
-
+        // 解析 Token 获取当前用户（假设 Token 直接存储用户名）
+        Integer accountId = TokenUtil.getUserIdFromToken(token);
         // 通过 ID 获取最新的账号信息
         Account currentAccount = userRepository.findById(accountId)
                 .orElseThrow(TomatoException::notLogin);
-
-        System.out.println("Username from DTO: " + dto.getUsername());
-        System.out.println("Username from Account: " + currentAccount.getUsername());
-
         // 校验前端传过来的 username 是否是自己的，防止越权修改
         if (!dto.getUsername().equals(currentAccount.getUsername())) {
             throw TomatoException.noPermission();
@@ -94,27 +77,37 @@ public class AccountController {
     }
 
     /**
-     * 登录
+     * 账户登录
+     * @param accountVO 账户信息视图对象
+     * @param response HTTP响应对象
+     * @return 认证令牌
      */
     @PostMapping("/login")
     public Response<String> login(@RequestBody AccountVO accountVO, HttpServletResponse response) {
         String token = accountService.login(accountVO);
         // 将Token设置到Cookie中
-        Cookie cookie = new Cookie("token", token);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60);
-        response.addCookie(cookie);
+        TokenUtil.setTokenToCookie(response, token);
         return Response.buildSuccess(token);
     }
 
+    /**
+     * 获取账户积分
+     * @param username 用户名
+     * @return 积分数量
+     */
     @GetMapping("/{username}/points")
-    public Response<Integer> getUserPoints(@PathVariable String username) {
+    public Response<Integer> getAccountPoints(@PathVariable String username) {
         return Response.buildSuccess(accountService.getUserPoints(username));
     }
 
+    /**
+     * 更新账户积分
+     * @param username 用户名
+     * @param dto 积分更新数据传输对象
+     * @return 操作结果
+     */
     @PatchMapping("/{username}/points")
-    public Response<String> updateUserPoints(@PathVariable String username, @RequestBody AccountPointsUpdateDTO dto) {
+    public Response<String> updateAccountPoints(@PathVariable String username, @RequestBody AccountPointsUpdateDTO dto) {
         String result = accountService.updateUserPoints(username, dto.getPoints());
         return Response.buildSuccess(result);
     }

@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * 图片管理控制器
+ */
 @RestController
 @RequestMapping("/api/images")
 public class ImageController {
@@ -14,6 +17,11 @@ public class ImageController {
   @Autowired
   private ImageService imageService;
 
+  /**
+   * 图片上传
+   * @param file 文件
+   * @return 成功信息
+   */
   @PostMapping
   public Response<String> uploadImage(@RequestPart("file") MultipartFile file) {
     try {
