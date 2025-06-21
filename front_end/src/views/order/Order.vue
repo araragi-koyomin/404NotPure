@@ -5,7 +5,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { router } from '../../router'
 import { submitOrder as apiSubmitOrder, initiatePayment as apiInitiatePayment, OrderRequest } from '../../api/order'
 import { removeFromCart } from '../../api/cart' // Import removeFromCart
-
+import { getUserPoints, updateUserPoints } from '../../api/order'
+const userPoints = ref(0)             // 用户拥有的积分
+const pointsToUse = ref(0)            // 用户想要使用的积分
+const discountAmount = computed(() => (pointsToUse.value / 30).toFixed(2)) // 积分折扣金额
 // Types
 type CartItem = {
   productId: string;
@@ -26,6 +29,13 @@ const orderId = ref<string>('')
 const paymentFormHtml = ref('')
 const isFromProductPage = ref(false) // 标记是否从产品页面来的
 const returnPage = ref<string>('') // 新增：存储支付后要返回的页面
+
+const maxUsablePoints = computed(() => userPoints.value);
+
+const payableAmount = computed(() => {
+  const amount = Number(totalAmount.value) - Number(discountAmount.value)
+  return amount >= 0 ? amount.toFixed(2) : '0.00'
+})
 
 // 计算属性
 const totalAmount = computed(() => {
@@ -84,6 +94,13 @@ const submitOrder = async () => {
     return
   }
 
+  // 检查积分使用合法性
+  if (pointsToUse.value < 0 || pointsToUse.value > userPoints.value) {
+    ElMessage.warning('积分使用数量不合法')
+    return
+  }
+
+
   try {
     // 保存当前登录状态，以便支付返回时恢复
     const token = sessionStorage.getItem('token');
@@ -98,6 +115,7 @@ const submitOrder = async () => {
     // 保存订单信息和来源页面到 sessionStorage
     sessionStorage.setItem('pendingOrderId', orderResponse.orderId)
     sessionStorage.setItem('returnPage', returnPage.value)
+    sessionStorage.setItem('usedPoints', pointsToUse.value.toString()) // 暂存使用的积分数
 
     ElMessage.success('订单创建成功，准备跳转支付')
 
@@ -228,11 +246,27 @@ const checkPaymentReturn = async () => {
           console.error('处理购物车商品失败:', error)
         }
       }
+      // 积分计算逻辑
+      const usedPoints = Number(sessionStorage.getItem('usedPoints') || '0')
+      const username = sessionStorage.getItem('username')
+      if (username) {
+        try {
+          const actualPaid = Number(payableAmount.value)
+          const pointsEarned = Math.floor(actualPaid) // 每支付1元增加1积分
+          const newTotalPoints = userPoints.value - usedPoints + pointsEarned
+
+          await updateUserPoints(username, newTotalPoints)
+          ElMessage.success(`积分更新成功，当前积分：${newTotalPoints}`)
+        } catch (error) {
+          ElMessage.error(`积分更新失败: ${error}`)
+        }
+      }
 
       // 清除会话存储
       clearCartItems()
       sessionStorage.removeItem('payment_success')
       sessionStorage.removeItem('payment_order_id')
+      sessionStorage.removeItem('usedPoints')
 
       // 根据来源跳转到相应页面
       if (savedReturnPage) {
@@ -245,9 +279,17 @@ const checkPaymentReturn = async () => {
 }
 
 // 生命周期钩子
-onMounted(() => {
+onMounted(async () => {
   loadCartItems()
   checkPaymentReturn() // 检查是否从支付页面返回
+  const username = sessionStorage.getItem('username')
+  if (username) {
+    try {
+      userPoints.value = await getUserPoints(username)
+    } catch (error) {
+      ElMessage.error(`积分获取失败: ${error}`)
+    }
+  }
 })
 
 </script>
@@ -324,6 +366,28 @@ onMounted(() => {
             <span>订单总金额:</span>
             <span class="total-amount">¥{{ totalAmount }}</span>
           </div>
+          <div class="summary-row">
+            <span>当前积分:</span>
+            <span>{{ userPoints }}分</span>
+          </div>
+          <div class="summary-row">
+            <span>使用积分:</span>
+            <el-input-number
+                v-model="pointsToUse"
+                :min="0"
+                :max="maxUsablePoints"
+                :step="30"
+                size="small"
+            />
+          </div>
+          <div class="summary-row">
+            <span>积分抵扣:</span>
+            <span>-¥{{ discountAmount }}</span>
+          </div>
+          <div class="summary-row total">
+            <span>实际支付金额:</span>
+            <span class="total-amount">¥{{ payableAmount }}</span>
+          </div>
         </div>
         <!-- Order actions section -->
         <div class="order-actions">
@@ -355,11 +419,7 @@ onMounted(() => {
 .order-background {
   width: 100%;
   min-height: 100vh;
-  //background-image: url("../../assets/pexels-padrinan-19670.jpg");
-  //background-repeat: no-repeat;
-  //background-position: center center;
-  //background-size: cover;
-  //background-attachment: fixed; /* 让背景固定不随滚动移动 */
+
 }
 
 .order-container {

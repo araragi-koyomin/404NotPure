@@ -39,12 +39,7 @@ const router = createRouter({
                 name: 'order',
                 component: () => import('../views/order/Order.vue'),
                 meta: {title: '订单'}
-            }, {
-                path: '/allOrder',
-                name: 'allOrder',
-                component: () => import('../views/order/AllOrder.vue'),
-                meta: {title: '所有订单'}
-            }, {
+            },{
                 path: '/updateProduct',
                 name: 'updateProduct',
                 component: () => import('../views/product/UpdateProduct.vue'),
