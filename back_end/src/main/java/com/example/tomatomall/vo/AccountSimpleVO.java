@@ -16,4 +16,5 @@ public class AccountSimpleVO {
     private String telephone;
     private String email;
     private String location;
+    private String id;
 }

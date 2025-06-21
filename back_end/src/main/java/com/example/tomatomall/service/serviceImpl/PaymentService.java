@@ -1,6 +1,6 @@
 package com.example.tomatomall.service.serviceImpl;
 
-import com.alipay.api.AlipayClient;
+import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Orders;
 import com.example.tomatomall.po.StockPile;
 import com.example.tomatomall.repository.OrdersRepository;
@@ -11,9 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
-import java.util.Collections;
-import java.util.Map;
 
+/**
+ * 支付服务实现类
+ * 处理订单支付状态更新和库存扣减
+ */
 @Service
 public class PaymentService implements PaymentServiceImpl {
 
@@ -22,6 +24,13 @@ public class PaymentService implements PaymentServiceImpl {
   @Autowired
   private StockPileRepository stockPileRepository;
 
+  /**
+   * 更新订单支付状态
+   * @param orderId 订单ID
+   * @param alipayTradeNo 支付宝交易号
+   * @param amount 支付金额
+   * @throws TomatoException 订单不存在或状态异常时抛出
+   */
   @Transactional
   @Override
   public void updateOrderStatus(String orderId, String alipayTradeNo, String amount) {

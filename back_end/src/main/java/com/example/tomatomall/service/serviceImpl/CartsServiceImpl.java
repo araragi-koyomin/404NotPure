@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * 购物车服务实现类
+ * 提供购物车商品的增删改查功能
+ */
 @Service
 public class CartsServiceImpl implements CartsService {
 
@@ -36,32 +40,43 @@ public class CartsServiceImpl implements CartsService {
     @Autowired
     private StockPileRepository stockPileRepository;
 
+    /**
+     * 添加商品到购物车
+     * @param userId 用户ID
+     * @param productId 商品ID
+     * @param quantity 数量
+     * @return 购物车商品视图对象
+     * @throws TomatoException 商品不存在或已在购物车中时抛出
+     */
     @Override
     public CartsVO addProductToCart(int userId, int productId, int quantity) {
+        Product product = productRepository.findById(productId)
+            .orElseThrow(TomatoException::productNotExist);
 
-        Product product = productRepository.findById(productId);
-        if (product == null) {
-            throw TomatoException.productNotExist();
-        }
         Account account = accountRepository.findById(userId)
-                .orElseThrow(TomatoException::notLogin);
+            .orElseThrow(TomatoException::notLogin);
 
         List<Carts> cartItems = cartsRepository.findByAccount(account);
         for (Carts cartItem : cartItems) {
             if (cartItem.getProduct().getId() == productId) {
-                throw new TomatoException("商品已存在于购物车中", "400");
+                throw TomatoException.existInCart();
             }
         }
         Carts cartItem = new Carts();
         cartItem.setAccount(account);
         cartItem.setProduct(product);
         cartItem.setQuantity(quantity);
-
         Carts savedCartItem = cartsRepository.save(cartItem);
 
         return savedCartItem.toVO();
     }
 
+    /**
+     * 从购物车删除商品
+     * @param cartItemId 购物车商品ID
+     * @return 删除结果
+     * @throws TomatoException 购物车商品不存在时抛出
+     */
     @Override
     public String deleteCartItem(int cartItemId) {
         Optional<Carts> cartItemOptional = cartsRepository.findById(cartItemId);
@@ -73,6 +88,13 @@ public class CartsServiceImpl implements CartsService {
         }
     }
 
+    /**
+     * 更新购物车商品数量
+     * @param cartItemId 购物车商品ID
+     * @param quantity 新数量
+     * @return 更新结果
+     * @throws TomatoException 购物车商品不存在或库存不足时抛出
+     */
     @Override
     public String updateCartItemQuantity(int cartItemId, int quantity) {
         Carts cartItem = cartsRepository.findById(cartItemId)
@@ -82,7 +104,7 @@ public class CartsServiceImpl implements CartsService {
                 .orElseThrow(TomatoException::productNotExist);
 
         if (quantity > stockPile.getAmount()) {
-            throw new TomatoException("修改数量超出库存", "400");
+            throw TomatoException.spillStock();
         }
 
         cartItem.setQuantity(quantity);
@@ -90,6 +112,12 @@ public class CartsServiceImpl implements CartsService {
         return "修改数量成功";
     }
 
+    /**
+     * 获取购物车列表
+     * @param userId 用户ID
+     * @return 购物车列表视图对象
+     * @throws TomatoException 用户不存在时抛出
+     */
     @Override
     public CartsListVO getCartItems(int userId) {
         Account account = accountRepository.findById(userId)

@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 订单服务实现类
+ * 处理订单创建及相关业务逻辑
+ */
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -34,6 +38,13 @@ public class OrderServiceImpl implements OrderService {
   @Autowired
   StockPileRepository stockPileRepository;
 
+  /**
+   * 创建新订单
+   * @param userId 用户ID
+   * @param dto 订单创建DTO
+   * @return 订单视图对象
+   * @throws TomatoException 用户不存在、商品不存在或库存不足时抛出
+   */
   @Override
   public OrdersVO addOrder(Integer userId, CreateOrderDTO dto) {
     Account persistedUser = userRepository.findById(userId).orElseThrow(TomatoException::userNotExist);
@@ -45,7 +56,6 @@ public class OrderServiceImpl implements OrderService {
         .collect(Collectors.toMap(Product::getId, p -> p));
     Map<Integer, StockPile> stockPileMap = stockPileRepository.findByProductIdIn(productIds).stream()
         .collect(Collectors.toMap(StockPile::getProductId, p -> p));
-
 
     Orders order = new Orders();
     order.setAccount(persistedUser);

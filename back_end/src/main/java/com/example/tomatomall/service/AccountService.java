@@ -12,11 +12,17 @@ public interface AccountService {
 
     public String register(Account account);
 
-
     public String login(AccountVO accountVO);
 
     public AccountSimpleVO getAccount(String username);
 
     public String update(AccountUpdateDTO accountUpdateDTO);
+
+
+    public Account getAccountById(int id);
+
+    public Integer getUserPoints(String username);
+
+    public String updateUserPoints(String username, int points);
 
 }

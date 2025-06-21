@@ -14,7 +14,6 @@ import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.vo.ProductContentImageVO;
 import com.example.tomatomall.vo.ProductVO;
 import com.example.tomatomall.vo.SpecificationVO;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -23,6 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 商品服务实现类
+ * 处理商品CRUD及相关业务逻辑
+ */
 @Service
 public class ProductServiceImpl implements ProductService {
 
@@ -41,6 +44,11 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    /**
+     * 创建商品
+     * @param productVO 商品视图对象
+     * @return 创建的商品实体
+     */
     @Override
     @Transactional
     public Product createProduct(ProductVO productVO) {
@@ -89,12 +97,22 @@ public class ProductServiceImpl implements ProductService {
         return savedProduct;
     }
 
+    /**
+     * 获取商品列表
+     * @return 商品视图对象列表
+     */
     @Override
     public List<ProductVO> getProductList() {
         List<Product> products = productRepository.findAll();
         return products.stream().map(Product::toVO).collect(Collectors.toList());
     }
 
+    /**
+     * 根据ID获取商品信息
+     * @param id 商品ID
+     * @return 商品视图对象
+     * @throws TomatoException 商品不存在时抛出
+     */
     @Override
     public ProductVO getProductById(int id) {
         String redisKey = "advertisement:product:" + id;
@@ -103,7 +121,7 @@ public class ProductServiceImpl implements ProductService {
             // 将 ProductDTO 转换为 ProductVO
             return convertToVO(productDTO);
         }
-        Product product = productRepository.findById(id);
+        Product product = productRepository.findById(id).get();
         if (product == null) {
             throw TomatoException.productNotExist();
         }
@@ -115,10 +133,16 @@ public class ProductServiceImpl implements ProductService {
         return productVO;
     }
 
+    /**
+     * 更新商品信息
+     * @param productVO 商品视图对象
+     * @return 操作结果
+     * @throws TomatoException 商品不存在时抛出
+     */
     @Override
     @Transactional
     public String update(ProductVO productVO) {
-        Product product = productRepository.findById(productVO.getId());
+        Product product = productRepository.findById(productVO.getId()).get();
         if (productVO.getTitle() != null) product.setTitle(productVO.getTitle());
         if (productVO.getPrice() != null) product.setPrice(productVO.getPrice());
         if (productVO.getRate() != null) product.setRate(productVO.getRate());
@@ -163,6 +187,11 @@ public class ProductServiceImpl implements ProductService {
         return "更新成功";
     }
 
+    /**
+     * 删除商品
+     * @param id 商品ID
+     * @return 操作结果
+     */
     @Override
     @Transactional
     public String delete(int id) {
