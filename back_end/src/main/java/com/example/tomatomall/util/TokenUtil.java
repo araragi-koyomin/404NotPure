@@ -56,4 +56,15 @@ public class TokenUtil {
         Account account = userRepository.findById(userId).orElseThrow(TomatoException::notLogin);
         return account.getRole();
     }
+
+    public Integer getUserIdfromToken(String token) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(SECRET);
+            JWTVerifier verifier = JWT.require(algorithm).build();
+            DecodedJWT decodedJWT = verifier.verify(token);
+            return Integer.parseInt(decodedJWT.getSubject()); // 解析出的是 id
+        } catch (Exception e) {
+            throw TomatoException.notLogin(); // 或自定义异常
+        }
+    }
 }

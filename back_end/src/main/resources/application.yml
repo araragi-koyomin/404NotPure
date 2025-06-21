@@ -42,3 +42,4 @@ alipay:
   return-url: ${ALIPAY_RETURN_URL}
   charset: UTF-8
   sign-type: RSA2
+
