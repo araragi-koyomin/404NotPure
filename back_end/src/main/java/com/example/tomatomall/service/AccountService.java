@@ -19,4 +19,7 @@ public interface AccountService {
 
     public String update(AccountUpdateDTO accountUpdateDTO);
 
+    public Integer getUserPoints(String username);
+
+    public String updateUserPoints(String username, int points);
 }
