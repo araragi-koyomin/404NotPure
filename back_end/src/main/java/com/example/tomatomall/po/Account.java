@@ -78,6 +78,7 @@ public class Account {
     vo.setTelephone(this.telephone);
     vo.setEmail(this.email);
     vo.setLocation(this.location);
+    vo.setId(String.valueOf(this.id));
     return vo;
   }
 }

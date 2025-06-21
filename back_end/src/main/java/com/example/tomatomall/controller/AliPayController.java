@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 支付沙箱管理控制器
+ */
 @RestController
 @RequestMapping("/api/orders")
 public class AliPayController {
