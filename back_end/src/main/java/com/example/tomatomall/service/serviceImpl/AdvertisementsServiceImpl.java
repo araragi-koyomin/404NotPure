@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,12 +55,14 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         ProductDTO productDTO = convertToDTO(initializedProduct);
 
         String redisKey = "advertisement:product:" + savedAdvertisement.getProductId();
-        redisTemplate.opsForValue().set(redisKey, productDTO);
+        //随机偏移赋值，防止redis雪崩
+        long randomExpiration = 1800 + (long) (Math.random() * 1800);
+        redisTemplate.opsForValue().set(redisKey, productDTO, randomExpiration, TimeUnit.SECONDS);
         return savedAdvertisement.toVO();
     }
 
     @Override
-    public String deleteAdvertisement(int id) {
+    public String deleteAdvertisement(int id){
         Advertisements advertisements = advertisementsRepository.findById(id).orElse(null);
         if (advertisements == null) {
             throw TomatoException.advertisementNotExist();
@@ -95,8 +98,9 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         String redisKey = "advertisement:product:" + advertisement.getProductId();
         // 将 Product 对象转换为 ProductDTO
         ProductDTO productDTO = convertToDTO(product.get());
+        long randomExpiration = 1800 + (long) (Math.random() * 1800);
         // 将 ProductDTO 存入 Redis 缓存
-        redisTemplate.opsForValue().set(redisKey, productDTO);
+        redisTemplate.opsForValue().set(redisKey, productDTO, randomExpiration, TimeUnit.SECONDS);
 
         return "更新成功";
     }

@@ -35,6 +35,9 @@ public class AccountServiceImpl implements AccountService {
         //检查电话号码重复
         Optional<Account> existingTelephone = userRepository.findByTelephone(account.getTelephone());
         if (existingTelephone.isPresent()) {
+            if(existingTelephone.equals("")){
+                throw TomatoException.telephoneExist();
+            }
             throw TomatoException.telephoneExist();
         }
         // 加密密码
@@ -92,6 +95,15 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public Account getAccountById(int id){
+        Optional<Account> account = userRepository.findById(id);
+        if (!account.isPresent()) {
+            throw TomatoException.userNotExist();
+        }
+        return account.get();
+    }
+
+    @Override
     public Integer getUserPoints(String username) {
         Optional<Account> account = !userRepository.findByUsername(username).isPresent() ? userRepository.findByTelephone(username) : userRepository.findByUsername(username);
         if (!account.isPresent()) {
@@ -120,4 +132,5 @@ public class AccountServiceImpl implements AccountService {
         userRepository.save(account.get());
         return "修改成功";
     }
+
 }
