@@ -77,3 +77,25 @@ export const getUserOrders = async (): Promise<Order[]> => {
 
     return handleError(response.data.code, response.data.msg || '获取订单列表失败');
 };
+
+// 获取用户积分
+export const getUserPoints = async (username: string): Promise<number> => {
+    const res = await axios.get<BaseResponse<number>>(
+        `/api/accounts/${username}/points`
+    );
+    if (res.data.code == "200") {
+        return res.data.data;
+    }
+    return Promise.reject(res.data.msg || '获取积分失败');
+};
+
+// 更新用户积分
+export const updateUserPoints = async (username: string, points: number): Promise<void> => {
+    const res = await axios.patch<BaseResponse<string>>(
+        `/api/accounts/${username}/points`,
+        { points }
+    );
+    console.log(res.data);
+    if (res.data.code == "200") return;
+    return Promise.reject(res.data.msg || '更新积分失败');
+};

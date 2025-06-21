@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface ChatService {
     void sendMessage(ChatMessage message);
-    List<ChatSession> getUserSessions(Integer userId);
+    List<ChatSession> getUserSessionsById(Integer userId);
 }

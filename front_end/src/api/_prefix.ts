@@ -6,6 +6,7 @@ export const PRODUCT_MODULE = `${API_MODULE}/products`;
 export const CART_MODULE = `${API_MODULE}/cart`;
 export const ORDER_MODULE = '/api/orders';
 export const ADVERTISEMENT_MODULE = `${API_MODULE}/advertisements`;
+export const CHAT_MODULE = `${API_MODULE}/chat`;
 
 export type BaseResponse<T = any> = {
     code: string;

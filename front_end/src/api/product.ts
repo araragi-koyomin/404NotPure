@@ -168,3 +168,11 @@ export const addToCart = async (productId: string, quantity: number) => {
             return err.response;
         });
 };
+
+// ⭐ 新增：获取指定商品的评论列表
+export const getProductComments = async (productId: string) => {
+    return axios
+        .get(`${PRODUCT_MODULE}/${productId}/comments`)   // GET /api/products/{productId}/comments
+        .then(res  => res)
+        .catch(err => err.response);
+};

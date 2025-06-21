@@ -28,6 +28,8 @@ public class AccountVO {
 
   private String password;
 
+  private Integer points;
+
   public Account toPO() {
     Account account = new Account();
     account.setId(id);
@@ -39,6 +41,7 @@ public class AccountVO {
     account.setEmail(email);
     account.setLocation(location);
     account.setPassword(password);
+    account.setPoints(points);
     return account;
   }
 

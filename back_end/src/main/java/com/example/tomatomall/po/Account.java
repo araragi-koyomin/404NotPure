@@ -50,6 +50,10 @@ public class Account {
   @Column(name = "location", length = 255)
   private String location;
 
+  @Basic
+  @Column(name = "points")
+  private Integer points;
+
   public AccountVO toVO() {
     AccountVO vo = new AccountVO();
     vo.setId(this.id);
@@ -61,6 +65,7 @@ public class Account {
     vo.setLocation(this.location);
     vo.setPassword(this.password);
     vo.setRole(this.role);
+    vo.setPoints(this.points);
     return vo;
   }
 
@@ -73,6 +78,7 @@ public class Account {
     vo.setTelephone(this.telephone);
     vo.setEmail(this.email);
     vo.setLocation(this.location);
+    vo.setId(String.valueOf(this.id));
     return vo;
   }
 }

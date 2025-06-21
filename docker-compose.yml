@@ -52,6 +52,7 @@ services:
 
       # 其他通用配置
       - TZ=Asia/Shanghai
+      - ARK_API_KEY=${ARK_API_KEY}
     depends_on:
       db:
         condition: service_healthy

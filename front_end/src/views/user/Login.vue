@@ -42,6 +42,7 @@ function handleLogin() {
         sessionStorage.setItem('telephone', res.data.data.telephone);
         sessionStorage.setItem('email', res.data.data.email);
         sessionStorage.setItem('location', res.data.data.location);
+        sessionStorage.setItem('userId', res.data.data.id);
       });
       router.push({path: "/home"});
     } else  {

@@ -1,6 +1,5 @@
 package com.example.tomatomall.controller;
 
-import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Account;
 import com.example.tomatomall.po.ChatMessage;
 import com.example.tomatomall.po.ChatSession;
@@ -11,10 +10,8 @@ import com.example.tomatomall.util.TokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 
 @RestController
@@ -33,23 +30,13 @@ public class ChatController {
     @Autowired
     private UserRepository userRepository;
 
+    /**
+     * 主页进入咨询状态，并随机选择一个管理员进行对话
+     * @param request HTTP请求
+     */
     @PostMapping("/question")
     public void question(HttpServletRequest request){
-        String token = null;
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("token".equals(cookie.getName())){
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (token == null) {
-            throw TomatoException.notLogin();
-        }
-        Integer userId = tokenUtil.getUserIdfromToken(token);
+        Integer userId = TokenUtil.getUserIdFromRequest(request);
         List<Account> admins = userRepository.findByRole("admin");
 
         if (admins.isEmpty()) {
@@ -70,67 +57,38 @@ public class ChatController {
         chatService.sendMessage(message);
     }
 
-    // 发送消息
+    /**
+     * 发送信息
+     * @param message 消息实体
+     * @param request HTTP请求
+     */
     @PostMapping("/send")
     public void sendMessage(@RequestBody ChatMessage message, HttpServletRequest request) {
-        String token = null;
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("token".equals(cookie.getName())){
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (token == null) {
-            throw TomatoException.notLogin();
-        }
-        Integer senderId = tokenUtil.getUserIdfromToken(token);
+        Integer senderId = TokenUtil.getUserIdFromRequest(request);
         message.setSenderId(senderId);
         chatService.sendMessage(message);
     }
 
-    // 获取聊天记录（对话）
+    /**
+     * 获取聊天记录（对话）
+     * @param peerId 伙伴id
+     * @param request HTTP请求
+     * @return
+     */
     @GetMapping("/messages")
     public List<ChatMessage> getMessages(@RequestParam Integer peerId, HttpServletRequest request) {
-        String token = null;
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("token".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (token == null) {
-            throw TomatoException.notLogin();
-        }
-        Integer userId = tokenUtil.getUserIdfromToken(token);
+        Integer userId = TokenUtil.getUserIdFromRequest(request);
         return chatMessageRepository.findConversation(userId, peerId);
     }
 
-    // 获取当前用户的会话列表
+    /**
+     * 获取当前用户的会话列表
+     * @param request HTTP请求
+     * @return 会话列表
+     */
     @GetMapping("/sessions")
     public List<ChatSession> getSessions(HttpServletRequest request) {
-        String token = null;
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("token".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (token == null) {
-            throw TomatoException.notLogin();
-        }
-        Integer userId = tokenUtil.getUserIdfromToken(token);
-        return chatService.getUserSessions(userId);
+        Integer userId = TokenUtil.getUserIdFromRequest(request);
+        return chatService.getUserSessionsById(userId);
     }
 }

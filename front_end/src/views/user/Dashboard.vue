@@ -5,6 +5,16 @@ import { parseRole, runWithTimeout } from "../../utils";
 import { router } from "../../router";
 import { UploadFilled, InfoFilled } from "@element-plus/icons-vue";
 import { uploadImage } from "../../api/tools.ts";
+import { getUserPoints, updateUserPoints } from "../../api/order";
+import { onMounted } from 'vue';
+
+onMounted(() => {
+  getUserInfo();
+});
+
+const points = ref(0);
+const newPoints = ref<number>(0);
+const hasNewPointsInput = computed(() => newPoints.value !== points.value && newPoints.value >= 0);
 
 const username = sessionStorage.getItem("username") || ''
 const name = ref(sessionStorage.getItem("name")|| '')
@@ -65,7 +75,7 @@ const changeAvatarDisabled = computed(() => {
   return !hasNewAvatarInput.value;
 })
 
-function getUserInfo() {
+async function getUserInfo() {
   userInfo(username).then(res => {
     sessionStorage.setItem('name', res.data.data.name);
     sessionStorage.setItem('role', res.data.data.role);
@@ -80,9 +90,29 @@ function getUserInfo() {
     email.value = sessionStorage.getItem("email") || '';
     location.value = sessionStorage.getItem("location") || '';
     window.dispatchEvent(new CustomEvent('sessionstorage-local-update', {
-      detail: { key: 'role', value: res.data.data.role }
+      detail: {key: 'role', value: res.data.data.role}
     }));
   });
+  // 获取用户积分
+  points.value = await getUserPoints(username);
+  newPoints.value = points.value;
+}
+
+const changePointsDisabled = computed(() => {
+  return role.value !== 'ADMIN' || !hasNewPointsInput.value;
+});
+
+async function handleChangePoints() {
+  loading.value = true;
+  try {
+    await updateUserPoints(username, newPoints.value);
+    ElMessage.success('积分更新成功！');
+    points.value = newPoints.value;
+  } catch (error) {
+    ElMessage.error(`积分更新失败: ${error}`);
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function updateUserInfo() {
@@ -263,6 +293,13 @@ const beforeUpload = (file: File) => {
         <el-descriptions-item label="地址">
           <el-tag class="full-tag" type="danger" @click="displayInfoCard = '4'">{{ location }}</el-tag>
         </el-descriptions-item>
+
+        <el-descriptions-item label="积分数量">
+          <el-tag class="full-tag" type="primary" @click="displayInfoCard = '7'">
+            {{ points }}
+          </el-tag>
+        </el-descriptions-item>
+
       </el-descriptions>
     </el-card>
 
@@ -425,6 +462,28 @@ const beforeUpload = (file: File) => {
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card v-if="displayInfoCard === '7'" class="change-card radius1" shadow="never">
+      <template #header>
+        <div class="card-header">
+          <span>修改积分数量</span>
+          <el-button @click="handleChangePoints" :disabled="changePointsDisabled" :loading="loading">
+            更新
+          </el-button>
+        </div>
+      </template>
+
+      <el-form>
+        <el-form-item v-if="role === 'ADMIN'">
+          <label for="newPoints">输入新积分数量（≥0）</label>
+          <el-input-number id="newPoints" v-model="newPoints" :min="0"/>
+        </el-form-item>
+        <el-form-item v-else>
+          <span>您无权限修改积分数量。</span>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
   </el-main>
 </template>
 

@@ -10,6 +10,9 @@ import com.example.tomatomall.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
 
 @Component
@@ -57,14 +60,75 @@ public class TokenUtil {
         return account.getRole();
     }
 
-    public Integer getUserIdfromToken(String token) {
+    /**
+     * 从HTTP请求中提取token
+     * @param request HTTP请求对象
+     * @return token字符串
+     */
+    public static String extractTokenFromRequest(HttpServletRequest request) {
+        String token = request.getHeader("token");
+        if (token == null && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("token".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return token;
+    }
+
+    /**
+     * 设置token到Cookie
+     * @param response HTTP响应对象
+     * @param token 认证token
+     */
+    public static void setTokenToCookie(HttpServletResponse response, String token) {
+        Cookie cookie = new Cookie("token", token);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60); // 7天有效期
+        response.addCookie(cookie);
+    }
+
+    /**
+     * 从请求中获取用户ID（包含登录验证）
+     * @param request HTTP请求对象
+     * @return 用户ID
+     * @throws TomatoException 未登录时抛出
+     */
+    public static int getUserIdFromRequest(HttpServletRequest request) {
+        String token = extractTokenFromRequest(request);
+        if (token == null) {
+            throw TomatoException.notLogin();
+        }
         try {
-            Algorithm algorithm = Algorithm.HMAC256(SECRET);
-            JWTVerifier verifier = JWT.require(algorithm).build();
-            DecodedJWT decodedJWT = verifier.verify(token);
-            return Integer.parseInt(decodedJWT.getSubject()); // 解析出的是 id
+            return getUserIdFromToken(token);
         } catch (Exception e) {
-            throw TomatoException.notLogin(); // 或自定义异常
+            throw TomatoException.notLogin();
         }
     }
+
+    /**
+     * 验证管理员权限
+     * @param request – HTTP请求对象
+     * @throws TomatoException 无权限时抛出
+     */
+    public void validateAdminRole(HttpServletRequest request) {
+        String token = extractTokenFromRequest(request);
+        String role = getUserRoleFromToken(token);
+        if (!"admin".equalsIgnoreCase(role)) {
+            throw TomatoException.noPermission();
+        }
+    }
+
+//    public Integer getUserIdfromToken(String token) {
+//        try {
+//            Algorithm algorithm = Algorithm.HMAC256(SECRET);
+//            JWTVerifier verifier = JWT.require(algorithm).build();
+//            DecodedJWT decodedJWT = verifier.verify(token);
+//            return Integer.parseInt(decodedJWT.getSubject()); // 解析出的是 id
+//        } catch (Exception e) {
+//            throw TomatoException.notLogin(); // 或自定义异常
+//        }
+//    }
 }
