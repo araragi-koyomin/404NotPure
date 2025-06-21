@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '../router';
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { Session, ChatMessage, question, send, getMessage, getSessionList } from "../api/chat.ts";
 // import { useReactiveSessionStorage } from "../utils/storage.ts";
 import {
@@ -21,8 +21,12 @@ const updateRoleFromStorage = () => {
   }
 };
 
+const peerPrefix = computed(() =>
+    role.value === 'USER' ? '客服' : '用户'
+)
+
 const handleStorageChange = (e: StorageEvent) => {
-  if (e.key === 'role') {
+  if (e.key == 'role') {
     updateRoleFromStorage();
   }
 };
@@ -31,7 +35,7 @@ const showProfile = ref(false);
 
 function handleProfileClick() {
   showProfile.value = true;
-  question();
+  if (role.value == 'USER') question();
 }
 
 const sessions = ref<Session[]>([])
@@ -218,7 +222,7 @@ function logout() {
                 :class="{ 'active-session': session.peerId === selectedPeerId }"
                 @click="selectSession(session.peerId)"
             >
-              <div class="peer-id">客服 {{ session.peerId }}</div>
+              <div class="peer-id">{{ peerPrefix }} {{ session.peerId }}</div>
               <div class="last-message">{{ session.lastMessage }}</div>
             </div>
           </div>
