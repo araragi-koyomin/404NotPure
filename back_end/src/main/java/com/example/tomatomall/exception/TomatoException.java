@@ -60,4 +60,8 @@ public class TomatoException extends RuntimeException{
     public static TomatoException commentNotExist() {
         return new TomatoException("删除失败，评论不存在", "400");
     }
+
+    public static TomatoException pointsInvalid() {
+        return new TomatoException("积分非法", "400");
+    }
 }
