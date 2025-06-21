@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -63,7 +64,13 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         BeanUtils.copyProperties(advertisementsVO, advertisements);
         advertisements.setImageUrl(advertisementsVO.getImgUrl());
         Advertisements savedAdvertisement = advertisementsRepository.save(advertisements);
-        cacheProductInRedis(product);
+        Product initializedProduct = product.get();
+        ProductDTO productDTO = convertToDTO(initializedProduct);
+
+        String redisKey = "advertisement:product:" + savedAdvertisement.getProductId();
+        //随机偏移赋值，防止redis雪崩
+        long randomExpiration = 1800 + (long) (Math.random() * 1800);
+        redisTemplate.opsForValue().set(redisKey, productDTO, randomExpiration, TimeUnit.SECONDS);
         return savedAdvertisement.toVO();
     }
 
@@ -74,11 +81,12 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
      * @throws TomatoException 广告不存在时抛出
      */
     @Override
-    @Transactional
-    public String deleteAdvertisement(int id) {
-        Advertisements advertisement = advertisementsRepository.findById(id)
-            .orElseThrow(TomatoException::advertisementNotExist);
-        String redisKey = "advertisement:product:" + advertisement.getProductId();
+    public String deleteAdvertisement(int id){
+        Advertisements advertisements = advertisementsRepository.findById(id).orElse(null);
+        if (advertisements == null) {
+            throw TomatoException.advertisementNotExist();
+        }
+        String redisKey = "advertisement:product:" + advertisements.getProductId();
         redisTemplate.delete(redisKey);
         advertisementsRepository.deleteById(id);
         return "删除成功";
@@ -101,7 +109,13 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         advertisement.setProductId(advertisementsVO.getProductId());
 
         advertisementsRepository.save(advertisement);
-        cacheProductInRedis(product);
+        // 生成 Redis 缓存的键
+        String redisKey = "advertisement:product:" + advertisement.getProductId();
+        // 将 Product 对象转换为 ProductDTO
+        ProductDTO productDTO = convertToDTO(product.get());
+        long randomExpiration = 1800 + (long) (Math.random() * 1800);
+        // 将 ProductDTO 存入 Redis 缓存
+        redisTemplate.opsForValue().set(redisKey, productDTO, randomExpiration, TimeUnit.SECONDS);
 
         return "更新成功";
     }
@@ -139,10 +153,5 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
                 .collect(Collectors.toList()));
 
         return dto;
-    }
-
-    private void cacheProductInRedis(Product product) {
-        String redisKey = "advertisement:product:" + product.getId();
-        redisTemplate.opsForValue().set(redisKey, convertToDTO(product));
     }
 }

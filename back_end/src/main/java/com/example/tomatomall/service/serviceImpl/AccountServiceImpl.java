@@ -43,7 +43,6 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public String register(Account account) {
         validateAccountUniqueness(account);
-
         account.setPassword(passwordEncoder.encode(account.getPassword()));
         account.setPoints(0);
         userRepository.save(account);
@@ -113,6 +112,15 @@ public class AccountServiceImpl implements AccountService {
         return findAccountByIdentifier(identifier)
             .map(Account::getPoints)
             .orElseThrow(TomatoException::userNotExist);
+    }
+  
+    @Override
+    public Account getAccountById(int id){
+        Optional<Account> account = userRepository.findById(id);
+        if (!account.isPresent()) {
+            throw TomatoException.userNotExist();
+        }
+        return account.get();
     }
 
     /**
