@@ -1,0 +1,26 @@
+/* src/style/fade.css */
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-enter-from {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.fade-enter-to {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fade-leave-from {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fade-leave-to {
+    opacity: 0;
+    transform: translateY(20px);
+}
