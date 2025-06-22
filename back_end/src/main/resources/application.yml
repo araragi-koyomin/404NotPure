@@ -40,6 +40,7 @@ alipay:
   notify-url: ${ALIPAY_NOTIFY_URL}
   server-url: ${ALIPAY_SERVER_URL}
   return-url: ${ALIPAY_RETURN_URL}
+  frontEnd-url: ${FRONTEND_URL}
   charset: UTF-8
   sign-type: RSA2
 

@@ -57,6 +57,12 @@ public class AdvertisementsController {
         return Response.buildSuccess(result);
     }
 
+    /**
+     * 更新广告
+     * @param advertisementsVO - 广告信息视图对象
+     * @param request - HTTP请求
+     * @return 操作结果
+     */
     @PutMapping()
     public Response<String> updateAdvertisement(@RequestBody AdvertisementsVO advertisementsVO, HttpServletRequest request) {
         tokenUtil.validateAdminRole(request);

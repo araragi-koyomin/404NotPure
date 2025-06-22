@@ -82,6 +82,10 @@ public class TomatoException extends RuntimeException{
     }
 
     public static TomatoException sessionNotExist() {
-        return new TomatoException("绘画不存在", "400");
+        return new TomatoException("会话不存在", "400");
+    }
+
+    public static TomatoException paymentError() {
+        return new TomatoException("支付报错", "403");
     }
 }

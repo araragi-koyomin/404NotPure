@@ -64,7 +64,7 @@ public class AdvertisementsServiceImpl implements AdvertisementsService {
         BeanUtils.copyProperties(advertisementsVO, advertisements);
         advertisements.setImageUrl(advertisementsVO.getImgUrl());
         Advertisements savedAdvertisement = advertisementsRepository.save(advertisements);
-      ProductDTO productDTO = convertToDTO(product);
+        ProductDTO productDTO = convertToDTO(product);
 
         String redisKey = "advertisement:product:" + savedAdvertisement.getProductId();
         //随机偏移赋值，防止redis雪崩

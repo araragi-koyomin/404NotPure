@@ -17,11 +17,11 @@ import java.util.List;
  */
 @Service
 public class ChatServiceImpl implements ChatService {
-        @Autowired
-        private ChatMessageRepository messageRepo;
+  @Autowired
+  private ChatMessageRepository messageRepo;
 
-        @Autowired
-        private ChatSessionRepository sessionRepo;
+  @Autowired
+  private ChatSessionRepository sessionRepo;
 
   /**
    * 发送信息
