@@ -2,39 +2,92 @@
 南京大学23届软工Ⅱ大作业
 
 ## 当前分支
-lab4
+main
 
-## 环境变量配置
+## 配置
 
-请到对应官网购买或注册使用相应服务，并配置环境变量
+（默认后端使用IDEA打开，根目录用WebStorm打开）
 
-* 阿里云：请详细参考*back_end/src/main/resources/application.yml*中的配置
+### 前置
 
-* 支付宝：请详细参考*back_end/src/main/resources/application.yml*中的配置
+请先确保Docker desktop, MySQL, Natapp已启动
 
-* 豆包：需要到官网申请ARK_API_KEY，将其配置至用户环境变量中
+### 请到对应官网购买或注册使用相应服务，得到所需键值
 
-## 启动前依赖服务
+* 阿里云
+  * ALIYUN_OSS_ENDPOINT
+  * ALIYUN_OSS_ACCESS_KEY_ID
+  * ALIYUN_OSS_ACCESS_KEY_SECRET
+  * ALIYUN_OSS_BUCKET_NAME
 
-* mysql
-  * 数据库名称为tomato，请提前创建
-  * 用户名称和密码可自行在back_end/src/main/resources/application.yml中修改
+* 支付宝
+  * ALIPAY_APP_ID
+  * ALIPAY_APP_PUBLIC_KEY
+  * ALIPAY_ALIPAY_PRIVATE_KEY
+  * ALIPAY_NOTIFY_URL
+  * ALIPAY_SERVER_URL
+  * ALIPAY_RETURN_URL
 
-* natapp
-  * 启动内网穿透，并相应配置关于支付宝的环境变量
-  * 如需使用完整支付功能，请参考博客 https://blog.csdn.net/mnn12/article/details/136299334
+* 豆包
+  * ARK_API_KEY
+  * ARK_MODEL
 
-* redis：
-  * 需要提前配置好Redis服务端
-  * 启动cmd，进入Redis安装目录，输入`redis-server.exe redis.windows.conf`启动服务
-  * 参考教程 https://www.runoob.com/redis/redis-install.html
+* DB（部分默认值请参考application.yml中的键值对）
+  * DB_HOST
+  * DB_PORT
+  * DB_NAME
+  * DB_USER
+  * DB_PASSWORD
 
-## 启动指南
+* Redis（默认值请参考application.yml中的键值对）
+  * REDIS_HOST
+  * REDIS_PORT
 
-* 前端
-  * 进入前端目录，执行`npm install`安装依赖
-  * 执行`vite`启动前端服务
+### Docker获取环境变量
 
-* 后端
-  * 进入后端目录，执行`mvn clean install`安装依赖
-  * 直接运行src/main/java/com/example/tomatomall/TomatoMallApplication.java
+* 请创建./backend/.env
+
+* 在.env中添加设置以上所列出的键及其值
+
+### 构建Docker-compose
+
+* 在IDEA中右侧栏的maven中点击所⽰按钮，然后运⾏图中指令来构建.jar⽂件
+
+![1.png](./assets/1.png)
+
+* 在WebStorm中打开运行/调试配置构建镜像和容器
+
+![4.png](./assets/4.png)
+
+## 每次启动或修改代码必需动作
+
+### 后端
+
+1. 在IDEA中右侧栏的maven中点击所⽰按钮，然后运⾏图中指令来构建.jar⽂件
+
+![1.png](./assets/1.png)
+
+2. 在WebStorm中点击下方Service。再执行图示操作
+
+![2.png](./assets/2.png)
+
+3. 在WebStorm中执行图示操作
+
+![3.png](./assets/3.png)
+
+### 前端
+
+仅修改依赖时需要重新构建，若只修改代码不需要以下步骤，浏览器会自动更新。
+
+1. 在WebStorm中点击下方Service。再执行图示操作
+
+![5.png](./assets/5.png)
+
+2. 同后端3
+
+## 注意事项
+
+* 勿直接修改容器内⽂件：所有代码应通过 Git 同步，避免容器销毁后丢失。
+* 谨慎操作数据库：禁⽌直接在⽣产环境容器中执⾏ DROP 或 TRUNCATE。
+* 敏感信息保护：.env ⽂件不提交⾄ Git，使⽤ .gitignore 过滤。
+* 遇到问题先自查⽂档 → 询问团队 → 联系维护⼈

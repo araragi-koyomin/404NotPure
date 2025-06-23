@@ -20,8 +20,8 @@ public class ArkChatController {
     public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, String> body) {
         String prompt = body.get("prompt");
 
-        // 💡 直接从环境变量读取 API KEY
         String apiKey = System.getenv("ARK_API_KEY");
+        String model = System.getenv("ARK_MODEL");
 
         if (apiKey == null || apiKey.isEmpty()) {
             Map<String, String> errorMap = new HashMap<>();
@@ -46,7 +46,7 @@ public class ArkChatController {
                 .build());
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
-                .model("ep-20250407172021-pvlph")
+                .model(model)
                 .messages(messages)
                 .temperature(0.8)
                 .maxTokens(1000)
