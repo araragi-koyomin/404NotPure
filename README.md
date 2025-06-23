@@ -12,6 +12,40 @@ main
 
 请先确保Docker desktop, MySQL, Natapp已启动
 
+### Docker desktop配置
+
+![img.png](assets/img.png)
+
+如图所示， 设置为
+```json
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
+  "registry-mirrors": [
+    "https://docker.registry.cyou/",
+    "https://docker-cf.registry.cyou/",
+    "https://dockercf.jsdelivr.fyi/",
+    "https://docker.jsdelivr.fyi/",
+    "https://dockertest.jsdelivr.fyi/",
+    "https://mirror.aliyuncs.com/",
+    "https://dockerproxy.com/",
+    "https://mirror.baidubce.com/",
+    "https://docker.m.daocloud.io/",
+    "https://docker.nju.edu.cn/",
+    "https://docker.mirrors.sjtug.sjtu.edu.cn/",
+    "https://docker.mirrors.ustc.edu.cn/",
+    "https://mirror.iscas.ac.cn/",
+    "https://docker.rainbond.cc/",
+    "https://jq794zz5.mirror.aliyuncs.com"
+  ]
+}
+```
+
 ### 请到对应官网购买或注册使用相应服务，得到所需键值
 
 * 阿里云
