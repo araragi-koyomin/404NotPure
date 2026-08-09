@@ -7,7 +7,9 @@ import lombok.Setter;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.Valid;
 import java.util.List;
 
 @Getter
@@ -15,17 +17,19 @@ import java.util.List;
 @NoArgsConstructor
 @Data
 public class CreateOrderDTO {
-  @NotNull
+  @NotBlank
   private String paymentMethod;
 
   @NotEmpty
-  private List<OrderItemDTO> items;
+  @Valid
+  private List<@NotNull OrderItemDTO> items;
 
   @Data
   public static class OrderItemDTO {
     @NotNull
     private Integer productId;
 
+    @NotNull
     @Min(1)
     private Integer amount;
   }

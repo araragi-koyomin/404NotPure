@@ -11,12 +11,14 @@ import com.example.tomatomall.service.OrderService;
 import com.example.tomatomall.vo.OrdersVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -46,16 +48,19 @@ public class OrderServiceImpl implements OrderService {
    * @throws TomatoException 用户不存在、商品不存在或库存不足时抛出
    */
   @Override
+  @Transactional
   public OrdersVO addOrder(Integer userId, CreateOrderDTO dto) {
+    validateOrderRequest(dto);
+    Map<Integer, Integer> quantitiesByProduct = aggregateQuantities(dto);
     Account persistedUser = userRepository.findById(userId).orElseThrow(TomatoException::userNotExist);
 
-    List<Integer> productIds = dto.getItems().stream()
-        .map(CreateOrderDTO.OrderItemDTO::getProductId)
-        .collect(Collectors.toList());
+    List<Integer> productIds = new ArrayList<>(quantitiesByProduct.keySet());
     Map<Integer, Product> productMap = productRepository.findAllById(productIds).stream()
         .collect(Collectors.toMap(Product::getId, p -> p));
-    Map<Integer, StockPile> stockPileMap = stockPileRepository.findByProductIdIn(productIds).stream()
-        .collect(Collectors.toMap(StockPile::getProductId, p -> p));
+
+    if (productMap.size() != productIds.size()) {
+      throw TomatoException.productNotExist();
+    }
 
     Orders order = new Orders();
     order.setAccount(persistedUser);
@@ -66,27 +71,28 @@ public class OrderServiceImpl implements OrderService {
     List<OrderItem> orderItems = new ArrayList<>();
     BigDecimal totalAmount = BigDecimal.ZERO;
 
-    for (CreateOrderDTO.OrderItemDTO item : dto.getItems()) {
-      Product product = productMap.get(item.getProductId());
-      if (product == null) {
-        throw TomatoException.productNotExist();
-      }
+    for (Map.Entry<Integer, Integer> entry : quantitiesByProduct.entrySet()) {
+      Integer productId = entry.getKey();
+      Integer quantity = entry.getValue();
+      Product product = productMap.get(productId);
 
-      StockPile stockPile = stockPileMap.get(item.getProductId());
-      if (stockPile == null || stockPile.getAmount() < item.getAmount()) {
+      int updatedRows = stockPileRepository.freezeStockIfAvailable(productId, quantity);
+      if (updatedRows == 0) {
+        if (stockPileRepository.countByProductId(productId) > 1) {
+          throw TomatoException.stockDataInconsistent();
+        }
         throw TomatoException.stockNotEnough();
       }
+      if (updatedRows != 1) {
+        throw TomatoException.stockDataInconsistent();
+      }
 
-      stockPile.setAmount(stockPile.getAmount() - item.getAmount());
-      stockPile.setFrozen(stockPile.getFrozen() + item.getAmount());
-      stockPileRepository.save(stockPile);
-
-      BigDecimal price = product.getPrice().multiply(BigDecimal.valueOf(item.getAmount()));
+      BigDecimal price = product.getPrice().multiply(BigDecimal.valueOf(quantity));
       totalAmount = totalAmount.add(price);
 
       OrderItem orderItem = new OrderItem();
       orderItem.setProduct(product);
-      orderItem.setQuantity(item.getAmount());
+      orderItem.setQuantity(quantity);
       orderItem.setOrder(order);
       orderItems.add(orderItem);
     }
@@ -97,5 +103,30 @@ public class OrderServiceImpl implements OrderService {
     ordersRepository.save(order);
 
     return order.toVO();
+  }
+
+  private void validateOrderRequest(CreateOrderDTO dto) {
+    if (dto == null || dto.getPaymentMethod() == null || dto.getPaymentMethod().trim().isEmpty()
+        || dto.getItems() == null || dto.getItems().isEmpty()) {
+      throw TomatoException.invalidOrderRequest();
+    }
+
+    for (CreateOrderDTO.OrderItemDTO item : dto.getItems()) {
+      if (item == null || item.getProductId() == null || item.getAmount() == null || item.getAmount() <= 0) {
+        throw TomatoException.invalidOrderRequest();
+      }
+    }
+  }
+
+  private Map<Integer, Integer> aggregateQuantities(CreateOrderDTO dto) {
+    Map<Integer, Integer> quantitiesByProduct = new TreeMap<>();
+    try {
+      for (CreateOrderDTO.OrderItemDTO item : dto.getItems()) {
+        quantitiesByProduct.merge(item.getProductId(), item.getAmount(), Math::addExact);
+      }
+    } catch (ArithmeticException exception) {
+      throw TomatoException.invalidOrderRequest();
+    }
+    return quantitiesByProduct;
   }
 }

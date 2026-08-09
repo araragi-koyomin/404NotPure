@@ -49,6 +49,14 @@ public class TomatoException extends RuntimeException{
     public static TomatoException stockNotEnough(){
         return new TomatoException("库存不足！", "404");
     }
+
+    public static TomatoException invalidOrderRequest() {
+        return new TomatoException("订单信息不完整或购买数量非法", "400");
+    }
+
+    public static TomatoException stockDataInconsistent() {
+        return new TomatoException("库存数据异常，请联系管理员", "500");
+    }
     public static TomatoException advertisementNotExist(){
         return new TomatoException("商品不存在","400");
     }
