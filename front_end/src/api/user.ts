@@ -11,7 +11,6 @@ type RegisterInfo = {
     password: string,
     avatar?: string,
     name: string,
-    role: string,
     telephone?: string,
     email?: string,
     location?: string
@@ -22,7 +21,6 @@ type UpdateInfo = {
     password?: string,
     name?: string,
     avatar?: string,
-    role?: string,
     telephone?: string,
     email?: string,
     location?: string,
@@ -31,7 +29,6 @@ type UpdateInfo = {
 // 如果有“Vue: This may be converted to an async function”警告，可以不管
 // 用户登录
 export const userLogin = async (loginInfo: LoginInfo) => {
-    console.log(loginInfo);
     const res = await axios.post(`${USER_MODULE}/login`, loginInfo);
 
     // 保存登录返回的 token（res.data.data 是你说的 JWT）
@@ -59,6 +56,5 @@ export const userInfo = async (username: string) => {
 
 // 更新用户信息
 export const userInfoUpdate = async (updateInfo: UpdateInfo) => {
-    console.log(updateInfo);
     return axios.put(`${USER_MODULE}`, updateInfo); // headers自动加上 token
 };

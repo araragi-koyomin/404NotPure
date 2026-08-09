@@ -77,6 +77,10 @@ public class TomatoException extends RuntimeException{
         return new TomatoException("文件上传失败", "400");
     }
 
+    public static TomatoException invalidImageFile() {
+        return new TomatoException("仅支持 10MB 以内的 PNG、JPEG 或 GIF 图片", "400");
+    }
+
     public static TomatoException orderNotExist() {
         return new TomatoException("订单不存在", "400");
     }

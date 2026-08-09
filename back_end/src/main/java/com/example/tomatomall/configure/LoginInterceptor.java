@@ -32,7 +32,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         logger.info("Content-Type: {}", request.getContentType());
         String uri = request.getRequestURI();
         logger.info("Request URI: {}", uri);
-        if (uri.equals("/api/accounts") || uri.equals("/api/accounts/login") || uri.equals("/api/images") ||
+        if (uri.equals("/api/accounts") || uri.equals("/api/accounts/login") ||
             uri.startsWith("/api/products") || uri.startsWith("/api/assistant/chat") ||
             uri.startsWith("/api/orders") || uri.startsWith("/api/cart")){
             return true;

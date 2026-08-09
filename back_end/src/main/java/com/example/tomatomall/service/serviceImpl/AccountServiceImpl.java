@@ -21,6 +21,8 @@ import java.util.Optional;
 @Service
 public class AccountServiceImpl implements AccountService {
 
+    private static final String DEFAULT_REGISTRATION_ROLE = "USER";
+
     private final UserRepository userRepository;
     private final TokenUtil tokenUtil;
     private final PasswordEncoder passwordEncoder;
@@ -43,8 +45,10 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public String register(Account account) {
         validateAccountUniqueness(account);
+        account.setId(null);
         account.setPassword(passwordEncoder.encode(account.getPassword()));
         account.setPoints(0);
+        account.setRole(DEFAULT_REGISTRATION_ROLE);
         userRepository.save(account);
         return "注册成功";
     }
@@ -177,6 +181,5 @@ public class AccountServiceImpl implements AccountService {
         }
         if (dto.getEmail() != null) account.setEmail(dto.getEmail());
         if (dto.getLocation() != null) account.setLocation(dto.getLocation());
-        if (dto.getRole() != null) account.setRole(dto.getRole());
     }
 }

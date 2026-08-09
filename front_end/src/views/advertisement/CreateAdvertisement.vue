@@ -54,7 +54,7 @@ async function loopUpload() {
     formData.append('file', coverFileList.value[0].raw as UploadRawFile);
 
     try {
-      const res = await uploadImage(formData);
+      const res = await uploadImage(formData, 'ADVERTISEMENT');
       const url = res.data.data?.imageUrl || res.data.data;
       if (typeof url === 'string') {
         coverURL.value = url;

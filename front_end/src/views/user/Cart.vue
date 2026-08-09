@@ -194,7 +194,7 @@ onMounted(loadCart)
                 <el-card
                     class="product-card"
                     shadow="hover"
-                    @click="(e) => handleCardClick(item, e)"
+                    @click="handleCardClick(item, $event)"
                 >
                   <el-row :gutter="10" class="product-info" wrap>
                     <el-col :span="1">
