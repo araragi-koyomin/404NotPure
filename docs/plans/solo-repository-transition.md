@@ -69,4 +69,7 @@ related:
 - 原本地 `origin` 已重命名为 `upstream`，fetch 仍指向原多人仓库，push URL 已设置为 `DISABLED`，防止误推。
 - 新 `origin` 已指向个人 Fork。
 - `master` 已从提交 `093a6c9e` 创建；原当前分支 `lab4` 已重命名为 `fix/oss-runtime-security-hardening`，工作区修改和未跟踪文件保持原样。
-- 当前尚未完成提交、推送和默认分支切换；必须先完成暂存清单和敏感信息检查。
+- 暂存清单共 68 个项目文件；`.env`、本地工具、构建产物和 `面试回答指南.md` 未进入暂存区，常见私钥/Token 格式扫描和 `git diff --cached --check` 均通过。
+- fix 主提交为 `23df7b9f`（`fix: harden runtime, account registration, and OSS uploads`）。
+- `master` 和 `fix/oss-runtime-security-hardening` 均已推送到个人 Fork，GitHub 默认分支已设置为 `master`。
+- 当前尚未创建 Pull Request，也未合并或归档。GIT-001 与本轮工作继续保留在 BACKLOG，直到 merge 后再转入冷层。

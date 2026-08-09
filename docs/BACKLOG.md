@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | OSS 与图片上传安全整改交付、个人仓库接管与 Git 分支迁移 |
-| 当前阶段 | 个人 Fork 已创建；本地 `origin` 已切换到个人 Fork、原仓库已改为禁止推送的 `upstream`；`master` 和 `fix/oss-runtime-security-hardening` 已从有效基线建立，正在审查和暂存 fix 分支改动 |
-| 已完成 | OSS 与图片安全实现、后端 52/52 测试、前端构建、Compose 配置检查、真实 OSS 生命周期检查、业务图片删除权限检查、Redis 实际本机绑定和历次审查问题修复 |
-| 尚未完成 | 审查暂存清单、提交 fix 分支、推送 `master` 和 fix 分支、设置个人 Fork 默认分支；后续 Pull Request、merge 和冷层归档不在本次自动执行范围内 |
+| 当前阶段 | 个人仓库接管和分支推送已完成：Fork 默认分支为 `master`，本轮改动已提交并推送到 `fix/oss-runtime-security-hardening`；等待项目所有者决定是否创建 Pull Request |
+| 已完成 | OSS 与图片安全实现、后端 52/52 测试、前端构建、Compose 配置检查、真实 OSS 生命周期检查、业务图片删除权限检查、Redis 实际本机绑定、个人 Fork、主分支和 fix 分支推送 |
+| 尚未完成 | Pull Request、合并到 `master` 和冷层归档；完整四容器运行仍属于长期 RUN-002/DEPLOY-001 范围 |
 | 当前阻塞或待确认 | 完整 Compose 保持 P2 blocked；原仓库 `main` 与有效 `lab4` 没有共同祖先，因此明确不合并两段历史 |
-| 下一步 | 显式暂存本轮项目文件，排除 `.env`、本地工具、构建产物和 `面试回答指南.md`；通过敏感信息与格式检查后创建 fix 提交并推送两个分支 |
+| 下一步 | 向项目所有者报告 Fork、分支、提交和验证结果；收到明确授权后再创建从 `fix/oss-runtime-security-hardening` 到 `master` 的 Pull Request，不自动合并 |
 | 本批次不处理 | 订单、库存、支付、Redis Cache-Aside、废弃的 AI assistant 和公网部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -36,7 +36,7 @@ tags:
 | TEST-001 | P0 | planned | 建立订单、库存、支付、Redis 的可信单元与集成测试基线 | Maven 测试覆盖核心分支，并在 MySQL/Redis 环境重复通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | TEST-002 | P1 | planned | 排查 Maven 测试独立进程曾出现的原生内存不足，恢复不依赖 `-DforkCount=0` 的默认测试方式 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录 Java 内存和测试进程要求；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
 | PROC-001 | P1 | in_progress | 建立固定检查步骤、保留技术选择空间的开发 SOP，并在 BACKLOG 显示当前开发批次和阶段 | SOP、文档治理规则和 AGENTS 入口一致；Frontmatter、链接和格式检查通过；合并后从 BACKLOG 移除 | [开发流程 SOP](DEVELOPMENT_SOP.md) |
-| GIT-001 | P1 | in_progress | Fork、远端和本地分支迁移已完成：`origin` 指向个人 Fork；`upstream` 保留原仓库 fetch 且 push 为 `DISABLED`；`master` 指向 `093a6c9e`；当前工作区位于 `fix/oss-runtime-security-hardening`，待提交和推送 | 两个分支推送成功；Fork 默认分支为 `master`；提交不含敏感配置、本地工具、构建产物或用户的面试文档；后续 PR merge 后归档 | [个人仓库接管与 Git 分支迁移计划](plans/solo-repository-transition.md) |
+| GIT-001 | P1 | in_progress | 个人 Fork、远端和分支迁移已完成；`master` 已推送并设为默认分支，fix 主提交 `23df7b9f` 已推送；`upstream` push 为 `DISABLED`，待 Pull Request、merge 和归档 | `origin/master` 指向 `093a6c9e`；远端 fix 分支包含本轮提交；提交不含敏感配置、本地工具、构建产物或用户面试文档；PR merge 后转入冷层 | [个人仓库接管与 Git 分支迁移计划](plans/solo-repository-transition.md) |
 | SEC-007 | P0 | in_progress | 已使用专用注册输入并在服务层清空 ID，阻止匿名注册请求通过客户端已有账户 ID 覆盖数据库账户；真实数据库红测先复现原账户被覆盖，修复后转绿，独立复核已确认目标成立，待合并 | 真实数据库预置账户后，携带其 ID 的注册请求创建了数据库分配的新账户；原账户、密码、角色和积分不变；目标测试 1/1、相关安全测试 4/4、完整后端 52/52 通过 | [OSS 评审整改计划](plans/oss-review-remediation.md) |
 | SEC-008 | P1 | in_progress | 已在不删除 Redis 数据卷的前提下重新创建旧容器，实际发布地址从所有网卡改为 `127.0.0.1:6379`；键数量重启前后均为 0，容器健康且 `PING` 通过；独立复核确认配置与证据一致，待合并 | `docker compose ps` 只显示 `127.0.0.1:6379`；Compose 配置脚本和 Redis `PING` 通过；更新过程没有删除数据卷或影响 MySQL | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-005 | P0 | in_progress | 已修复注册和资料更新角色提权，3 个红测从 3/3 失败转为 3/3 通过，相关鉴权回归 9/9、前端构建成功；待完整回归与二审 | 注册提交 ADMIN 仍创建普通用户；普通用户更新 role 不能提权；已有管理员更新资料保持管理员；服务与接口测试通过 | [OSS 评审整改计划](plans/oss-review-remediation.md) |
