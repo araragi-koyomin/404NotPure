@@ -21,16 +21,16 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 订单、库存、支付与 Redis Cache-Aside 一致性改造 |
-| 当前阶段 | `fix/order-inventory-consistency` 已按 TDD 完成条件原子更新、事务边界、统一非法请求响应、重复商品汇总和真实 MySQL 并发验证；两轮冷启动审查问题已修正，79 项全量测试通过；项目所有者已于 2026-08-10 审阅确认并授权提交、推送和创建 PR，正在执行 Git 交付流程 |
+| 当前阶段 | `fix/order-inventory-consistency` 已完成实现、测试和两轮冷启动审查；提交 `c9522f44` 已推送，并创建面向 `master` 的 [PR #2](https://github.com/araragi-koyomin/404NotPure/pull/2)，当前等待 PR 审阅与后续合并授权 |
 | 已完成 | OSS、图片上传、本机运行安全和个人仓库迁移已合并；ORD-001 已完成实现、两轮冷启动审查、审查问题修正、79 项完整回归和修正版并发重复验证 |
-| 尚未完成 | ORD-001 尚需完成提交、推送和 PR 创建；PR 合并成功后还需归档完成证据并从热层移除；PAY-001 与 CACHE-001 尚未开始 |
+| 尚未完成 | ORD-001 的 PR #2 尚未合并；合并成功后还需归档完成证据并从热层移除；PAY-001 与 CACHE-001 尚未开始 |
 | 当前阻塞或待确认 | 完整四容器 Compose 验收仍因镜像拉取和本机端口环境保持 P2 blocked；这不阻塞本机混合运行和下一批交易链路开发 |
-| 下一步 | 提交并推送 `fix/order-inventory-consistency`，创建面向 `master` 的 PR 并回写 PR 证据；本轮不执行合并 |
+| 下一步 | 审阅 PR #2；获得明确合并授权后再执行 squash merge，并同步完成冷层归档和 BACKLOG 热层移除 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
 |---|---|---|---|---|---|
-| ORD-001 | P0 | in_progress | `fix/order-inventory-consistency` 已完成实现、两轮冷启动审查和项目所有者审阅确认；已获授权，正在提交、推送并创建 PR | 定向测试 27/27、全量测试 79/79 通过；修正版真实 MySQL 并发测试额外连续 3 次通过；最终本地检查无阻塞 | [交易链路一致性计划](plans/transaction-integrity.md) |
+| ORD-001 | P0 | in_progress | 提交 `c9522f44` 已推送至 `fix/order-inventory-consistency`；[PR #2](https://github.com/araragi-koyomin/404NotPure/pull/2) 已创建并以 `master` 为目标，等待审阅与合并授权 | 定向测试 27/27、全量测试 79/79 通过；修正版真实 MySQL 并发测试额外连续 3 次通过；最终本地检查无阻塞 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | ORD-002 | P1 | planned | 为结算请求设计跨进程可靠的幂等键和数据库唯一约束；当前请求没有幂等标识，用户重复提交可能创建两个不同订单，不能用进程内 Map 作为替代 | 相同用户和相同幂等键重复或并发请求只产生一个订单并只冻结一次库存；不同幂等键保持正常下单；冲突和失败重试语义有测试 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-001 | P0 | planned | 完善支付宝回调订单号、金额、合法状态、并发重复通知和支付时间处理 | 签名失败、金额不一致、非法状态、重复通知、成功支付测试全部通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | CACHE-001 | P0 | planned | 完善商品详情 Cache-Aside、稳定 key、随机 TTL、空值保护和写后失效；统一使用带明确类型的 RedisTemplate，并关闭项目未使用的 Redis Repository 扫描 | 命中、回填、空值、更新/删除失效、广告换品旧 key 失效测试通过；编译没有原始 RedisTemplate 引起的类型警告，启动没有无意义的 Redis Repository 扫描提示 | [交易链路一致性计划](plans/transaction-integrity.md) |
