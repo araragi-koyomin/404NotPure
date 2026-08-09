@@ -14,7 +14,6 @@ tags:
   - redis
   - tdd
 related:
-  - ORD-001
   - ORD-002
   - PAY-001
   - CACHE-001
@@ -29,7 +28,9 @@ related:
 
 不引入微服务、消息队列或复杂分布式架构；已废弃的 assistant 完全排除在维护、测试和验收范围外；不虚构并发或性能数据。实现继续基于 Spring Boot 2.7.6、Java 17、JPA、MySQL 8 和 Redis 6。
 
-## ORD-001：订单与库存
+## 已完成：ORD-001 订单与库存
+
+ORD-001 已于 2026-08-10 通过 [PR #2](https://github.com/araragi-koyomin/404NotPure/pull/2) squash merge 进入 `master`。最终设计、TDD 失败与通过证据、验证命令、独立审查结果和剩余风险统一保存在[交付归档](../archive/2026-08-10-order-inventory-consistency-delivery.md)。下面保留实现约束，供仍在进行的支付、幂等和数据库迁移任务理解库存冻结语义；ORD-001 已不再是活跃工作项。
 
 2026-08-10 实现选择：采用 MySQL 带库存条件的原子更新，不使用悲观锁或 Redis 分布式锁。单个商品通过一条 `UPDATE` 同时执行 `amount -= quantity`、`frozen += quantity`，并要求更新前 `amount >= quantity`。更新语句通过同表左连接确认该商品不存在第二条库存记录，只有唯一库存行才能更新。受影响行数为 1 才表示成功；0 行时再统计该商品的库存记录数，多于 1 行按数据异常回滚，0 或 1 行按库存缺失或不足处理；大于 1 的返回值仍作为防御性数据异常处理。多商品请求先汇总重复商品并按商品 ID 排序，在同一数据库事务中逐项更新；任意一项失败时，前面的库存更新、订单和订单项都不得提交。
 
@@ -124,5 +125,5 @@ TDD 顺序：缓存命中、未命中回填、数据库不存在空值、错误�
 - `mvn compile`、`mvn test` 和 MySQL/Redis 集成测试通过；
 - `git diff --check` 通过；
 - 接口字段和前端构建兼容；
-- BACKLOG 中 ORD-001、PAY-001、CACHE-001、TEST-001 在合并到项目所有者确认的集成分支后移除；
+- BACKLOG 中 PAY-001、CACHE-001、TEST-001 在合并到项目所有者确认的集成分支后移除；
 - 实现与测试证据归档到 `docs/archive/`。
