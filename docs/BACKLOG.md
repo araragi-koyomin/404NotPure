@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | OSS 与图片上传安全整改交付、个人仓库接管与 Git 分支迁移 |
-| 当前阶段 | 个人仓库接管和分支推送已完成：Fork 默认分支为 `master`，本轮改动已提交并推送到 `fix/oss-runtime-security-hardening`；等待项目所有者决定是否创建 Pull Request |
+| 当前阶段 | 合并前完整测试和构建已通过；冷启动审查未发现 P0-P2 阻塞，但发现 DOC-003 的三处当前状态描述过期，正在修正文档后再创建 Pull Request |
 | 已完成 | OSS 与图片安全实现、后端 52/52 测试、前端构建、Compose 配置检查、真实 OSS 生命周期检查、业务图片删除权限检查、Redis 实际本机绑定、个人 Fork、主分支和 fix 分支推送 |
-| 尚未完成 | Pull Request、合并到 `master` 和冷层归档；完整四容器运行仍属于长期 RUN-002/DEPLOY-001 范围 |
+| 尚未完成 | DOC-003 修正和复核、Pull Request、合并到 `master` 和冷层归档；完整四容器运行仍属于长期 RUN-002/DEPLOY-001 范围 |
 | 当前阻塞或待确认 | 完整 Compose 保持 P2 blocked；原仓库 `main` 与有效 `lab4` 没有共同祖先，因此明确不合并两段历史 |
-| 下一步 | 向项目所有者报告 Fork、分支、提交和验证结果；收到明确授权后再创建从 `fix/oss-runtime-security-hardening` 到 `master` 的 Pull Request，不自动合并 |
+| 下一步 | 修正 BACKLOG 分支说明、AGENTS 和安全计划中的当前测试数字；检查通过后创建 PR，补齐合并时的冷层归档并执行项目所有者已授权的 squash merge |
 | 本批次不处理 | 订单、库存、支付、Redis Cache-Aside、废弃的 AI assistant 和公网部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -56,6 +56,7 @@ tags:
 | OSS-007 | P2 | in_progress | 已为匿名读取抛异常和返回非 200 两条路径补充 Red 测试；修复后仍执行删除，但因为没有删除后 404 证据，保守报告 `cleanupFailed=false, residuePossible=true`；独立复核确认语义和测试成立，待合并 | Red 阶段 6 项中 2 项因错误报告不会残留而失败；Green 后生命周期测试 6/6、完整后端 52/52 通过，消息不包含对象名且删除仍被调用 | [OSS 评审整改计划](plans/oss-review-remediation.md) |
 | DOC-001 | P3 | in_progress | 当前结果已统一为 52/52，历史 31/31、48/48、49/49、50/50 和 51/51 标明对应阶段；assistant 废弃文档状态改为 `cancelled`，待合并 | 当前验收数字与命令对应；历史数字明确标为历史；冷层状态符合 `completed/superseded/cancelled` 约定 | [OSS 评审整改计划](plans/oss-review-remediation.md) |
 | DOC-002 | P3 | in_progress | 已把 Compose 数据库端口描述改为历史缺陷已修复，并保留镜像拉取和四容器尚未完整验收的真实阻塞，待独立复核 | 温层计划明确区分历史缺陷、已修复配置和仍未完成的四容器运行验收；与 Compose 和配置测试一致 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
+| DOC-003 | P3 | in_progress | 合并前冷启动审查发现分支说明、默认测试数量、真实 OSS 探针数量，以及注册角色和图片像素检查的两处历史缺陷仍被写成当前风险；相关描述均已修正，其余已完成项将在 merge 同步归档时移出热层 | 当前分支/远端说明与 Git 实况一致；AGENTS、BACKLOG 和温层计划统一使用 52/52，并区分两个显式 `*IT`；温层不再把已修复缺陷写成当前风险；完成项从 BACKLOG 移除，文档检查和针对性冷启动复核通过 | [安全与质量计划](plans/security-and-quality.md) |
 | DB-001 | P1 | planned | 用版本化迁移替代 `ddl-auto: update`，补库存唯一约束和支付时间字段迁移 | 空库和现有库升级测试通过，可回溯 schema 版本 | [安全与质量计划](plans/security-and-quality.md) |
 | JPA-001 | P2 | planned | 明确服务层事务和关联数据读取边界，在接口测试证明兼容后关闭 JPA 的 Open Session in View | 设置 `spring.jpa.open-in-view=false`；商品、广告和订单接口没有延迟加载错误；响应生成阶段不再依赖仍然打开的数据库会话 | [安全与质量计划](plans/security-and-quality.md) |
 | API-001 | P2 | planned | 对齐前端已调用但后端缺失的订单详情和订单列表 GET 接口 | 前端订单页不再调用不存在接口，所有权测试通过 | [安全与质量计划](plans/security-and-quality.md) |
@@ -64,7 +65,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- 当前分支：`lab4`，比 `origin/lab4` 领先 1 个提交；本轮未创建开发分支。
+- 历史状态：个人仓库迁移前，工作区位于 `lab4`，比当时的 `origin/lab4` 领先 1 个提交且尚未创建开发分支。当前实际分支为 `fix/oss-runtime-security-hardening`，跟踪个人 Fork 的同名远端分支；个人 `master` 指向基线 `093a6c9e`。
 - 2026-08-10 项目所有者确认增加开发 SOP：固定需求记录、Git 边界、TDD、验证、独立审查、授权和归档等检查步骤，同时保留事务、锁、缓存和代码结构等具体技术选择空间。BACKLOG 新增“当前开发批次”，用于直接显示当前阶段、已完成、尚未完成、阻塞和下一步。
 - 2026-08-10 项目所有者授权开始最终独立复核。复核由不继承此前实现过程的新 subagent 只读执行，不读取 `.env`、不访问真实外部服务、不修改文件；主开发代理必须复核其证据，不能把 subagent 的结论直接当作合并授权。
 - 2026-08-10 最终独立复核发现并由主开发代理接受三个问题：SEC-007（公开注册仍接受客户端账户 ID，可能覆盖已有账户，阻止进入 Git 授权）、OSS-006（上传结果不确定时没有明确提示验证对象可能残留）和 DOC-002（运行计划仍把已修复的 Compose 数据库端口覆盖写成当前缺陷）。按安全影响从高到低执行 TDD 修复，修复后必须重新验证并由新的独立复核确认。
