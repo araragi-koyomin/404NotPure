@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <conversionRule conversionWord="maskedMsg"
+                    converterClass="com.example.tomatomall.configure.SensitiveLogMessageConverter"/>
+    <conversionRule conversionWord="maskedThrowable"
+                    converterClass="com.example.tomatomall.configure.SensitiveLogThrowableConverter"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %maskedMsg%n%maskedThrowable</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.apache.http.headers" level="OFF"/>
+    <logger name="org.apache.http.wire" level="OFF"/>
+    <logger name="org.apache.http" level="WARN"/>
+    <logger name="com.aliyun.oss" level="OFF"/>
+    <logger name="org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration" level="OFF"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

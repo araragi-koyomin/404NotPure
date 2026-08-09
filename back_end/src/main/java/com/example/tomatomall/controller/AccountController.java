@@ -1,6 +1,7 @@
 package com.example.tomatomall.controller;
 
 import com.example.tomatomall.dto.AccountPointsUpdateDTO;
+import com.example.tomatomall.dto.AccountRegistrationDTO;
 import com.example.tomatomall.dto.AccountUpdateDTO;
 import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Account;
@@ -43,12 +44,12 @@ public class AccountController {
 
     /**
      * 创建新账户
-     * @param accountVO 账户信息视图对象
+     * @param registration 公开注册允许提交的账户信息
      * @return 操作结果
      */
     @PostMapping()
-    public Response<String> createAccount(@RequestBody AccountVO accountVO) {
-        return Response.buildSuccess(accountService.register(accountVO.toPO()));
+    public Response<String> createAccount(@RequestBody AccountRegistrationDTO registration) {
+        return Response.buildSuccess(accountService.register(registration.toPO()));
     }
 
     /**

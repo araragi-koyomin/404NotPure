@@ -16,7 +16,6 @@ const location = ref(sessionStorage.getItem("location") || '')
 
 const newPassword = ref('');
 const newName = ref('');
-const newRole = ref('');
 const newTelephone = ref('');
 const newEmail = ref('');
 const newLocation = ref('');
@@ -27,7 +26,6 @@ const displayInfoCard = ref('0');
 const hasNewPasswordInput = computed(() => newPassword.value != '');
 const hasNewNameInput = computed(() => newName.value != '');
 const hasNewAvatarInput = computed(() => imageFileList.value.length > 0);
-const hasNewRoleInput = computed(() => newRole.value != '');
 const hasNewTelephoneInput = computed(() => newTelephone.value != '');
 const hasNewEmailInput = computed(() => newEmail.value != '');
 const hasNewLocationInput = computed(() => newLocation.value != '');
@@ -40,7 +38,7 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const emailLegal = computed(() => emailRegex.test(newEmail.value))
 
 const hasAnyFieldChanged = computed(() =>
-    hasNewNameInput.value || hasNewRoleInput.value ||
+    hasNewNameInput.value ||
     (hasNewEmailInput.value && emailLegal.value) ||
     (hasNewTelephoneInput.value && telLegal.value) ||
     hasNewLocationInput.value
@@ -91,7 +89,6 @@ async function updateUserInfo() {
     password: undefined,
     name: newName.value === '' ? undefined : newName.value,
     avatar: imgURLs.value[0] === '' ? undefined : imgURLs.value[0],
-    role: newRole.value === '' ? undefined : newRole.value,
     telephone: newTelephone.value === '' ? undefined : newTelephone.value,
     email: newEmail.value === '' ? undefined : newEmail.value,
     location: newLocation.value === '' ? undefined : newLocation.value,
@@ -107,7 +104,6 @@ async function updateUserInfo() {
       newName.value = '';
       imgURLs.value = [];
       imageFileList.value = [];
-      newRole.value = '';
       newTelephone.value = '';
       newEmail.value = '';
       newLocation.value = '';
@@ -166,7 +162,7 @@ async function loopUpload() {
   for (let image of imageFileList.value) {
     let formData = new FormData();
     formData.append('file', image.raw);
-    const res = await uploadImage(formData);
+    const res = await uploadImage(formData, 'AVATAR');
     imgURLs.value.push(res.data.data as string);
   }
 }
@@ -245,7 +241,7 @@ const beforeUpload = (file: File) => {
         </template>
 
         <el-descriptions-item label="类型">
-          <el-tag class="full-tag" @click="displayInfoCard = '6'">{{ parseRole(role) }}</el-tag>
+          <el-tag class="full-tag">{{ parseRole(role) }}</el-tag>
         </el-descriptions-item>
 
         <el-descriptions-item label="姓名">
@@ -403,28 +399,6 @@ const beforeUpload = (file: File) => {
       </el-form>
     </el-card>
 
-    <el-card v-if="displayInfoCard === '6'" class="change-card radius1" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>修改类型</span>
-          <el-button @click="handleChangeUltimate" :disabled="changeDisabled" :loading="loading">更新</el-button>
-        </div>
-      </template>
-
-      <el-form>
-        <el-form-item>
-          <label for="newRole">请选择类型</label>
-          <el-select id="newRole"
-                     v-model="newRole"
-                     placeholder="请选择"
-                     style="width: 100%;"
-          >
-            <el-option value="ADMIN" label="管理员"/>
-            <el-option value="USER" label="用户"/>
-          </el-select>
-        </el-form-item>
-      </el-form>
-    </el-card>
   </el-main>
 </template>
 

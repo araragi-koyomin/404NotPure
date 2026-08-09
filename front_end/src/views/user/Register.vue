@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { router } from '../../router'
-import { uploadImage } from '../../api/tools';
 import { userRegister } from "../../api/user.ts"
 import { runWithTimeout } from "../../utils";
-import { UploadFilled } from "@element-plus/icons-vue";
 import "../../style/base.css";
 
 const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const name = ref('')
-const role = ref('')
 const telephone = ref('')
 const email = ref('')
 const location = ref('')
@@ -19,7 +16,6 @@ const location = ref('')
 const hasUsernameInput = computed(() => username.value != '')
 const hasPasswordInput = computed(() => password.value != '')
 const hasNameInput = computed(() => name.value != '')
-const hasRoleInput = computed(() => role.value != '')
 const hasTelephoneInput = computed(() => telephone.value != '')
 const hasEmailInput = computed(() => email.value != '')
 const hasConfirmPasswordInput = computed(() => confirmPassword.value != '')
@@ -32,7 +28,7 @@ const emailLegal = computed(() => emailRegex.test(email.value))
 const isPasswordIdentical = computed(() => password.value == confirmPassword.value)
 
 const registerDisabled = computed(() => {
-  const mustFields = hasUsernameInput.value && hasPasswordInput.value && hasNameInput.value && hasRoleInput.value && isPasswordIdentical.value
+  const mustFields = hasUsernameInput.value && hasPasswordInput.value && hasNameInput.value && isPasswordIdentical.value
   // 如果电话输入了，那就必须合法才行；如果没输入就无所谓
   const phoneOk = !hasTelephoneInput.value || telLegal.value
   const emailOk = !hasEmailInput.value || emailLegal.value
@@ -43,9 +39,7 @@ async function handleRegister() {
   return userRegister({
     username: username.value,
     password: password.value,
-    avatar: imgURLs.value[0],
     name: name.value,
-    role: role.value,
     telephone: telephone.value,
     email: email.value,
     location: location.value,
@@ -59,7 +53,6 @@ async function handleRegister() {
       });
       router.push({ path: "/login" });
     } else {
-      resetImgCache();
       ElMessage({
         message: res.data.code + res.data.msg,
         type: 'error',
@@ -70,18 +63,14 @@ async function handleRegister() {
 }
 
 //file
-const imageFileList = ref([] as any);
-const imgURLs = ref([] as any);
 const loading = ref(false);
 async function handleChangeUltimate() {
   loading.value = true;
   try {
     await runWithTimeout(async () => {
-      await loopUpload();
       await handleRegister(); // 注意：handleRegister 也要改成 async 返回 Promise
     }, 10000); // 设置超时 10 秒
   } catch (err) {
-    resetImgCache();
     ElMessage({
       message: "创建账户失败：请求超时，请重试",
       type: 'error',
@@ -91,41 +80,16 @@ async function handleChangeUltimate() {
     loading.value = false;
   }
 }
-async function loopUpload() {
-  for (let image of imageFileList.value) {
-    let formData = new FormData();
-    formData.append('file', image.raw);
-    const res = await uploadImage(formData);
-    imgURLs.value.push(res.data.data as string);
-  }
-}
 // 在上传失败时，因为上传图片并保存url先于上传执行，将已经保存的url作废
-function resetImgCache() {
-  imgURLs.value = [];
-}
-function handleExceed() {
-  ElMessage.warning(`当前限制选择 1 个文件`);
-}
 // 成功时调用
 function clearCache() {
-  imgURLs.value = [];
-  imageFileList.value = [];
   username.value = '';
   password.value = '';
   confirmPassword.value = '';
   name.value = '';
-  role.value = '';
   location.value = '';
   email.value = '';
 }
-const beforeUpload = (file: File) => {
-  const isLt5M = file.size / 1024 / 1024 < 10;
-  if (!isLt5M) {
-    ElMessage.error('上传的文件不能超过 10MB 哦~');
-  }
-  return isLt5M;
-};
-
 </script>
 
 
@@ -137,28 +101,15 @@ const beforeUpload = (file: File) => {
 
         <el-form>
 
-          <el-form-item label="头像（可选）" label-position="top">
-            <el-upload
-                v-model:file-list="imageFileList"
-                :limit="1"
-                :on-exceed="handleExceed"
-                class="upload-demo input"
-                list-type="picture"
-                :auto-upload="false"
-                drag
-                :before-upload="beforeUpload"
-            >
-              <el-icon class="el-icon--upload">
-                <upload-filled/>
-              </el-icon>
-              <div class="el-upload__text">
-                将头像文件拖到此处或单击此处上传。仅允许上传一份文件。
-              </div>
-            </el-upload>
-          </el-form-item>
+          <el-alert
+              title="注册成功并登录后，可在个人主页设置头像"
+              type="info"
+              :closable="false"
+              show-icon
+          />
 
           <el-row>
-            <el-col :span="12">
+            <el-col :span="24">
               <el-form-item>
                 <label for="username">昵称</label>
                 <el-input id="username"
@@ -167,21 +118,6 @@ const beforeUpload = (file: File) => {
               </el-form-item>
             </el-col>
 
-            <el-col :span="1"></el-col>
-
-            <el-col :span="11">
-              <el-form-item>
-                <label for="role">身份</label>
-                <el-select id="role"
-                           v-model="role"
-                           placeholder="请选择"
-                           style="width: 100%;"
-                >
-                  <el-option value="ADMIN" label="管理员"/>
-                  <el-option value="USER" label="用户"/>
-                </el-select>
-              </el-form-item>
-            </el-col>
           </el-row>
 
           <el-row>

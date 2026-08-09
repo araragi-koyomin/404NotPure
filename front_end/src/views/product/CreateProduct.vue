@@ -140,7 +140,7 @@ async function loopUpload() {
     const formData = new FormData();
     formData.append('file', image.raw as UploadRawFile);
 
-    const res = await uploadImage(formData);
+    const res = await uploadImage(formData, 'PRODUCT');
     const url = res.data.data?.imageUrl || res.data.data; // ✅ 同时兼容 string / 对象
     if (typeof url === 'string') {
       imgURLs.value.push(url);
@@ -153,7 +153,7 @@ async function loopUpload() {
     const formData = new FormData();
     formData.append('file', coverFileList.value[0].raw as UploadRawFile);
 
-    const res = await uploadImage(formData);
+    const res = await uploadImage(formData, 'PRODUCT');
     const url = res.data.data?.imageUrl || res.data.data;
     if (typeof url === 'string') {
       coverURL.value = url;

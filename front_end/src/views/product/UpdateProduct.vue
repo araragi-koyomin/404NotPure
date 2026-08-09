@@ -183,7 +183,7 @@ async function loopUpload() {
     if (image.raw) {
       const formData = new FormData();
       formData.append('file', image.raw as UploadRawFile);
-      const res = await uploadImage(formData);
+      const res = await uploadImage(formData, 'PRODUCT');
       const url = res.data.data?.imageUrl || res.data.data;
       if (typeof url === 'string') {
         imgURLs.value.push(url);
@@ -203,7 +203,7 @@ async function loopUpload() {
     if (coverFileList.value[0].raw) {
       const formData = new FormData();
       formData.append('file', coverFileList.value[0].raw as UploadRawFile);
-      const res = await uploadImage(formData);
+      const res = await uploadImage(formData, 'PRODUCT');
       const url = res.data.data?.imageUrl || res.data.data;
       if (typeof url === 'string') {
         coverURL.value = url;
