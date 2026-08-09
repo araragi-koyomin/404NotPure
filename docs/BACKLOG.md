@@ -21,19 +21,20 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 订单、库存、支付与 Redis Cache-Aside 一致性改造 |
-| 当前阶段 | OSS、图片上传、本机运行安全和个人仓库迁移已通过 PR #1 的合并前检查；本轮完成证据已写入冷层，等待 squash merge 后开始交易链路审计 |
-| 已完成 | PR #1 可合并；后端 52/52 默认测试、前端构建、Compose 配置检查、Redis 实际本机绑定和多轮冷启动审查均通过；两项历史真实 OSS 检查各 1/1 通过且不计入默认 52 项 |
-| 尚未完成 | ORD-001、PAY-001、CACHE-001、TEST-001 是下一批 P0；其余活跃风险和长期工作见下表 |
+| 当前阶段 | `fix/order-inventory-consistency` 已按 TDD 完成条件原子更新、事务边界、统一非法请求响应、重复商品汇总和真实 MySQL 并发验证；两轮冷启动审查问题已修正，79 项全量测试通过；项目所有者已于 2026-08-10 审阅确认并授权提交、推送和创建 PR，正在执行 Git 交付流程 |
+| 已完成 | OSS、图片上传、本机运行安全和个人仓库迁移已合并；ORD-001 已完成实现、两轮冷启动审查、审查问题修正、79 项完整回归和修正版并发重复验证 |
+| 尚未完成 | ORD-001 尚需完成提交、推送和 PR 创建；PR 合并成功后还需归档完成证据并从热层移除；PAY-001 与 CACHE-001 尚未开始 |
 | 当前阻塞或待确认 | 完整四容器 Compose 验收仍因镜像拉取和本机端口环境保持 P2 blocked；这不阻塞本机混合运行和下一批交易链路开发 |
-| 下一步 | squash merge PR #1；随后从更新后的 `master` 创建新的交易链路开发分支，先审计现状并按照 Red → Green → Refactor 补真实 MySQL/Redis 测试 |
+| 下一步 | 提交并推送 `fix/order-inventory-consistency`，创建面向 `master` 的 PR 并回写 PR 证据；本轮不执行合并 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
 |---|---|---|---|---|---|
-| ORD-001 | P0 | planned | 建立下单事务边界、正数校验和并发库存控制，确保失败全量回滚且不超卖 | 正常、库存不足、非法数量、事务回滚、真实数据库并发测试全部通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
+| ORD-001 | P0 | in_progress | `fix/order-inventory-consistency` 已完成实现、两轮冷启动审查和项目所有者审阅确认；已获授权，正在提交、推送并创建 PR | 定向测试 27/27、全量测试 79/79 通过；修正版真实 MySQL 并发测试额外连续 3 次通过；最终本地检查无阻塞 | [交易链路一致性计划](plans/transaction-integrity.md) |
+| ORD-002 | P1 | planned | 为结算请求设计跨进程可靠的幂等键和数据库唯一约束；当前请求没有幂等标识，用户重复提交可能创建两个不同订单，不能用进程内 Map 作为替代 | 相同用户和相同幂等键重复或并发请求只产生一个订单并只冻结一次库存；不同幂等键保持正常下单；冲突和失败重试语义有测试 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-001 | P0 | planned | 完善支付宝回调订单号、金额、合法状态、并发重复通知和支付时间处理 | 签名失败、金额不一致、非法状态、重复通知、成功支付测试全部通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | CACHE-001 | P0 | planned | 完善商品详情 Cache-Aside、稳定 key、随机 TTL、空值保护和写后失效；统一使用带明确类型的 RedisTemplate，并关闭项目未使用的 Redis Repository 扫描 | 命中、回填、空值、更新/删除失效、广告换品旧 key 失效测试通过；编译没有原始 RedisTemplate 引起的类型警告，启动没有无意义的 Redis Repository 扫描提示 | [交易链路一致性计划](plans/transaction-integrity.md) |
-| TEST-001 | P0 | planned | 建立订单、库存、支付、Redis 的可信单元与集成测试基线 | Maven 测试覆盖核心分支，并在 MySQL/Redis 环境重复通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
+| TEST-001 | P0 | in_progress | 本轮先建立订单与库存的可信单元和真实 MySQL 集成测试；支付与 Redis 测试仍留在后续工作 | ORD-001 的业务分支、事务回滚和并发库存测试可重复通过；后续支付与 Redis 测试补齐后才能整体完成 TEST-001 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | TEST-002 | P1 | planned | 排查 Maven 测试独立进程曾出现的原生内存不足，恢复不依赖 `-DforkCount=0` 的默认测试方式 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录 Java 内存和测试进程要求；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
 | RUN-002 | P2 | blocked | Compose 端口配置已修复，但镜像拉取和完整四容器运行尚未完成一次验收；本机/面试阶段继续使用已验证的混合运行方式 | 容器后端使用 `db:3306`，本机后端使用 `127.0.0.1:3307`，四服务健康且 5173 代理成功 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-001 | P1 | planned | 继续收敛 Security、拦截器和控制器鉴权边界，补购物车与订单资源所有权，并统一 Cookie 与请求头认证来源 | 未登录、普通用户、管理员、跨用户购物车和订单访问测试通过，浏览器与 API 客户端使用统一认证规则 | [安全与质量计划](plans/security-and-quality.md) |
@@ -46,7 +47,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 的源分支为 `fix/oss-runtime-security-hardening`，目标分支为个人 Fork 的 `master`；GitHub 当前报告可合并且没有配置远端自动检查，合并依据为本地可重复验证和冷启动独立审查。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；当前开发分支为 `fix/order-inventory-consistency`，从该提交创建。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 的阻塞仅表示完整 Compose 没有完成四容器验收；Java 17 后端、本机 MySQL/Redis、5173 前端代理和主要接口已经在混合运行方式中验证。

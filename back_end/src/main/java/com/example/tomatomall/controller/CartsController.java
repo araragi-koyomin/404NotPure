@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 
 /**
  * 购物车管理控制器
@@ -95,7 +96,7 @@ public class CartsController {
      * @throws TomatoException 未登录时抛出
      */
     @PostMapping("/checkout")
-    public Response<OrdersVO> createOrder(HttpServletRequest request, @RequestBody CreateOrderDTO dto) {
+    public Response<OrdersVO> createOrder(HttpServletRequest request, @Valid @RequestBody CreateOrderDTO dto) {
         int userId = TokenUtil.getUserIdFromRequest(request);
         OrdersVO ordersVO = orderService.addOrder(userId, dto);
         return Response.buildSuccess(ordersVO);
