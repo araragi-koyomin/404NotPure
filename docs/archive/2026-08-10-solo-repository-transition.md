@@ -1,10 +1,11 @@
 ---
 title: 个人仓库接管与 Git 分支迁移计划
 type: plan
-layer: warm
-status: active
+layer: cold
+status: completed
 created: 2026-08-10
 updated: 2026-08-10
+archived_at: 2026-08-10
 owners:
   - araragi-koyomin
 tags:
@@ -72,4 +73,4 @@ related:
 - 暂存清单共 68 个项目文件；`.env`、本地工具、构建产物和 `面试回答指南.md` 未进入暂存区，常见私钥/Token 格式扫描和 `git diff --cached --check` 均通过。
 - fix 主提交为 `23df7b9f`（`fix: harden runtime, account registration, and OSS uploads`）。
 - `master` 和 `fix/oss-runtime-security-hardening` 均已推送到个人 Fork，GitHub 默认分支已设置为 `master`。
-- 当前尚未创建 Pull Request，也未合并或归档。GIT-001 与本轮工作继续保留在 BACKLOG，直到 merge 后再转入冷层。
+- Pull Request #1 已从 `fix/oss-runtime-security-hardening` 创建到 `master`；本文件将随该 PR 按项目所有者授权执行的 squash merge 进入冷层。只有合并成功后，GIT-001 才在 `master` 的 BACKLOG 中正式移除。

@@ -1,10 +1,11 @@
 ---
 title: OSS 第一轮评审整改计划
 type: plan
-layer: warm
-status: active
+layer: cold
+status: completed
 created: 2026-08-09
 updated: 2026-08-10
+archived_at: 2026-08-10
 owners:
   - maintainers
 tags:

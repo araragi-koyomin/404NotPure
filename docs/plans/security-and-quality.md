@@ -17,9 +17,6 @@ tags:
   - tdd
 related:
   - SEC-001
-  - SEC-002
-  - SEC-003
-  - SEC-004
   - TEST-002
   - DB-001
   - JPA-001
@@ -97,13 +94,13 @@ Open Session in View 是 Spring Boot 默认开启的一种 JPA 行为：HTTP 请
 
 本地处置进展：新增 `OssProbeLoggingTest`，修复前准确失败为 headers/wire 有效级别 DEBUG，并捕获到仅用于测试的伪 Authorization/token；新增 `src/test/resources/logback-test.xml`，在 Spring 启动之前即关闭两个敏感 logger，并将其余 Apache HTTP 与 OSS logger 限制为 WARN。修复后原生 Surefire 与 Spring 配置测试 2/2 通过；使用不可用 OSS 占位配置的默认完整测试 30/30 通过。持有旧凭据的 8080 后端进程已经停止。
 
-项目所有者已于 2026-08-09 确认停用旧 AccessKey、创建新 Key 并更新忽略的本地配置。新凭据显式生命周期探针 1/1 通过，输出未出现 Authorization、签名、AccessKey、Endpoint、Bucket 或对象名，验证对象在 `finally` 清理后不可读且无残留。新构建后端在 8080 启动后，直连和 5173 代理商品接口均为 HTTP 200，启动日志未发现敏感标记。SEC-002 已解除阻塞并进入待评审/待合并；不得因本次通过而降低后续日志配置或把真实凭据写入测试 fixture。
+项目所有者已于 2026-08-09 确认停用旧 AccessKey、创建新 Key 并更新忽略的本地配置。新凭据显式生命周期探针 1/1 通过，输出未出现 Authorization、签名、AccessKey、Endpoint、Bucket 或对象名，验证对象在 `finally` 清理后不可读且无残留。新构建后端在 8080 启动后，直连和 5173 代理商品接口均为 HTTP 200，启动日志未发现敏感标记。SEC-002 的本批次目标已经完成并转入冷层；不得因本次通过而降低后续日志配置或把真实凭据写入测试 fixture。
 
 ## SEC-004：测试日志中的临时开发口令
 
 默认 Spring Boot 测试上下文会自动生成开发安全口令并以 WARN 写入构建日志。该值不是 `.env`、JWT、OSS 或支付配置，也只对当前临时上下文有效，但凭据类信息仍不应出现在 CI/会话输出。
 
-2026-08-09 Red 阶段在不启动 Spring 的原生日志测试中模拟同一 logger，确认其有效级别继承为 INFO 且占位消息会进入 appender；Green 阶段仅在 `logback-test.xml` 将 `UserDetailsServiceAutoConfiguration` logger 设为 OFF。Green 后目标日志测试 2/2、默认完整测试 31/31 通过，完整输出不再出现生成口令提示。该设置只影响测试，不用于掩盖生产环境缺失的认证配置；生产认证边界仍由 SEC-001 跟踪。SEC-004 现处于待评审/待合并，merge 后按文档生命周期归档。
+2026-08-09 Red 阶段在不启动 Spring 的原生日志测试中模拟同一 logger，确认其有效级别继承为 INFO 且占位消息会进入 appender；Green 阶段仅在 `logback-test.xml` 将 `UserDetailsServiceAutoConfiguration` logger 设为 OFF。Green 后目标日志测试 2/2、默认完整测试 31/31 通过，完整输出不再出现生成口令提示。该设置只影响测试，不用于掩盖生产环境缺失的认证配置；生产认证边界仍由 SEC-001 跟踪。SEC-004 的本批次目标已经完成并转入冷层。
 
 ## SEC-003：匿名图片上传
 
