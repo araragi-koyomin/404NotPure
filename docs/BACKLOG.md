@@ -20,17 +20,16 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | DOC-005 文档一致性修正；完成后进入 CACHE-001 商品详情 Cache-Aside 与 TEST-001 真实 Redis 行为测试 |
-| 当前阶段 | 已从 `master@7501a2e1` 创建 `codex/docs-doc-005-consistency` 文档分支；正在修正 SEC-001 合并后仍残留的历史描述、Redis 广告热门商品预热措辞和推荐任务顺序，并建立 DATA-001 本机/面试演示数据计划 |
-| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档，以及 SEC-011 前端敏感日志保护和 SEC-001 认证与资源所有权均已合并并进入冷层交付记录 |
-| 尚未完成 | DOC-005 需要完成文档修正、Frontmatter/内部链接/格式检查和独立复核；CACHE-001/TEST-001 需要补齐商品详情缓存命中、未命中回填、空值保护、随机 TTL、商品写后失效、广告换品旧 key 处理和真实 Redis 证据；DATA-001 需要提供不会清空数据库的可重复演示数据脚本；其余活跃项继续按下表跟踪 |
-| 当前阻塞或待确认 | DOC-005 没有外部阻塞且已获得提交、推送、PR、合并和归档授权；CACHE-001/TEST-001 已确认保留广告驱动的热门商品预热，缓存键可泛化为商品详情职责，测试自行创建并精确清理 MySQL/Redis 数据且禁止 `FLUSHDB`；PAY-003 仍缺支付宝服务器可访问的 `notify_url`；RUN-002 仍缺数据卷重启、日志配置回显和基础镜像稳定拉取证据 |
-| 下一步 | 完成并交付 DOC-005；随后为 CACHE-001/TEST-001 创建独立开发分支，按 Red → Green → Refactor 完成真实 Redis 行为测试；缓存交付后再独立实施 DATA-001 |
+| 主开发批次 | CACHE-001 商品详情 Cache-Aside 与 TEST-001 真实 Redis 行为测试 |
+| 当前阶段 | DOC-005 已通过 [PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) squash merge 到个人 Fork 的 `master`，合并提交为 `1170d4b2`；文档事实、Redis 广告热门商品预热措辞、当前任务顺序和 DATA-001 计划已经统一，完成证据进入冷层；CACHE-001/TEST-001 尚未创建代码开发分支 |
+| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001，以及 DOC-005 文档一致性修正均已合并并进入冷层交付记录 |
+| 尚未完成 | CACHE-001/TEST-001 需要补齐商品详情缓存命中、未命中回填、空值保护、随机 TTL、商品写后失效、广告换品旧 key 处理和真实 Redis 证据；DATA-001 需要提供不会清空数据库的可重复演示数据脚本；其余活跃项继续按下表跟踪 |
+| 当前阻塞或待确认 | CACHE-001/TEST-001 没有外部服务阻塞：已经确认保留广告驱动的热门商品预热，缓存职责可泛化为通用商品详情，测试自行创建并精确清理 MySQL/Redis 数据且禁止 `FLUSHDB`；真实 Redis/MySQL 运行依赖开始开发后按本机环境核对；PAY-003 仍缺支付宝服务器可访问的 `notify_url`；RUN-002 仍缺数据卷重启、日志配置回显和基础镜像稳定拉取证据 |
+| 下一步 | 为 CACHE-001/TEST-001 创建独立代码开发分支，先写能够复现未命中不回填、写后不失效、错误类型和 Redis 故障等缺陷的失败测试，再实现修复和真实 Redis 验证；缓存交付后独立实施 DATA-001 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
 |---|---|---|---|---|---|
-| DOC-005 | P0 | in_progress | 修正 SEC-001/SEC-011 合并后仍把已解决问题写成当前缺陷的文档，并准确说明广告驱动的热门商品详情预热与通用商品详情 Cache-Aside 的关系；同步当前任务顺序和 DATA-001 范围 | AGENTS、温层计划、简历/面试事实文档和 BACKLOG 结论一致；Frontmatter、内部链接、行尾空白和 `git diff --check` 通过；独立复核无阻断问题 | [安全与质量计划](plans/security-and-quality.md) |
 | ORD-002 | P1 | planned | 为结算请求设计跨进程可靠的幂等键和数据库唯一约束；当前请求没有幂等标识，用户重复提交可能创建两个不同订单，不能用进程内 Map 作为替代 | 相同用户和相同幂等键重复或并发请求只产生一个订单并只冻结一次库存；不同幂等键保持正常下单；冲突和失败重试语义有测试 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | ORD-003 | P1 | planned | 增加待支付订单取消和超时关闭规则，安全地把冻结库存恢复为可用库存；当前只有 `PENDING -> PAID`，长期未支付订单会一直占用冻结库存 | 明确 `PENDING -> CANCELLED/CLOSED` 的来源、权限、超时依据和库存动作；支付与取消并发时只有一个方向成功；重复取消不重复恢复库存；真实 MySQL 事务和并发测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-002 | P2 | planned | 修复支付宝同步返回页仅凭浏览器参数显示支付成功并清理购物车的问题，同时统一支付表单接口的失败 `Response`；页面必须以服务端订单状态为准 | 伪造或提前到达的同步返回不会显示成功或清理购物车；订单不存在、非法状态等失败保持 `code/msg/data`；前后端接口测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
@@ -54,7 +53,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`。当前 DOC-005 分支为 `codex/docs-doc-005-consistency`，CACHE-001/TEST-001 尚未创建代码开发分支。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`。当前位于个人 Fork 的 `master`，CACHE-001/TEST-001 尚未创建代码开发分支。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。
