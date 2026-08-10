@@ -106,7 +106,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 
 - MySQL：应用数据库名、主机、端口、用户和密码由 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USER`、`DB_PASSWORD` 提供。代码按 MySQL 8 运行，结构先由 Flyway 迁移、再由 Hibernate 验证；本机后端连接 Compose 数据库时端口为 3307。`FLYWAY_BASELINE_ON_MIGRATE` 默认必须为 `false`，只能在人工确认旧库与 V1 一致后临时设为 `true`，完成基线后立即恢复关闭。
 - Redis：由 `REDIS_HOST`、`REDIS_PORT` 提供，默认 Redis 端口为 6379。Compose 内后端使用 `redis:6379`，宿主机后端使用 `127.0.0.1:6379`；当前 Redis 没有密码，因此宿主机端口必须只绑定本机回环地址。`RedisConfig` 使用字符串 key 和 `GenericJackson2JsonRedisSerializer` 序列化对象。
-- 支付宝：需要 `ALIPAY_APP_ID`、`ALIPAY_SELLER_ID`、`ALIPAY_APP_PRIVATE_KEY`、`ALIPAY_ALIPAY_PUBLIC_KEY`、`ALIPAY_NOTIFY_URL`、`ALIPAY_SERVER_URL`、`ALIPAY_RETURN_URL`、`FRONTEND_URL`。签名算法配置为 RSA2，字符集为 UTF-8；回调验签后还必须核对应用 ID 和收款方 PID。本地异步通知通常还需要可公开访问的回调地址。
+- 支付宝：需要 `ALIPAY_APP_ID`、`ALIPAY_SELLER_ID`、`ALIPAY_APP_PRIVATE_KEY`、`ALIPAY_ALIPAY_PUBLIC_KEY`、`ALIPAY_NOTIFY_URL`、`ALIPAY_SERVER_URL`、`ALIPAY_RETURN_URL`、`FRONTEND_URL`。签名算法配置为 RSA2，字符集为 UTF-8；回调验签后还必须核对应用 ID 和收款方 PID。本地异步通知需要支付宝服务器可访问的 `notify_url`，但个人项目不要求固定公网 IP 或长期部署；PAY-003 只在 SEC-001/PAY-002 完成后使用临时 HTTPS 入口执行一次沙箱端到端验收。
 - 阿里云 OSS：需要 `ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`、`ALIYUN_OSS_BUCKET_NAME`。
 - AI assistant：已废弃，不是启动、验收、测试或维护范围，不要求配置 `ARK_API_KEY`。不得扩展、修复或为其补测试；如需物理删除接口、前端入口或 Ark 依赖，必须作为独立清理任务评估兼容影响。
 
@@ -200,6 +200,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 
 - 下单事务边界、正数校验、重复商品汇总和条件原子更新已由 ORD-001 实现并通过真实 MySQL 测试；但结算请求没有幂等键，重复提交仍可能创建不同订单，该问题由 ORD-002 跟踪。库存表尚无商品唯一约束，仍需 DB-001 通过版本化迁移补齐。
 - PAY-001 当前分支已实现验签后的订单号和金额校验、`PENDING -> PAID` 条件更新、同一交易号重复通知幂等、并发通知单次库存释放、独立支付时间和交易号唯一性；只有合并并完成最终审查后才能作为主分支能力声明。遗留 `PaymentInfo` 仍位于 `dto/` 且没有 Repository/业务接入，后续应独立清理。
+- PAY-003 是一次性沙箱外部验收，不是生产部署任务：使用临时 HTTPS `notify_url` 完成沙箱买家虚拟付款、真实异步通知和本地订单/库存闭环后立即关闭公网入口；不保存账号、订单号、交易号、签名或隧道凭据，也不把它扩展为退款、清结算或多渠道支付。
 - 订单状态在数据库和实体中仍使用字符串，支付与下单服务已通过 `OrderStatus` 枚举集中使用 `PENDING`/`PAID`，但数据库没有状态约束，也没有取消、超时解冻、退款或支付失败处理。
 - Redis 缓存职责、回填和失效策略不完整，详见上文；Redis 操作使用原始类型 `RedisTemplate`，存在未检查类型转换，应用启动还会扫描项目没有使用的 Redis Repository。这些问题统一由 CACHE-001 跟踪。
 - DB-001A 当前分支已建立 Flyway V1 完整基线和 V2 订单支付字段，并将 JPA 切换为 `ddl-auto: validate`；库存商品唯一约束和历史重复库存处理仍由 DB-001 跟踪。后续实体结构变化必须增加新迁移版本，不能修改已应用的 V1/V2。
