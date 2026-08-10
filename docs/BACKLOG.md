@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 订单、库存、支付与 Redis Cache-Aside 一致性改造 |
-| 当前阶段 | `fix/payment-callback-consistency` 已完成 DB-001A/PAY-001、SEC-009 和 SEC-010 实现及当前沙箱分层验收：RSA2 密钥格式有效，显式探针只允许官方 HTTPS 沙箱网关并得到精确的 `40004 / ACQ.TRADE_NOT_EXIST`；SDK 原始业务参数日志已按 TDD 修复，真实探针退出码为 0 且控制台为空。Maven 编译通过，当前最终代码连续两轮默认回归均为 104/104，临时迁移数据库 0 个残留；当前分支 JAR 在隔离的 18080 端口启动并通过商品接口检查 |
+| 当前阶段 | `fix/payment-callback-consistency` 已完成 DB-001A/PAY-001、SEC-009 和 SEC-010 实现及当前沙箱分层验收：RSA2 密钥格式有效，显式探针只允许官方 HTTPS 沙箱网关并得到精确的 `40004 / ACQ.TRADE_NOT_EXIST`；SDK 原始业务参数日志已按 TDD 修复，真实探针退出码为 0 且控制台为空。Maven 编译通过，当前最终代码连续两轮默认回归均为 104/104，临时迁移数据库 0 个残留；当前分支 JAR 在隔离的 18080 端口启动并通过商品接口检查。[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已创建，尚未合并 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移以及 ORD-001 订单与库存一致性已经合并；ORD-001 的实现、TDD 证据、两轮冷启动审查、79 项完整回归和修正版并发重复验证已进入冷层归档 |
-| 尚未完成 | DB-001A、PAY-001、SEC-009、SEC-010 和 TEST-002 尚需完成审查修复、提交、PR，并在合并后转入冷层；支付宝开放平台于 2026-04-29 公告沙箱环境升级，旧 APPID、商家 PID、密钥、网关和临时公网域名均不能直接假定有效；CACHE-001 尚未开始；ORD-002、ORD-003、DB-001、SEC-001、PAY-002 等风险继续保持活跃 |
+| 尚未完成 | DB-001A、PAY-001、SEC-009、SEC-010 和 TEST-002 已完成实现、审查、提交和 PR，仍需合并后转入冷层；支付宝开放平台于 2026-04-29 公告沙箱环境升级，旧 APPID、商家 PID、密钥、网关和临时公网域名均不能直接假定有效；CACHE-001 尚未开始；ORD-002、ORD-003、DB-001、SEC-001、PAY-002 等风险继续保持活跃 |
 | 当前阻塞或待确认 | 当前没有支付宝服务器可访问的 `notify_url`，所以真实沙箱异步通知端到端闭环暂未执行；`return_url` 由用户浏览器访问，只影响同步跳转检查，不能代替异步通知。RSA2 回调入口、沙箱只读签名请求和真实 MySQL 支付事务已有证据，这不阻塞 PAY-001 代码审查与合并，但交付记录必须明确该外部验证缺口。完整四容器 Compose 验收仍因镜像拉取和本机端口环境保持 P2 blocked |
-| 下一步 | 对 SEC-010 修复与最终文档进行快速复核；没有阻断问题后按明确文件清单提交、推送和创建 PR。真实异步通知留待以后建立临时 HTTPS 隧道后补验 |
+| 下一步 | 审阅 PR #3 的完整差异和远端检查；项目所有者确认后再执行 squash merge。合并后立即创建冷层交付记录，并从 BACKLOG 移除 DB-001A、PAY-001、SEC-009、SEC-010、TEST-002。真实异步通知留待以后建立临时 HTTPS 隧道后补验 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -51,7 +51,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日通过 squash merge 进入 `master`，合并提交为 `39dbd59d`。当前开发分支为 `fix/payment-callback-consistency`，从包含 ORD-001 归档提交 `fde19ba7` 的 `master` 创建，目标集成分支为 `master`。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日通过 squash merge 进入 `master`，合并提交为 `39dbd59d`。当前开发分支为 `fix/payment-callback-consistency`，从包含 ORD-001 归档提交 `fde19ba7` 的 `master` 创建；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已创建并以 `master` 为目标，当前尚未合并。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 的阻塞仅表示完整 Compose 没有完成四容器验收；Java 17 后端、本机 MySQL/Redis、5173 前端代理和主要接口已经在混合运行方式中验证。
