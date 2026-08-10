@@ -42,6 +42,7 @@
 - `docs/BACKLOG.md`：热层活跃工作索引；只保留未完成项。
 - `docs/DEVELOPMENT_SOP.md`：从需求确认、TDD、验证和独立审查到 Git 授权、合并与归档的标准开发流程。
 - `docs/plans/`：温层活跃设计、范围、TDD 清单和验收标准。
+- `docs/plans/demo-data.md`：DATA-001 本机/面试演示书籍、库存、规格、本地图片和广告的可重复导入边界；演示数据不属于默认测试夹具。
 - `docs/archive/`：冷层已完成、被替代或取消文档；归档不等于删除。
 
 ## 文档与三层记忆
@@ -165,16 +166,16 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 5. 保留 TTL 随机化，不使用永久缓存。测试不应依赖随机 TTL 的精确秒数，只断言其位于约定范围。
 6. 不能声称缓存带来具体性能提升，除非有可复现的测量结果。
 
-现状缺口：商品详情缓存未命中不会回填；商品更新/删除不会失效；广告切换商品时不会删除旧 key；没有空值缓存；缓存 key 的广告语义与商品详情读取职责耦合。
+现有 `advertisement:product:{productId}` 并非错误设计：它由广告创建/更新触发，目的是提前缓存更可能被访问的广告热门商品详情。现状缺口是这份预热缓存后来同时承担通用商品详情读取，但商品详情未命中不会回填，商品更新/删除不会失效，广告切换商品时不会处理旧 key，也没有空值缓存。CACHE-001 可以把 key 泛化为通用商品详情职责，但必须保留广告商品预热行为，并统一全部读写和失效入口。
 
 ## 认证与权限注意事项
 
-- JWT 存在名为 `token` 的 HttpOnly Cookie 中；过期时间与 Cookie 最大存活时间当前不一致。不要在日志或响应之外额外打印 token。
-- Spring Security 当前配置为所有请求 `permitAll` 且关闭 CSRF，真正鉴权主要依赖 MVC `LoginInterceptor` 和控制器中的 `TokenUtil` 调用。
-- `LoginInterceptor` 当前直接放行 `/api/products`、`/api/orders`、`/api/cart`、`/api/assistant/chat` 等前缀；部分接口随后在控制器中手工取 token，但不能假设所有放行接口都安全。
+- JWT 存在名为 `token` 的 HttpOnly Cookie 中，也兼容精确同名请求头；Cookie 与请求头身份冲突时统一拒绝。Cookie 和 JWT 使用同一可配置有效期，不要在日志或响应之外额外打印 token。
+- Spring Security 当前仍配置为所有请求 `permitAll` 且关闭 CSRF；现阶段认证主要由 MVC `LoginInterceptor` 的精确公开路由、统一 `TokenUtil` 解析，以及控制器/服务层资源所有权共同完成。不要误写成已经建立完整 Spring Security 权限平台，SEC-012 仍需单独设计 CSRF token 和兼容例外。
+- `LoginInterceptor` 已不再按 `/api/products`、`/api/orders`、`/api/cart` 等前缀整体放行；它按 HTTP 方法和精确路径判断公开接口。废弃 assistant 仅保留原有精确兼容放行，不属于维护范围。
 - 商品、库存和广告写接口调用 `validateAdminRole`；修改这些控制器时必须保留管理员校验。
-- 购物车查询、添加和结算会解析当前用户；当前购物车更新/删除只验证存在登录 token，没有校验条目所有权。支付表单接口也未校验订单所有权。这些属于已知越权风险。
-- JWT 签名密钥当前硬编码在源码中，是必须迁移到环境变量/密钥管理的技术债；不得在文档、日志或测试中复制其值。
+- 购物车查询、添加、更新、删除和结算都从已验证身份取得当前用户；更新/删除还校验数据库条目归属。支付表单只允许订单所有者为自己的 `PENDING` 订单生成，匿名、跨用户和管理员替他人支付会在支付宝 SDK 前被拒绝。
+- JWT 签名密钥已迁移到必填环境变量 `JWT_SECRET`；缺少配置时拒绝启动。不得在文档、日志或测试中复制真实值。
 
 ## 测试约定
 
@@ -186,6 +187,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - 测试不能调用真实支付宝或 OSS 服务。支付宝签名验证应封装出可替换边界，业务服务测试直接传入已验证的通知数据。废弃的 assistant 不新增维护性测试。
 - 真实 OSS 只能通过显式外部探针执行：`OssLifecycleProbeIT` 必须设置 `RUN_REAL_OSS_PROBE=true`，`OssBusinessDeletePermissionIT` 必须设置 `RUN_REAL_OSS_PERMISSION_PROBE=true`。两者的 `*IT` 命名都不进入默认 Surefire 发现范围，只能由对应脚本或 `-Dtest=...` 明确选择；生命周期探针只能使用 `_validation` 隔离前缀并在 `finally` 中清理，权限探针只能针对预先确认不存在的随机业务对象名验证拒绝结果。它们都不能作为默认单元测试运行。
 - 需要 MySQL/Redis 的测试应明确标注并使用隔离数据；若本机依赖不可用，必须报告未执行项、阻塞原因和替代验证。不要让测试读取开发者真实 `.env`。
+- CACHE-001/TEST-001 的真实 Redis 测试必须自行创建带随机标识的少量 MySQL 商品和缓存 key，只清理自己创建的数据且禁止 `FLUSHDB`；不得依赖 DATA-001 演示书籍。DATA-001 只用于本机和面试浏览器演示，默认 Maven 测试不得自动导入。
 - 完成交付前至少执行 `mvn compile`、`mvn test`、适用的 MySQL/Redis 集成测试以及仓库根目录的 `git diff --check`。前端契约发生变化时还需执行 `npm run build`。
 
 代码开发严格遵循 TDD 的 Red → Green → Refactor：先写能因目标缺陷而失败的测试并确认失败原因，再写最小实现，最后在持续绿灯下重构。禁止测试剧场：不得用只验证 Mock 调用次数的测试替代结果/状态验证，不得复制生产实现到测试，不得用无意义断言或跳过真实事务、并发、金额精度和缓存失效语义。数据库锁、条件更新、事务回滚和并发库存必须由真实 MySQL 集成测试证明；Redis TTL、序列化和失效必须由真实 Redis 集成测试证明。
@@ -206,7 +208,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - Redis 缓存职责、回填和失效策略不完整，详见上文；Redis 操作使用原始类型 `RedisTemplate`，存在未检查类型转换，应用启动还会扫描项目没有使用的 Redis Repository。这些问题统一由 CACHE-001 跟踪。
 - DB-001A 已通过 PR #3 建立 Flyway V1 完整基线和 V2 订单支付字段，并将 JPA 切换为 `ddl-auto: validate`；库存商品唯一约束和历史重复库存处理仍由 DB-001 跟踪。后续实体结构变化必须增加新迁移版本，不能修改已应用的 V1/V2。
 - JPA 当前依赖 Spring Boot 默认开启的 Open Session in View；部分实体关联为延迟加载，可能把数据库查询推迟到控制器或响应生成阶段。JPA-001 要求先用接口测试明确数据读取边界，再关闭该选项。
-- 认证授权边界分散且存在大范围放行；购物车条目、订单支付等资源所有权校验不完整；CSRF 当前关闭。
+- SEC-001 已收紧精确公开路由、认证来源、账户/购物车/支付表单资源所有权、JWT 配置和 CORS 白名单；但 Spring Security 仍使用 `permitAll`，具体边界分布在拦截器、控制器和服务层，且 CSRF 当前关闭。后续改动必须避免形成相互矛盾的双重认证实现，SEC-012 继续跟踪 CSRF。
 - 测试已覆盖 OSS 图片上传安全边界、ORD-001 下单事务与真实 MySQL 并发库存，以及 PAY-001 的真实 MySQL 迁移、通知归属、金额、状态、交易号、确定性并发重复通知和多商品回滚。支付宝沙箱只读查询探针必须显式设置 `RUN_REAL_ALIPAY_PROBE=true`，默认测试不会访问支付宝；探针只允许 HTTPS 的 `alipaydev.com` 官方沙箱网关，只接受随机订单返回 `40004 / ACQ.TRADE_NOT_EXIST`，且不能替代公网异步通知。一次性 Maven 3.9.9/Java 17 容器中默认 Surefire 独立 JVM 已连续两次完成 104 项测试，但尚未测量稳定运行所需的最低合理内存，因此 TEST-002 继续保持活跃；宿主机当前没有 Maven。Redis Cache-Aside 行为测试仍缺。
 - 前端 `order.ts` 声明了获取订单详情/列表接口，但后端当前没有对应 GET 订单接口；不要误认为这两条链路已经实现。
 - AI assistant 已废弃；现存控制器、服务、前端入口和 Ark SDK 均视为遗留代码，不投入维护，不得让其配置或故障阻塞商城主链路。
