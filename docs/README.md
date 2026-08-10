@@ -39,6 +39,8 @@ tags:
 
 `docs/DEVELOPMENT_SOP.md` 是持续生效的温层治理文档。它不会因为单个开发批次完成而归档；只有被新流程替代时，旧版本才按 `superseded` 进入冷层。
 
+跨开发批次持续生效的本机配置说明统一维护在[本机环境变量配置与启动指南](guides/local-environment.md)。变量名称或运行方式发生变化时，应在同一次变更中更新指南和 `back_end/.env.example`，不能只修改 `application.yml` 后让使用者自行猜测。
+
 ### 冷层：`docs/archive/`
 
 冷层保存已完成或被替代的文档和交付证据。归档不等于删除；归档文档应把 `layer` 改为 `cold`，把 `status` 改为 `completed`、`superseded` 或 `cancelled`，并记录 `archived_at` 和最终证据。

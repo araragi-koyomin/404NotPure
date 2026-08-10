@@ -58,6 +58,10 @@ class OssSensitiveLoggingTest {
                     Level.OFF,
                     isolatedContext.getLogger("com.aliyun.oss").getEffectiveLevel()
             );
+            assertEquals(
+                    Level.OFF,
+                    isolatedContext.getLogger("sdk.biz.err").getEffectiveLevel()
+            );
         } finally {
             isolatedContext.stop();
         }

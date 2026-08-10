@@ -5,10 +5,15 @@ spring:
     password: ${DB_PASSWORD:}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect  # ✅ 加上这行
+  flyway:
+    enabled: true
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: 1
+    validate-on-migrate: true
   main:
     allow-bean-definition-overriding: true
   servlet:
@@ -31,6 +36,7 @@ logging:
     org.apache.http.headers: OFF
     org.apache.http.wire: OFF
     com.aliyun.oss: OFF
+    sdk.biz.err: OFF
 
 aliyun:
   oss:
@@ -41,6 +47,7 @@ aliyun:
 
 alipay:
   app-id: ${ALIPAY_APP_ID}
+  seller-id: ${ALIPAY_SELLER_ID:}
   private-key: ${ALIPAY_APP_PRIVATE_KEY}
   alipay-public-key: ${ALIPAY_ALIPAY_PUBLIC_KEY}
   notify-url: ${ALIPAY_NOTIFY_URL}

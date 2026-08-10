@@ -65,7 +65,7 @@ public class OrderServiceImpl implements OrderService {
     Orders order = new Orders();
     order.setAccount(persistedUser);
     order.setPaymentMethod(dto.getPaymentMethod());
-    order.setStatus("PENDING");
+    order.setStatus(OrderStatus.PENDING.name());
     order.setCreateTime(new Timestamp(System.currentTimeMillis()));
 
     List<OrderItem> orderItems = new ArrayList<>();

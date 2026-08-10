@@ -100,4 +100,24 @@ public class TomatoException extends RuntimeException{
     public static TomatoException paymentError() {
         return new TomatoException("支付报错", "403");
     }
+
+    public static TomatoException invalidPaymentNotification() {
+        return new TomatoException("支付通知参数不完整或格式错误", "400");
+    }
+
+    public static TomatoException paymentAmountMismatch() {
+        return new TomatoException("支付金额与订单金额不一致", "400");
+    }
+
+    public static TomatoException illegalOrderStatusForPayment() {
+        return new TomatoException("订单当前状态不允许完成支付", "409");
+    }
+
+    public static TomatoException paymentTradeConflict() {
+        return new TomatoException("支付宝交易号与订单支付记录冲突", "409");
+    }
+
+    public static TomatoException frozenStockReleaseFailure() {
+        return new TomatoException("订单冻结库存无法正确释放", "500");
+    }
 }

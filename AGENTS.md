@@ -4,7 +4,7 @@
 
 本仓库是南京大学软件工程课程项目 TomatoMall（404NotPure），实现在线图书商城。活跃主链路包括账户、商品、规格与详情图、广告位、购物车、库存、订单、支付宝网页支付、评论、OSS 图片上传和 Redis 缓存。仓库仍保留简单 LLM 聊天接口，但该功能已被产品决策废弃，不属于维护范围。
 
-- 后端：Java 17、Spring Boot 2.7.6、Spring Web、Spring Data JPA、Hibernate、Spring Security、Bean Validation、MySQL Connector/J 8.0.31、Spring Data Redis、支付宝 Java SDK、阿里云 OSS SDK；构建中仍有废弃功能遗留的 Volcengine Ark SDK。
+- 后端：Java 17、Spring Boot 2.7.6、Spring Web、Spring Data JPA、Hibernate、Flyway、Spring Security、Bean Validation、MySQL Connector/J 8.0.31、Spring Data Redis、支付宝 Java SDK、阿里云 OSS SDK；构建中仍有废弃功能遗留的 Volcengine Ark SDK。
 - 前端：Vue 3、TypeScript、Vite 5、Element Plus、Axios、Vue Router、ECharts。
 - 数据与运行依赖：MySQL 8、Redis 6；`docker-compose.yml` 还可启动前端和后端容器。
 - API 响应保持 `Response<T>` 包装，字段为 `code`、`msg`、`data`；成功业务码当前为字符串 `"200"`。
@@ -31,8 +31,9 @@
   - `po/`：JPA 实体；订单实体为 `Orders`/`OrderItem`，库存实体为 `StockPile`。
   - `dto/`、`vo/`：请求 DTO、缓存 DTO 和响应 VO。
   - `configure/`、`util/`：Security、MVC 拦截器、Redis 序列化、JWT、CORS 等基础设施。
-  - `src/main/resources/application.yml`：运行配置，使用环境变量注入外部服务参数；JPA 当前为 `ddl-auto: update`，没有版本化数据库迁移。
-  - `src/test/`：包含 Spring 上下文加载测试，以及 OSS 图片鉴权、文件校验、对象命名、上传元数据、受限验证对象删除、生命周期探针和敏感网络日志配置测试；订单、库存、支付和 Redis 核心业务测试仍缺。
+  - `src/main/resources/application.yml`：运行配置，使用环境变量注入外部服务参数；Flyway 先执行版本化迁移，JPA 当前使用 `ddl-auto: validate` 检查实体与数据库结构。
+  - `.env.example`：不含真实凭据的本机配置模板；真实配置写入被 Git 忽略的 `.env`，逐项说明见 `docs/guides/local-environment.md`。
+  - `src/test/`：包含 Spring 上下文加载测试，以及 OSS 图片安全、订单与库存一致性、Flyway 迁移、支付宝回调和统一错误响应测试；Redis Cache-Aside 核心行为测试仍缺。
 - `front_end/`：Vue/Vite 工程。
   - `src/api/`：与后端接口对应的 Axios 封装；订单提交仍调用 `POST /api/cart/checkout`，支付调用 `POST /api/orders/{orderId}/pay`。
   - `src/views/`、`src/components/`：页面和公共组件。
@@ -103,13 +104,13 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 
 ## 外部依赖与配置
 
-- MySQL：应用数据库名、主机、端口、用户和密码由 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USER`、`DB_PASSWORD` 提供。代码按 MySQL 8 运行，实体结构当前由 Hibernate 自动更新；本机后端连接 Compose 数据库时端口为 3307。
+- MySQL：应用数据库名、主机、端口、用户和密码由 `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USER`、`DB_PASSWORD` 提供。代码按 MySQL 8 运行，结构先由 Flyway 迁移、再由 Hibernate 验证；本机后端连接 Compose 数据库时端口为 3307。`FLYWAY_BASELINE_ON_MIGRATE` 默认必须为 `false`，只能在人工确认旧库与 V1 一致后临时设为 `true`，完成基线后立即恢复关闭。
 - Redis：由 `REDIS_HOST`、`REDIS_PORT` 提供，默认 Redis 端口为 6379。Compose 内后端使用 `redis:6379`，宿主机后端使用 `127.0.0.1:6379`；当前 Redis 没有密码，因此宿主机端口必须只绑定本机回环地址。`RedisConfig` 使用字符串 key 和 `GenericJackson2JsonRedisSerializer` 序列化对象。
-- 支付宝：需要 `ALIPAY_APP_ID`、`ALIPAY_APP_PRIVATE_KEY`、`ALIPAY_ALIPAY_PUBLIC_KEY`、`ALIPAY_NOTIFY_URL`、`ALIPAY_SERVER_URL`、`ALIPAY_RETURN_URL`、`FRONTEND_URL`。签名算法配置为 RSA2，字符集为 UTF-8；本地异步通知通常还需要可公开访问的回调地址。
+- 支付宝：需要 `ALIPAY_APP_ID`、`ALIPAY_SELLER_ID`、`ALIPAY_APP_PRIVATE_KEY`、`ALIPAY_ALIPAY_PUBLIC_KEY`、`ALIPAY_NOTIFY_URL`、`ALIPAY_SERVER_URL`、`ALIPAY_RETURN_URL`、`FRONTEND_URL`。签名算法配置为 RSA2，字符集为 UTF-8；回调验签后还必须核对应用 ID 和收款方 PID。本地异步通知需要支付宝服务器可访问的 `notify_url`，但个人项目不要求固定公网 IP 或长期部署；PAY-003 只在 SEC-001/PAY-002 完成后使用临时 HTTPS 入口执行一次沙箱端到端验收。
 - 阿里云 OSS：需要 `ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`、`ALIYUN_OSS_BUCKET_NAME`。
 - AI assistant：已废弃，不是启动、验收、测试或维护范围，不要求配置 `ARK_API_KEY`。不得扩展、修复或为其补测试；如需物理删除接口、前端入口或 Ark 依赖，必须作为独立清理任务评估兼容影响。
 
-不得在日志、测试输出、提交说明或文档中回显上述配置值。
+配置变量的来源、格式、本机与 Compose 地址差异统一维护在 `docs/guides/local-environment.md`。新增或修改配置变量时，必须同步更新该指南和 `back_end/.env.example`。不得在日志、测试输出、提交说明或文档中回显上述配置值。
 
 ## 订单与库存领域不变量
 
@@ -142,7 +143,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - `PENDING -> PAID` 与冻结库存释放必须在同一事务中完成。
 - 对已经 `PAID` 的同一订单重复通知应幂等成功，且不能再次修改库存；其他非法源状态不得直接变为 `PAID`。
 - 当前没有取消、关闭、退款或超时解冻流程。新增状态前必须同时定义来源状态、目标状态、库存动作、幂等语义和测试，不能只增加字符串常量。
-- `Orders.createTime` 只表示创建时间，不得覆盖为支付时间。当前实体没有独立支付完成时间；若新增 `paidTime`，应保持现有 JSON 字段兼容并考虑数据库迁移。
+- `Orders.createTime` 只表示创建时间，不得覆盖为支付时间。当前实体已通过 V2 迁移增加独立 `paidTime` 和唯一 `alipayTradeNo`；支付完成时间作为向后兼容的新响应字段，支付宝交易号不在订单 VO 中公开。
 
 ## Redis Cache-Aside 约定
 
@@ -198,13 +199,14 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 ## 当前已知技术债务
 
 - 下单事务边界、正数校验、重复商品汇总和条件原子更新已由 ORD-001 实现并通过真实 MySQL 测试；但结算请求没有幂等键，重复提交仍可能创建不同订单，该问题由 ORD-002 跟踪。库存表尚无商品唯一约束，仍需 DB-001 通过版本化迁移补齐。
-- 支付回调已验证支付宝签名并对 `PAID` 做早返回，但未比较通知金额，未使用支付宝交易号，未对并发重复回调加锁，并错误覆盖订单创建时间；`PaymentInfo` 位于 `dto/` 且没有 Repository/业务接入。
-- 订单状态使用裸字符串，没有集中常量/枚举、数据库约束、取消/超时解冻流程或支付失败处理。
+- PAY-001 当前分支已实现验签后的订单号和金额校验、`PENDING -> PAID` 条件更新、同一交易号重复通知幂等、并发通知单次库存释放、独立支付时间和交易号唯一性；只有合并并完成最终审查后才能作为主分支能力声明。遗留 `PaymentInfo` 仍位于 `dto/` 且没有 Repository/业务接入，后续应独立清理。
+- PAY-003 是一次性沙箱外部验收，不是生产部署任务：使用临时 HTTPS `notify_url` 完成沙箱买家虚拟付款、真实异步通知和本地订单/库存闭环后立即关闭公网入口；不保存账号、订单号、交易号、签名或隧道凭据，也不把它扩展为退款、清结算或多渠道支付。
+- 订单状态在数据库和实体中仍使用字符串，支付与下单服务已通过 `OrderStatus` 枚举集中使用 `PENDING`/`PAID`，但数据库没有状态约束，也没有取消、超时解冻、退款或支付失败处理。
 - Redis 缓存职责、回填和失效策略不完整，详见上文；Redis 操作使用原始类型 `RedisTemplate`，存在未检查类型转换，应用启动还会扫描项目没有使用的 Redis Repository。这些问题统一由 CACHE-001 跟踪。
-- JPA 使用 `ddl-auto: update`，没有 Flyway/Liquibase 等版本化迁移；涉及新字段、索引或约束时缺少可审计迁移路径。
+- DB-001A 当前分支已建立 Flyway V1 完整基线和 V2 订单支付字段，并将 JPA 切换为 `ddl-auto: validate`；库存商品唯一约束和历史重复库存处理仍由 DB-001 跟踪。后续实体结构变化必须增加新迁移版本，不能修改已应用的 V1/V2。
 - JPA 当前依赖 Spring Boot 默认开启的 Open Session in View；部分实体关联为延迟加载，可能把数据库查询推迟到控制器或响应生成阶段。JPA-001 要求先用接口测试明确数据读取边界，再关闭该选项。
 - 认证授权边界分散且存在大范围放行；购物车条目、订单支付等资源所有权校验不完整；CSRF 当前关闭。
-- 测试已覆盖 OSS 图片上传安全边界，以及 ORD-001 的下单校验、统一错误响应、事务回滚和真实 MySQL 并发库存；支付和缓存行为测试仍缺。默认上下文测试直接依赖外部 MySQL/Redis；本机资源紧张时 Surefire 独立测试进程曾发生原生内存不足，早期曾使用 `-DforkCount=0` 完成 17 项测试，当前同样以不启动独立测试进程的方式完成 79 项测试。TEST-002 要求找出具体原因并恢复默认测试方式，不能把降低测试进程隔离作为永久方案。
+- 测试已覆盖 OSS 图片上传安全边界、ORD-001 下单事务与真实 MySQL 并发库存，以及 PAY-001 的真实 MySQL 迁移、通知归属、金额、状态、交易号、确定性并发重复通知和多商品回滚。支付宝沙箱只读查询探针必须显式设置 `RUN_REAL_ALIPAY_PROBE=true`，默认测试不会访问支付宝；探针只允许 HTTPS 的 `alipaydev.com` 官方沙箱网关，只接受随机订单返回 `40004 / ACQ.TRADE_NOT_EXIST`，且不能替代公网异步通知。一次性 Maven 3.9.9/Java 17 容器中默认 Surefire 独立 JVM 已在当前最终代码上连续两次完成 104 项测试，TEST-002 的技术标准已达到并等待随分支合并归档；宿主机当前没有 Maven。Redis Cache-Aside 行为测试仍缺。
 - 前端 `order.ts` 声明了获取订单详情/列表接口，但后端当前没有对应 GET 订单接口；不要误认为这两条链路已经实现。
 - AI assistant 已废弃；现存控制器、服务、前端入口和 Ark SDK 均视为遗留代码，不投入维护，不得让其配置或故障阻塞商城主链路。
 - 存在重复 Lombok 注解、字段注入、`Optional.get()`、实体/DTO 命名混乱和异常码语义不一致等可维护性问题；优先在改动触及范围内渐进修复，不做无关大重写。

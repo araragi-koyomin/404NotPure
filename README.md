@@ -1,29 +1,28 @@
 # 404NotPure
 南京大学23届软工Ⅱ大作业
 
-## 当前分支
-lab4
-
 ## 环境变量配置
 
-请到对应官网购买或注册使用相应服务，并配置环境变量
+项目使用 Java 17。先复制不含真实凭据的示例，再按照[本机环境变量配置与启动指南](docs/guides/local-environment.md)逐项填写：
 
-* 阿里云：请详细参考*back_end/src/main/resources/application.yml*中的配置
+```powershell
+Copy-Item back_end/.env.example back_end/.env
+```
 
-* 支付宝：请详细参考*back_end/src/main/resources/application.yml*中的配置
+不要直接修改 `application.yml` 写入密码或密钥，也不要提交 `back_end/.env`。MySQL、Redis、OSS、支付宝沙箱、Flyway 和本机/Compose 地址差异都在配置指南中说明。
 
 AI assistant 已废弃，不属于当前启动和维护范围，无需配置 `ARK_API_KEY`。
 
 ## 启动前依赖服务
 
 * mysql
-  * 数据库名称为tomato，请提前创建
-  * 用户名称和密码可自行在back_end/src/main/resources/application.yml中修改
+  * 默认数据库名称为 `Tomato`，Compose 会在首次启动时创建
+  * 用户、密码和地址通过 `back_end/.env` 配置，不写入 `application.yml`
   * 本机后端连接 Compose 数据库时设置 `DB_HOST=127.0.0.1`、`DB_PORT=3307`
 
-* natapp
-  * 启动内网穿透，并相应配置关于支付宝的环境变量
-  * 如需使用完整支付功能，请参考博客 https://blog.csdn.net/mnn12/article/details/136299334
+* 支付宝沙箱公网回调
+  * 异步通知由支付宝服务器请求，本机地址不能直接接收；需要把后端 8080 映射为公网 HTTPS 地址
+  * `ALIPAY_NOTIFY_URL`、`ALIPAY_RETURN_URL`、`ALIPAY_SELLER_ID` 和密钥来源见本机配置指南
 
 * redis：
   * 需要提前配置好Redis服务端
@@ -45,4 +44,5 @@ docker compose --env-file back_end/.env up --build
 
 * 后端
   * 安装 Java 17 与 Maven，进入后端目录，执行`mvn clean verify`
-  * 直接运行src/main/java/com/example/tomatomall/TomatoMallApplication.java
+  * 直接运行 `src/main/java/com/example/tomatomall/TomatoMallApplication.java` 时，需在 IDE 运行配置中导入 `.env` 中的变量
+  * 已有后端 JAR 时，也可在 `back_end/` 执行 `.\scripts\Start-LocalBackend.ps1`

@@ -28,4 +28,17 @@ public interface StockPileRepository extends JpaRepository<StockPile, Integer> {
       @Param("productId") int productId,
       @Param("quantity") int quantity
   );
+
+  @Modifying
+  @Query(value = "update stockpile stock_row "
+      + "left join stockpile duplicate_row "
+      + "on duplicate_row.product_id = stock_row.product_id and duplicate_row.id <> stock_row.id "
+      + "set stock_row.frozen = stock_row.frozen - :quantity "
+      + "where stock_row.product_id = :productId "
+      + "and stock_row.frozen >= :quantity and duplicate_row.id is null",
+      nativeQuery = true)
+  int releaseFrozenStockIfAvailable(
+      @Param("productId") int productId,
+      @Param("quantity") int quantity
+  );
 }
