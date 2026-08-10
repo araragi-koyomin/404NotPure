@@ -33,7 +33,7 @@
   - `configure/`、`util/`：Security、MVC 拦截器、Redis 序列化、JWT、CORS 等基础设施。
   - `src/main/resources/application.yml`：运行配置，使用环境变量注入外部服务参数；Flyway 先执行版本化迁移，JPA 当前使用 `ddl-auto: validate` 检查实体与数据库结构。
   - `.env.example`：不含真实凭据的本机配置模板；真实配置写入被 Git 忽略的 `.env`，逐项说明见 `docs/guides/local-environment.md`。
-  - `src/test/`：包含 Spring 上下文加载测试，以及 OSS 图片安全、订单与库存一致性、Flyway 迁移、支付宝回调和统一错误响应测试；Redis Cache-Aside 核心行为测试仍缺。
+  - `src/test/`：包含 Spring 上下文加载测试，以及 OSS 图片安全、订单与库存一致性、Flyway 迁移、支付宝回调、统一错误响应和真实 Redis Cache-Aside 行为测试。
 - `front_end/`：Vue/Vite 工程。
   - `src/api/`：与后端接口对应的 Axios 封装；订单提交仍调用 `POST /api/cart/checkout`，支付调用 `POST /api/orders/{orderId}/pay`。
   - `src/views/`、`src/components/`：页面和公共组件。
@@ -200,11 +200,11 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - PAY-001 已通过 PR #3 合并到 `master`：回调完成验签后的订单号和金额校验、`PENDING -> PAID` 条件更新、同一交易号重复通知幂等、并发通知单次库存释放、独立支付时间和交易号唯一性。遗留 `PaymentInfo` 仍位于 `dto/` 且没有 Repository/业务接入，后续应独立清理。
 - PAY-003 是一次性沙箱外部验收，不是生产部署任务：使用临时 HTTPS `notify_url` 完成沙箱买家虚拟付款、真实异步通知和本地订单/库存闭环后立即关闭公网入口；不保存账号、订单号、交易号、签名或隧道凭据，也不把它扩展为退款、清结算或多渠道支付。
 - 订单状态在数据库和实体中仍使用字符串，支付与下单服务已通过 `OrderStatus` 枚举集中使用 `PENDING`/`PAID`，但数据库没有状态约束，也没有取消、超时解冻、退款或支付失败处理。
-- CACHE-001 当前分支已补齐商品详情回填、短期不存在标记、随机 TTL、类型恢复、事务提交后失效、广告最新值预热、并发回填顺序和 Redis 故障回退，并改用 `RedisTemplate<String, Object>`、关闭无用 Redis Repository 扫描；冷启动审查与修复后针对性复核已经完成，合并前仍需项目所有者 Git 授权、PR 和交付归档。Redis 删除失败后旧值可能存活到原 TTL，属于当前 Cache-Aside 的剩余风险。
+- CACHE-001/TEST-001 已通过 PR #7 合并并归档：商品详情具备回填、短期不存在标记、随机 TTL、类型恢复、事务提交后失效、广告最新值预热、并发回填顺序和 Redis 故障回退，并使用 `RedisTemplate<String, Object>`、关闭无用 Redis Repository 扫描。Redis 删除失败后旧值可能存活到原 TTL；当前也没有性能压测和热点商品严格单次回填，分别由 PERF-001/CACHE-002 跟踪。
 - DB-001A 已通过 PR #3 建立 Flyway V1 完整基线和 V2 订单支付字段，并将 JPA 切换为 `ddl-auto: validate`；库存商品唯一约束和历史重复库存处理仍由 DB-001 跟踪。后续实体结构变化必须增加新迁移版本，不能修改已应用的 V1/V2。
 - JPA 当前依赖 Spring Boot 默认开启的 Open Session in View；部分实体关联为延迟加载，可能把数据库查询推迟到控制器或响应生成阶段。JPA-001 要求先用接口测试明确数据读取边界，再关闭该选项。
 - SEC-001 已收紧精确公开路由、认证来源、账户/购物车/支付表单资源所有权、JWT 配置和 CORS 白名单；但 Spring Security 仍使用 `permitAll`，具体边界分布在拦截器、控制器和服务层，且 CSRF 当前关闭。后续改动必须避免形成相互矛盾的双重认证实现，SEC-012 继续跟踪 CSRF。
-- 测试已覆盖 OSS 图片上传安全边界、ORD-001 下单事务与真实 MySQL 并发库存、PAY-001 的真实 MySQL 迁移与并发重复通知，以及 CACHE-001 的真实 Redis 序列化、TTL、回填、失效、事务回滚和带线程启动信号的并发顺序。支付宝沙箱只读查询探针必须显式设置 `RUN_REAL_ALIPAY_PROBE=true`，默认测试不会访问支付宝；探针只允许 HTTPS 的 `alipaydev.com` 官方沙箱网关，只接受随机订单返回 `40004 / ACQ.TRADE_NOT_EXIST`，且不能替代公网异步通知。当前分支在清理旧报告后的默认 Maven 回归为 28 个测试类、172/172，但尚未测量稳定运行所需的最低合理内存，因此 TEST-002 继续保持活跃；宿主机 Maven 由仓库本地工具目录提供。
+- 测试已覆盖 OSS 图片上传安全边界、ORD-001 下单事务与真实 MySQL 并发库存、PAY-001 的真实 MySQL 迁移与并发重复通知，以及 CACHE-001 的真实 Redis 序列化、TTL、回填、失效、事务回滚和带线程启动信号的并发顺序。支付宝沙箱只读查询探针必须显式设置 `RUN_REAL_ALIPAY_PROBE=true`，默认测试不会访问支付宝；探针只允许 HTTPS 的 `alipaydev.com` 官方沙箱网关，只接受随机订单返回 `40004 / ACQ.TRADE_NOT_EXIST`，且不能替代公网异步通知。PR #7 合并代码在清理旧报告后的默认 Maven 回归为 28 个测试类、172/172，但尚未测量稳定运行所需的最低合理内存，因此 TEST-002 继续保持活跃；宿主机 Maven 由仓库本地工具目录提供。
 - 前端 `order.ts` 声明了获取订单详情/列表接口，但后端当前没有对应 GET 订单接口；不要误认为这两条链路已经实现。
 - AI assistant 已废弃；现存控制器、服务、前端入口和 Ark SDK 均视为遗留代码，不投入维护，不得让其配置或故障阻塞商城主链路。
 - 存在重复 Lombok 注解、字段注入、`Optional.get()`、实体/DTO 命名混乱和异常码语义不一致等可维护性问题；优先在改动触及范围内渐进修复，不做无关大重写。
