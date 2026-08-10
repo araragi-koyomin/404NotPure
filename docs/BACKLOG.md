@@ -20,12 +20,12 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | 先处理前端敏感响应日志，再进入认证与支付展示边界收敛 |
-| 当前阶段 | `fix/auth-boundary-and-sensitive-logging` 已按 SEC-011 → SEC-001 完成实现、主开发自查、冷启动 subagent 独立安全审查、两轮针对性修复和最终复核；修复后默认后端回归 147/147、前端安全检查 5/5 和生产构建均通过，独立复核没有剩余阻断问题；提交 `c10e4d12` 已推送并创建 [PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5)，当前等待评审与合并授权 |
-| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界，以及简历/面试亮点事实文档均已合并并进入冷层交付记录；DOC-004 证据见[简历与面试亮点文档交付记录](archive/2026-08-10-resume-interview-highlights-delivery.md) |
-| 尚未完成 | SEC-011/SEC-001 已通过独立审查和普通 Chrome/Edge 人工烟雾验证，代码已提交、推送并进入 PR #5；由于 PR 尚未合并，两项仍属于活跃工作，不能提前从 BACKLOG 移除、建立冷层交付记录或写入“可直接用于简历”的完成能力；冷启动时曾出现的一次性重载体验由 FE-002 保留观察；PAY-002、PAY-003、TEST-002、CACHE-001、ORD-002、ORD-003、DB-001 等继续保持活跃 |
-| 当前阻塞或待确认 | SEC-011/SEC-001 当前没有需求、验证或代码审查阻塞；PR #5 已开放且 GitHub 判断当前可合并，但仓库没有配置自动状态检查，仍需项目所有者评审并明确授权合并；FE-002 在 Vite 依赖预热后由项目所有者确认不再出现，不阻塞本批次交付；PAY-003 当前没有支付宝服务器可访问的 `notify_url`，且应等待 SEC-001/PAY-002 后再临时开放；RUN-002 继续保持 P2 blocked |
-| 下一步 | 评审 [PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5)；获得明确合并授权并成功进入个人 Fork 的 `master` 后，建立 SEC-011/SEC-001 冷层交付记录，从 BACKLOG 移除两项，并依据合并后的实现与测试证据更新简历/面试亮点文档和下一开发批次 |
+| 主开发批次 | 准备 CACHE-001 商品详情 Cache-Aside 与 TEST-001 真实 Redis 行为测试 |
+| 当前阶段 | [PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `21463e4f`；SEC-011/SEC-001 的实现、147/147 后端回归、5/5 前端安全检查、生产构建、独立审查和普通浏览器人工烟雾证据已转入[认证授权边界与前端敏感日志交付记录](archive/2026-08-10-auth-boundary-and-sensitive-logging-delivery.md)；下一批次尚未创建开发分支或开始代码修改 |
+| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档，以及 SEC-011 前端敏感日志保护和 SEC-001 认证与资源所有权均已合并并进入冷层交付记录 |
+| 尚未完成 | CACHE-001/TEST-001 需要补齐商品详情缓存命中、未命中回填、空值保护、随机 TTL、商品写后失效、广告换品旧 key 失效和真实 Redis 证据；PAY-002、PAY-003、TEST-002、ORD-002、ORD-003、DB-001、SEC-012、SEC-013、CART-001、ACCT-001 等继续保持活跃；冷启动一次性重载体验由 FE-002 保留观察 |
+| 当前阻塞或待确认 | CACHE-001/TEST-001 当前没有外部服务阻塞，但开始前需要按 SOP 确认缓存 key 兼容策略、空值标记格式、事务提交后失效方案、开发分支和真实 Redis 隔离方式；PAY-003 当前没有支付宝服务器可访问的 `notify_url`，且应等待 PAY-002 后再临时开放；RUN-002 仍缺数据卷重启、日志配置回显和基础镜像稳定拉取的完整证据，继续保持 P2 blocked |
+| 下一步 | 只读审计 CACHE-001/TEST-001 当前 Redis 读写路径和测试基础，确认目标、非目标、兼容策略与验收证据；项目所有者确认后再创建独立开发分支并按 Red → Green → Refactor 推进 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -37,9 +37,7 @@ tags:
 | CACHE-001 | P0 | planned | 完善商品详情 Cache-Aside、稳定 key、随机 TTL、空值保护和写后失效；统一使用带明确类型的 RedisTemplate，并关闭项目未使用的 Redis Repository 扫描 | 命中、回填、空值、更新/删除失效、广告换品旧 key 失效测试通过；编译没有原始 RedisTemplate 引起的类型警告，启动没有无意义的 Redis Repository 扫描提示 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | TEST-001 | P0 | in_progress | 订单、库存和支付已经具备可信单元或真实 MySQL 集成测试；剩余工作是补齐 Redis Cache-Aside 行为测试 | ORD-001 与 PAY-001 的业务分支、事务回滚和并发测试可重复通过；Redis 命中、回填、穿透保护和失效测试补齐后才能整体完成 TEST-001 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | TEST-002 | P1 | in_progress | 默认 Surefire 独立 JVM 已在一次性 Maven 3.9.9/Java 17 容器中连续两轮完成 104/104，但当前只证明现有环境可运行，尚未测量稳定通过所需的最低合理内存，也未在项目中覆盖 Surefire 默认 fork 设置 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录经测量的最低合理内存、实际容器限制和 Surefire 设置；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
-| RUN-002 | P2 | blocked | Compose 端口配置已修复，但镜像拉取和完整四容器运行尚未完成一次验收；本机/面试阶段继续使用已验证的混合运行方式 | 容器后端使用 `db:3306`，本机后端使用 `127.0.0.1:3307`，四服务健康且 5173 代理成功 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
-| SEC-001 | P1 | in_progress | 在 `fix/auth-boundary-and-sensitive-logging` 收敛拦截器和控制器鉴权边界，补购物车条目与支付表单资源所有权，统一 Cookie 与精确 `token` 请求头；两者冲突时拒绝，管理员也不能替其他用户发起支付 | 未登录、资源所有者、其他普通用户和管理员的购物车/支付结果与数据库状态测试通过；notify 继续公开；两种单一认证来源、相同双来源和冲突双来源规则有测试；JWT 密钥配置化且 Cookie/JWT 生命周期一致 | [安全与质量计划](plans/security-and-quality.md) |
-| SEC-011 | P1 | in_progress | 在同一开发分支先处理登录与账户响应日志，并经独立审查扩展到前端完整请求/响应正文和 Axios 错误对象；保留固定事件、错误类别和 HTTP 状态等必要信息 | 旧登录页两处和其余 11 处完整正文日志均被检查准确报告；修复后全源码检查及伪数据测试 5/5、前端构建通过 | [安全与质量计划](plans/security-and-quality.md) |
+| RUN-002 | P2 | blocked | Compose 端口配置已修复，本轮四服务已经成功运行且 5173 主链路人工烟雾通过；但尚未完整验证数据卷重启行为、日志不回显配置和基础镜像稳定拉取，因此不能提前标记完成 | 容器后端使用 `db:3306`，本机后端使用 `127.0.0.1:3307`；四服务健康且 5173 代理成功；数据卷重启、日志与镜像拉取证据全部补齐 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-012 | P1 | planned | 本轮先把 CORS 从反射任意 Origin 改为明确前端来源白名单，并给认证 Cookie 增加 `SameSite=Lax`；CSRF 暂不直接开启，后续需要设计前端 CSRF token、登录/注册和支付宝 notify 精确例外 | 状态修改请求需要可信 CSRF token；前端正常调用、匿名公开接口和支付宝 notify 均有兼容测试；不能只打开开关造成商城请求全部失败 | [安全与质量计划](plans/security-and-quality.md) |
 | SEC-013 | P2 | planned | 全局异常处理目前对预期的未登录、越权和业务校验异常直接执行 `printStackTrace()`，会把完整内部调用栈写入控制台并让正常拒绝场景产生大量噪声；本轮不扩大 SEC-011 的前端敏感响应日志范围 | 预期业务拒绝只记录不含 token、Cookie、账户资料和内部堆栈的必要信息；非预期异常仍保留可诊断且经过脱敏的结构化日志，并有日志捕获测试 | [安全与质量计划](plans/security-and-quality.md) |
 | CART-001 | P1 | planned | 购物车添加和数量更新目前允许零数或负数，可能保存没有业务意义的数量；本轮 SEC-001 只处理认证与所有权，不把数量规则悄悄包装成已完成 | 添加和更新均只接受正整数；库存上限、失败后购物车不变和统一 `Response` 有接口与数据库状态测试 | [安全与质量计划](plans/security-and-quality.md) |
@@ -54,10 +52,10 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`。[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已从 `fix/auth-boundary-and-sensitive-logging` 提交到个人 Fork 的 `master`，包含提交 `c10e4d12`，当前保持开放且尚未合并；因此 SEC-011/SEC-001 继续留在热层。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`。当前位于个人 Fork 的 `master`，尚未为 CACHE-001/TEST-001 创建下一开发分支。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
-- RUN-002 的阻塞仅表示完整 Compose 没有完成四容器验收；Java 17 后端、本机 MySQL/Redis、5173 前端代理和主要接口已经在混合运行方式中验证。
+- RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。
 - 真实 OSS 权限和配置可能被人工修改。每次面试演示前应显式运行生命周期与业务图片删除权限检查；默认 Maven 测试不得访问真实 OSS。
 
 AI assistant 已由项目所有者决定废弃，因此不作为活跃工作项、运行阻塞或验收目标；决策记录见 [assistant 废弃决策](archive/2026-08-09-assistant-deprecation-decision.md)。
