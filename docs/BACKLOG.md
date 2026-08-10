@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 先处理前端敏感响应日志，再进入认证与支付展示边界收敛 |
-| 当前阶段 | `fix/auth-boundary-and-sensitive-logging` 已按 SEC-011 → SEC-001 完成实现、主开发自查、冷启动 subagent 独立安全审查、两轮针对性修复和最终复核；修复后默认后端回归 147/147、前端安全检查 5/5 和生产构建均通过，独立复核没有剩余阻断问题，正在等待项目所有者检查与 Git 授权 |
+| 当前阶段 | `fix/auth-boundary-and-sensitive-logging` 已按 SEC-011 → SEC-001 完成实现、主开发自查、冷启动 subagent 独立安全审查、两轮针对性修复和最终复核；修复后默认后端回归 147/147、前端安全检查 5/5 和生产构建均通过，独立复核没有剩余阻断问题；提交 `c10e4d12` 已推送并创建 [PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5)，当前等待评审与合并授权 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界，以及简历/面试亮点事实文档均已合并并进入冷层交付记录；DOC-004 证据见[简历与面试亮点文档交付记录](archive/2026-08-10-resume-interview-highlights-delivery.md) |
-| 尚未完成 | SEC-011/SEC-001 已通过独立审查并修复其阻断问题，普通 Chrome/Edge 人工烟雾也确认权限、日志、Cookie、退出、认证规则和当前首次点击跳转正常；但尚未经过项目所有者确认、提交、推送、Pull Request 和合并，因此继续保持活跃；冷启动时曾出现的一次性重载体验由 FE-002 保留观察；PAY-002、PAY-003、TEST-002、CACHE-001、ORD-002、ORD-003、DB-001 等继续保持活跃 |
-| 当前阻塞或待确认 | SEC-011/SEC-001 当前没有需求或验证阻塞；FE-002 在 Vite 依赖预热后由项目所有者确认不再出现，不阻塞本批次交付，但未来全新前端缓存启动时仍需留意；PAY-003 当前没有支付宝服务器可访问的 `notify_url`，且应等待 SEC-001/PAY-002 后再临时开放；RUN-002 继续保持 P2 blocked |
-| 下一步 | 向项目所有者完整报告实现、测试、独立审查处置和未验证边界；按所有者意见修改，只有得到明确授权后才暂存、提交、推送或创建 Pull Request |
+| 尚未完成 | SEC-011/SEC-001 已通过独立审查和普通 Chrome/Edge 人工烟雾验证，代码已提交、推送并进入 PR #5；由于 PR 尚未合并，两项仍属于活跃工作，不能提前从 BACKLOG 移除、建立冷层交付记录或写入“可直接用于简历”的完成能力；冷启动时曾出现的一次性重载体验由 FE-002 保留观察；PAY-002、PAY-003、TEST-002、CACHE-001、ORD-002、ORD-003、DB-001 等继续保持活跃 |
+| 当前阻塞或待确认 | SEC-011/SEC-001 当前没有需求、验证或代码审查阻塞；PR #5 已开放且 GitHub 判断当前可合并，但仓库没有配置自动状态检查，仍需项目所有者评审并明确授权合并；FE-002 在 Vite 依赖预热后由项目所有者确认不再出现，不阻塞本批次交付；PAY-003 当前没有支付宝服务器可访问的 `notify_url`，且应等待 SEC-001/PAY-002 后再临时开放；RUN-002 继续保持 P2 blocked |
+| 下一步 | 评审 [PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5)；获得明确合并授权并成功进入个人 Fork 的 `master` 后，建立 SEC-011/SEC-001 冷层交付记录，从 BACKLOG 移除两项，并依据合并后的实现与测试证据更新简历/面试亮点文档和下一开发批次 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -54,7 +54,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`。当前开发分支为从 `master@6592fe27` 创建的 `fix/auth-boundary-and-sensitive-logging`；本批次实现、自动化测试、独立审查和人工烟雾验证均已完成，尚未创建或合并 Pull Request。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`。[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已从 `fix/auth-boundary-and-sensitive-logging` 提交到个人 Fork 的 `master`，包含提交 `c10e4d12`，当前保持开放且尚未合并；因此 SEC-011/SEC-001 继续留在热层。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 的阻塞仅表示完整 Compose 没有完成四容器验收；Java 17 后端、本机 MySQL/Redis、5173 前端代理和主要接口已经在混合运行方式中验证。
