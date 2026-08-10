@@ -4,7 +4,7 @@ type: report
 layer: cold
 status: completed
 created: 2026-08-09
-updated: 2026-08-09
+updated: 2026-08-10
 archived_at: 2026-08-09
 owners:
   - maintainers
@@ -43,6 +43,10 @@ tags:
 - `GET http://127.0.0.1:5173/api/products`：HTTP 200 JSON，证明 Vite 代理联通；
 - 浏览器登录页正常渲染，无 console warning/error；
 - `git diff --check`：通过。
+
+## 2026-08-10 事实更正
+
+DOC-004 冷启动审查重新核对当前 `master` 后确认：`front_end/src/views/user/Login.vue` 仍有两处 `console.log`，分别输出完整登录响应和账户响应；登录响应数据包含 token，账户响应包含角色、电话等资料。因此上文“删除前端登录/更新对象 console 日志”不是当前代码事实，不能作为已完成能力或简历亮点。该缺陷已重新登记为 SEC-011，后续必须通过前端测试和构建验证完成修复。冷层保留原记录并追加本更正，用于说明历史结论为什么被修订。
 
 ## 未纳入本归档的活跃问题
 
