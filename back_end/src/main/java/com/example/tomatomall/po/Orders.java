@@ -29,11 +29,17 @@ public class Orders implements Serializable{
     @Column(name = "payment_method", nullable = false, length = 50)
     private String paymentMethod;
 
+    @Column(name = "alipay_trade_no", unique = true, length = 64)
+    private String alipayTradeNo;
+
     @Column(name = "status", nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'PENDING'")
     private String status;
 
     @Column(name = "create_time", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Timestamp createTime;
+
+    @Column(name = "paid_time")
+    private Timestamp paidTime;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<OrderItem>();
@@ -46,6 +52,7 @@ public class Orders implements Serializable{
         vo.setPaymentMethod(paymentMethod);
         vo.setStatus(status);
         vo.setCreateTime(createTime);
+        vo.setPaidTime(paidTime);
         return vo;
     }
 }

@@ -16,6 +16,8 @@ related:
   - OSS-003
   - RUN-002
   - DEPLOY-001
+  - PAY-001
+  - DB-001A
 ---
 
 # 运行环境、Docker 与外部依赖验证计划
@@ -30,6 +32,12 @@ related:
 - 已通过前端代理完成临时账户注册、登录、HttpOnly Cookie 和账户读取烟雾测试。
 
 已完成证据位于 [运行环境恢复归档](../archive/2026-08-09-runtime-revival.md)。
+
+## 本机环境变量统一入口
+
+本机配置模板统一为 `back_end/.env.example`，逐项填写说明统一为[本机环境变量配置与启动指南](../guides/local-environment.md)。真实值只允许保存在被 Git 忽略的 `back_end/.env` 或本机安全的进程环境中；`application.yml` 只保留环境变量引用和无秘密默认值。
+
+同一份 `.env` 以宿主机后端连接地址填写：MySQL `127.0.0.1:3307`、Redis `127.0.0.1:6379`。完整 Compose 会在 backend 容器内覆盖为 `db:3306` 和 `redis:6379`。支付宝 `FRONTEND_URL` 是后端直接拼接订单号的地址前缀，当前必须包含 `?payment_success=true&orderId=`；异步通知地址必须是支付宝服务器可以访问的公网 HTTPS 后端地址。`ARK_API_KEY` 和两个真实 OSS 探针开关都不属于长期 `.env` 配置。
 
 ## 外部凭据只读验证结果
 

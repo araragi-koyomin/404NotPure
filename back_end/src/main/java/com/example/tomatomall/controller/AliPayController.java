@@ -41,6 +41,8 @@ public class AliPayController {
   // 从配置文件中注入
   @Value("${alipay.app-id}")
   private String appId;
+  @Value("${alipay.seller-id:}")
+  private String sellerId;
   @Value("${alipay.private-key}")
   private String privateKey;
   @Value("${alipay.alipay-public-key}")
@@ -132,7 +134,7 @@ public class AliPayController {
 
     // 2. 验证支付宝签名
     try {
-      boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayPublicKey, "UTF-8", "RSA2");
+      boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayPublicKey, charset, signType);
       if (!signVerified) {
         response.getWriter().print("fail");  // 签名验证失败
         return;
@@ -143,7 +145,12 @@ public class AliPayController {
     }
 
     // 3. 处理交易成功逻辑
-    if ("TRADE_SUCCESS".equals(params.get("trade_status"))) {
+    if (!matchesNotificationRecipient(params)) {
+      response.getWriter().print("fail");
+      return;
+    }
+
+    if (isSuccessfulTradeStatus(params.get("trade_status"))) {
       String orderId = params.get("out_trade_no");  // 商户订单号
       String alipayTradeNo = params.get("trade_no");  // 支付宝交易号
       String totalAmount = params.get("total_amount");  // 交易金额
@@ -155,10 +162,24 @@ public class AliPayController {
         response.getWriter().print("fail");
         return;
       }
+    } else {
+      response.getWriter().print("fail");
+      return;
     }
 
     // 4. 返回处理成功标识
     response.getWriter().print("success");
+  }
+
+  private boolean matchesNotificationRecipient(Map<String, String> params) {
+    return appId != null && !appId.trim().isEmpty()
+        && sellerId != null && !sellerId.trim().isEmpty()
+        && appId.equals(params.get("app_id"))
+        && sellerId.equals(params.get("seller_id"));
+  }
+
+  private boolean isSuccessfulTradeStatus(String tradeStatus) {
+    return "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
   }
 
   /**

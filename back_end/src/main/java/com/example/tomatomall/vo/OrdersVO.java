@@ -14,4 +14,5 @@ public class OrdersVO implements Serializable {
     private String paymentMethod;
     private String status;
     private Timestamp createTime;
+    private Timestamp paidTime;
 }

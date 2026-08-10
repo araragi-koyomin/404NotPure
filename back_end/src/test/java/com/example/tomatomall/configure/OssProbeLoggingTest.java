@@ -59,4 +59,19 @@ class OssProbeLoggingTest {
         assertEquals(Level.OFF, aliyunLogger.getEffectiveLevel());
         assertTrue(appender.list.isEmpty());
     }
+
+    @Test
+    void testRuntimeSuppressesAlipaySdkBusinessParameterLogger() {
+        Logger alipayBusinessErrorLogger = (Logger) LoggerFactory.getLogger("sdk.biz.err");
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        alipayBusinessErrorLogger.addAppender(appender);
+
+        alipayBusinessErrorLogger.error(
+                "app_id=test-only-app&out_trade_no=test-only-order&sign=test-only-signature"
+        );
+
+        assertEquals(Level.OFF, alipayBusinessErrorLogger.getEffectiveLevel());
+        assertTrue(appender.list.isEmpty());
+    }
 }
