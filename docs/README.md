@@ -41,6 +41,8 @@ tags:
 
 跨开发批次持续生效的本机配置说明统一维护在[本机环境变量配置与启动指南](guides/local-environment.md)。变量名称或运行方式发生变化时，应在同一次变更中更新指南和 `back_end/.env.example`，不能只修改 `application.yml` 后让使用者自行猜测。
 
+[简历与面试亮点总结](resume-interview-highlights.md)也是持续维护的温层文档。只有已经合并到个人 `master`、具有实现和测试证据的能力，才能进入“可直接写入简历”区域；仍在 BACKLOG 的计划项只能记录为待完成边界。完成新的 FIX/FEAT 并归档时，应同步判断是否需要更新该文档，避免简历描述落后于代码或把计划误写成现状。
+
 ### 冷层：`docs/archive/`
 
 冷层保存已完成或被替代的文档和交付证据。归档不等于删除；归档文档应把 `layer` 改为 `cold`，把 `status` 改为 `completed`、`superseded` 或 `cancelled`，并记录 `archived_at` 和最终证据。
