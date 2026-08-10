@@ -11,11 +11,11 @@ import com.example.tomatomall.repository.ProductRepository;
 import com.example.tomatomall.repository.SpecificationRepository;
 import com.example.tomatomall.repository.StockPileRepository;
 import com.example.tomatomall.service.ProductService;
+import com.example.tomatomall.service.cache.ProductDetailCache;
 import com.example.tomatomall.vo.ProductContentImageVO;
 import com.example.tomatomall.vo.ProductVO;
 import com.example.tomatomall.vo.SpecificationVO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +42,7 @@ public class ProductServiceImpl implements ProductService {
     private StockPileRepository stockPileRepository;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private ProductDetailCache productDetailCache;
 
     /**
      * 创建商品
@@ -94,6 +94,8 @@ public class ProductServiceImpl implements ProductService {
             .build();
         stockPileRepository.save(stockPile);
 
+        productDetailCache.evictAfterCommit(savedProduct.getId());
+
         return savedProduct;
     }
 
@@ -114,23 +116,24 @@ public class ProductServiceImpl implements ProductService {
      * @throws TomatoException 商品不存在时抛出
      */
     @Override
+    @Transactional
     public ProductVO getProductById(int id) {
-        String redisKey = "advertisement:product:" + id;
-        ProductDTO productDTO = (ProductDTO) redisTemplate.opsForValue().get(redisKey);
-        if (productDTO != null) {
-            // 将 ProductDTO 转换为 ProductVO
-            return convertToVO(productDTO);
+        ProductDetailCache.LookupResult lookupResult = productDetailCache.lookup(id);
+        if (lookupResult.getProduct() != null) {
+            return convertToVO(lookupResult.getProduct());
         }
-        Product product = productRepository.findById(id).get();
+        if (lookupResult.isMissing()) {
+            throw TomatoException.productNotExist();
+        }
+
+        Product product = productRepository.findByIdForUpdate(id).orElse(null);
         if (product == null) {
+            productDetailCache.putMissing(id);
             throw TomatoException.productNotExist();
         }
-        // 将 Product 转换为 ProductVO
-        ProductVO productVO = product.toVO();
-        if (productVO == null) {
-            throw TomatoException.productNotExist();
-        }
-        return productVO;
+        ProductDTO productDTO = ProductDTO.fromProduct(product);
+        productDetailCache.putProduct(id, productDTO);
+        return convertToVO(productDTO);
     }
 
     /**
@@ -142,7 +145,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public String update(ProductVO productVO) {
-        Product product = productRepository.findById(productVO.getId()).get();
+        Product product = productRepository.findByIdForUpdate(productVO.getId())
+                .orElseThrow(TomatoException::productNotExist);
         if (productVO.getTitle() != null) product.setTitle(productVO.getTitle());
         if (productVO.getPrice() != null) product.setPrice(productVO.getPrice());
         if (productVO.getRate() != null) product.setRate(productVO.getRate());
@@ -184,6 +188,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         productRepository.save(product);
+        productDetailCache.evictAfterCommit(product.getId());
         return "更新成功";
     }
 
@@ -195,9 +200,13 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public String delete(int id) {
+        productRepository.findByIdForUpdate(id)
+                .orElseThrow(TomatoException::productNotExist);
         stockPileRepository.deleteByProductId(id);
 
         productRepository.deleteById(id);
+
+        productDetailCache.evictAfterCommit(id);
 
         return "删除成功";
     }
@@ -212,7 +221,7 @@ public class ProductServiceImpl implements ProductService {
         vo.setDetail(dto.getDetail());
         vo.setCover(dto.getCover());
         vo.setCategory(dto.getCategory());
-        vo.setSpecifications(dto.getSpecifications().stream()
+        vo.setSpecifications(Optional.ofNullable(dto.getSpecifications()).orElse(Collections.emptyList()).stream()
                 .map(specDTO -> {
                     SpecificationVO specVO = new SpecificationVO();
                     specVO.setId(specDTO.getId());
@@ -222,7 +231,7 @@ public class ProductServiceImpl implements ProductService {
                     return specVO;
                 })
                 .collect(Collectors.toList()));
-        vo.setContentImages(dto.getContentImages().stream()
+        vo.setContentImages(Optional.ofNullable(dto.getContentImages()).orElse(Collections.emptyList()).stream()
                 .map(imageDTO -> {
                     ProductContentImageVO imageVO = new ProductContentImageVO();
                     imageVO.setId(imageDTO.getId());

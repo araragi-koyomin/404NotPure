@@ -24,6 +24,10 @@ spring:
   redis:
     host: ${REDIS_HOST:redis}
     port: ${REDIS_PORT:6379}
+  data:
+    redis:
+      repositories:
+        enabled: false
 
 server:
   port: 8080
