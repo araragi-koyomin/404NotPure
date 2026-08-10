@@ -51,7 +51,7 @@ class CartsControllerOrderValidationTest {
         "{\"paymentMethod\":\"   \",\"items\":[{\"productId\":1,\"amount\":1}]}"
     })
     void checkoutRejectsInvalidOrderBeforeCallingService(String body) throws Exception {
-        String token = new TokenUtil().generateToken(1);
+        String token = tokenUtilForTest().generateToken(1);
 
         mockMvc.perform(post("/api/cart/checkout")
                 .cookie(new Cookie("token", token))
@@ -72,7 +72,7 @@ class CartsControllerOrderValidationTest {
         "{\"paymentMethod\":\"Alipay\""
     })
     void checkoutWrapsUnreadableRequestBodyAsStableBadRequest(String body) throws Exception {
-        String token = new TokenUtil().generateToken(1);
+        String token = tokenUtilForTest().generateToken(1);
 
         mockMvc.perform(post("/api/cart/checkout")
                 .cookie(new Cookie("token", token))
@@ -84,5 +84,14 @@ class CartsControllerOrderValidationTest {
             .andExpect(jsonPath("$.data").doesNotExist());
 
         verifyNoInteractions(orderService);
+    }
+
+    private TokenUtil tokenUtilForTest() {
+        return new TokenUtil(
+                userRepository,
+                "unit-test-only-jwt-secret-32-characters-minimum",
+                86400,
+                false
+        );
     }
 }

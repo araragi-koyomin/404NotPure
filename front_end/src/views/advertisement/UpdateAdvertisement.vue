@@ -5,6 +5,7 @@ import { UploadFilled } from '@element-plus/icons-vue';
 import { uploadImage } from '../../api/tools.ts';
 import { updateAdvertisement, AdvertisementInfo } from '../../api/advertisement.ts';
 import { router } from "../../router";
+import { describeRequestError } from '../../utils/safe-error.ts';
 
 // 表单和校验规则
 const formRef = ref();
@@ -65,7 +66,7 @@ async function loopUpload() {
       if (typeof url === 'string') {
         coverURL.value = url;
       } else {
-        console.warn('封面图上传返回格式不合法:', res.data.data);
+        console.warn('封面图上传返回格式不合法');
       }
     }
     // 如果是保留了现有封面
@@ -111,7 +112,7 @@ const handleSubmit = async () => {
       resetImgCache();
       await router.push({ name: 'allProduct' });
     } catch (err) {
-      console.error('更新广告失败', err);
+      console.error('更新广告失败', describeRequestError(err));
       ElMessage.error('更新失败，请稍后重试');
     } finally {
       loading.value = false;

@@ -31,13 +31,20 @@ public class AccountController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TokenUtil tokenUtil;
+
     /**
      * 根据用户名获取用户信息
      * @param username 用户名
      * @return 用户详细信息
      */
     @GetMapping("/{username}")
-    public Response<AccountSimpleVO> getAccountByUsername(@PathVariable String username) {
+    public Response<AccountSimpleVO> getAccountByUsername(
+            @PathVariable String username,
+            HttpServletRequest request
+    ) {
+        requireOwnAccount(username, request);
         AccountSimpleVO accountVO = accountService.getAccount(username);
         return Response.buildSuccess(accountVO);
     }
@@ -61,19 +68,7 @@ public class AccountController {
      */
     @PutMapping()
     public Response<String> updateAccount(@RequestBody AccountUpdateDTO dto, HttpServletRequest request) {
-        String token = TokenUtil.extractTokenFromRequest(request);
-        if (token == null) {
-            throw TomatoException.notLogin();
-        }
-        // 解析 Token 获取当前用户（假设 Token 直接存储用户名）
-        Integer accountId = TokenUtil.getUserIdFromToken(token);
-        // 通过 ID 获取最新的账号信息
-        Account currentAccount = userRepository.findById(accountId)
-                .orElseThrow(TomatoException::notLogin);
-        // 校验前端传过来的 username 是否是自己的，防止越权修改
-        if (!dto.getUsername().equals(currentAccount.getUsername())) {
-            throw TomatoException.noPermission();
-        }
+        requireOwnAccount(dto.getUsername(), request);
         return Response.buildSuccess(accountService.update(dto));
     }
 
@@ -87,8 +82,14 @@ public class AccountController {
     public Response<String> login(@RequestBody AccountVO accountVO, HttpServletResponse response) {
         String token = accountService.login(accountVO);
         // 将Token设置到Cookie中
-        TokenUtil.setTokenToCookie(response, token);
+        tokenUtil.setTokenToCookie(response, token);
         return Response.buildSuccess(token);
+    }
+
+    @PostMapping("/logout")
+    public Response<String> logout(HttpServletResponse response) {
+        tokenUtil.clearTokenCookie(response);
+        return Response.buildSuccess("退出登录成功");
     }
 
     /**
@@ -97,7 +98,8 @@ public class AccountController {
      * @return 积分数量
      */
     @GetMapping("/{username}/points")
-    public Response<Integer> getAccountPoints(@PathVariable String username) {
+    public Response<Integer> getAccountPoints(@PathVariable String username, HttpServletRequest request) {
+        requireOwnAccount(username, request);
         return Response.buildSuccess(accountService.getUserPoints(username));
     }
 
@@ -109,7 +111,19 @@ public class AccountController {
      */
     @PatchMapping("/{username}/points")
     public Response<String> updateAccountPoints(@PathVariable String username, @RequestBody AccountPointsUpdateDTO dto) {
-        String result = accountService.updateUserPoints(username, dto.getPoints());
-        return Response.buildSuccess(result);
+        // 积分的增加和扣减必须由明确的商城业务触发，不能开放通用 HTTP 修改入口。
+        throw TomatoException.noPermission();
+    }
+
+    private Account requireOwnAccount(String username, HttpServletRequest request) {
+        int accountId = tokenUtil.getUserIdFromRequest(request);
+        Account currentAccount = userRepository.findById(accountId)
+                .orElseThrow(TomatoException::notLogin);
+        boolean matchesUsername = username.equals(currentAccount.getUsername());
+        boolean matchesTelephone = username.equals(currentAccount.getTelephone());
+        if (!matchesUsername && !matchesTelephone) {
+            throw TomatoException.noPermission();
+        }
+        return currentAccount;
     }
 }

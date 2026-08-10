@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "check:sensitive-logging": "node scripts/check-sensitive-response-logging.mjs && node --test scripts/security-ui.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

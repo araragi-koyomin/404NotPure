@@ -7,8 +7,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 @Configuration
@@ -19,15 +17,15 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        // 使用 antMatchers 匹配路径
-                        // 排除注册登录的拦截
+                        // 现阶段由 MVC LoginInterceptor 维持既有 JWT/Cookie 认证契约。
+                        // 将鉴权迁入 Spring Security 需要单独兼容改造，不能在本轮重复拦截。
                         .anyRequest().permitAll()
-                        //.anyRequest().authenticated()
                 )
-                .csrf(csrf -> csrf.disable()) // 测试环境禁用 CSRF
+                // 本轮通过 SameSite=Lax 和严格 CORS 缩小风险；完整 CSRF 防护由 SEC-012 跟踪。
+                .csrf(csrf -> csrf.disable())
                 .formLogin(formLogin -> formLogin.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(STATELESS)); // 无状态会话
+                .sessionManagement(session -> session.sessionCreationPolicy(STATELESS));
 
         return http.build();
     }

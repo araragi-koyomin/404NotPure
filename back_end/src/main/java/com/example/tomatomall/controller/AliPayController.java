@@ -1,18 +1,11 @@
 package com.example.tomatomall.controller;
 
-import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
-import com.alipay.api.AlipayClient;
-import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
-import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.example.tomatomall.dto.PaymentData;
-import com.example.tomatomall.exception.TomatoException;
-import com.example.tomatomall.po.AliPay;
-//import com.xdong.shopping.dao.pojo.ShoppingDd;
-import com.example.tomatomall.po.Orders;
-import com.example.tomatomall.repository.OrdersRepository;
+import com.example.tomatomall.service.PaymentFormService;
 import com.example.tomatomall.service.serviceImpl.PaymentService;
+import com.example.tomatomall.util.TokenUtil;
 import com.example.tomatomall.vo.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,26 +36,20 @@ public class AliPayController {
   private String appId;
   @Value("${alipay.seller-id:}")
   private String sellerId;
-  @Value("${alipay.private-key}")
-  private String privateKey;
   @Value("${alipay.alipay-public-key}")
   private String alipayPublicKey;
-  @Value("${alipay.server-url}")
-  private String serverUrl;
   @Value("${alipay.charset}")
   private String charset;
   @Value("${alipay.sign-type}")
   private String signType;
-  @Value("${alipay.notify-url}")
-  private String notifyUrl;
-  @Value("${alipay.return-url}")
-  private String returnUrl;
   @Value("${alipay.frontEnd-url}")
   private String frontEndUrl;
 
-  // 订单仓库，用于操作订单数据
   @Autowired
-  private OrdersRepository ordersRepository;
+  private PaymentFormService paymentFormService;
+
+  @Autowired
+  private TokenUtil tokenUtil;
 
   // 支付服务，用于处理支付相关业务逻辑
   @Autowired
@@ -82,40 +69,10 @@ public class AliPayController {
   @PostMapping("/{orderId}/pay")
   public Response<PaymentData> createPaymentForm(
       @PathVariable Integer orderId,
-      HttpServletResponse response
+      HttpServletRequest request
   ) throws AlipayApiException {
-    // 1. 验证订单存在且状态为待支付
-    Orders order = ordersRepository.findById(orderId)
-        .orElseThrow(() -> new RuntimeException("订单不存在"));
-    if (!"PENDING".equals(order.getStatus())) {
-      throw new RuntimeException("订单状态异常");
-    }
-
-    // 2. 构建支付宝客户端和请求
-    AlipayClient alipayClient = new DefaultAlipayClient(serverUrl, appId, privateKey, "json", "UTF-8", alipayPublicKey, "RSA2");
-    AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
-    request.setNotifyUrl(notifyUrl);
-    request.setReturnUrl(returnUrl);
-
-    // 3. 设置支付参数
-    JSONObject bizContent = new JSONObject();
-    bizContent.put("out_trade_no", orderId.toString());
-    bizContent.put("total_amount", order.getTotalAmount().toString());
-    bizContent.put("subject", "订单支付 - " + orderId);
-    bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
-    request.setBizContent(bizContent.toJSONString());
-
-    // 4. 生成支付表单
-    String form = alipayClient.pageExecute(request).getBody();
-
-    // 5. 构建响应数据
-    PaymentData paymentData = new PaymentData();
-    paymentData.setPaymentForm(form);
-    paymentData.setOrderId(orderId.toString());
-    paymentData.setTotalAmount(order.getTotalAmount().toString());
-    paymentData.setPaymentMethod("Alipay");
-
-    return Response.buildSuccess(paymentData);
+    int userId = tokenUtil.getUserIdFromRequest(request);
+    return Response.buildSuccess(paymentFormService.createPaymentForm(userId, orderId));
   }
 
   /**

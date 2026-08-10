@@ -3,6 +3,7 @@ import {onMounted, ref} from 'vue';
 import {ElMessage, ElTag} from 'element-plus';
 import {router} from '../../router';
 import {AdvertisementInfo, deleteAdvertisement, getAdvertisements} from '../../api/advertisement.ts';
+import {describeRequestError} from '../../utils/safe-error.ts';
 
 const advertisements = ref<AdvertisementInfo[]>([]);
 
@@ -13,7 +14,7 @@ const loadAdvertisements = async () => {
   try {
     advertisements.value = await getAdvertisements();
   } catch (error) {
-    console.error('获取广告失败:', error);
+    console.error('获取广告失败:', describeRequestError(error));
     ElMessage.error('加载广告失败，请稍后重试');
   }
 };
@@ -25,7 +26,7 @@ const confirmDelete = async (id: number) => {
     // 删除本地的广告数据
     advertisements.value = advertisements.value.filter(item => item.id !== id);
   } catch (error) {
-    console.error('删除失败:', error);
+    console.error('删除失败:', describeRequestError(error));
     ElMessage.error('删除失败，请稍后再试');
   } finally {
     deleteVisibleMap.value[id] = false; // 关闭 Popover
@@ -46,7 +47,7 @@ const updateAdvertisement = (ad: AdvertisementInfo) => {
     sessionStorage.setItem('advertisement', JSON.stringify(pureAd));
     router.push('/updateAdvertisement');
   } catch (error) {
-    console.error('保存广告到SessionStorage失败:', error);
+    console.error('保存广告到SessionStorage失败:', describeRequestError(error));
     ElMessage.error('保存失败，请重试');
   }
 };

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { describeRequestError } from './safe-error.ts';
 const service = axios.create({
     timeout: 10000,
     withCredentials: true,
@@ -14,7 +15,7 @@ service.interceptors.request.use(
         return config;
     },
     error => {
-        console.log('请求拦截器出错：', error);
+        console.error('请求拦截器出错：', describeRequestError(error));
         return Promise.reject(error);
     }
 );
@@ -29,7 +30,7 @@ service.interceptors.response.use(
         }
     },
     error => {
-        console.log(error)
+        console.error('HTTP 请求失败：', describeRequestError(error));
         return Promise.reject(error)
     }
 )

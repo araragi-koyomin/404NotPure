@@ -4,7 +4,6 @@ import com.example.tomatomall.dto.AddProductToCartDTO;
 import com.example.tomatomall.dto.CartItemUpdateDTO;
 import com.example.tomatomall.dto.CreateOrderDTO;
 import com.example.tomatomall.exception.TomatoException;
-import com.example.tomatomall.po.Account;
 import com.example.tomatomall.service.CartsService;
 import com.example.tomatomall.service.OrderService;
 import com.example.tomatomall.util.TokenUtil;
@@ -15,7 +14,6 @@ import com.example.tomatomall.vo.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
@@ -32,6 +30,9 @@ public class CartsController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private TokenUtil tokenUtil;
+
     /**
      * 添加商品到购物车
      * @param dto 添加商品数据传输对象
@@ -41,7 +42,7 @@ public class CartsController {
      */
     @PostMapping()
     public Response<CartsVO> addProductToCart(@RequestBody AddProductToCartDTO dto, HttpServletRequest request) {
-        int userId = TokenUtil.getUserIdFromRequest(request);
+        int userId = tokenUtil.getUserIdFromRequest(request);
         CartsVO cartItemVO = cartsService.addProductToCart(userId, dto.getProductId(), dto.getQuantity());
         return Response.buildSuccess(cartItemVO);
     }
@@ -55,8 +56,8 @@ public class CartsController {
      */
     @DeleteMapping("/{cartItemId}")
     public Response<String> deleteCartItem(@PathVariable int cartItemId, HttpServletRequest request) {
-        TokenUtil.getUserIdFromRequest(request);
-        String result = cartsService.deleteCartItem(cartItemId);
+        int userId = tokenUtil.getUserIdFromRequest(request);
+        String result = cartsService.deleteCartItem(userId, cartItemId);
         return Response.buildSuccess(result);
     }
 
@@ -70,8 +71,8 @@ public class CartsController {
      */
     @PatchMapping("/{cartItemId}")
     public Response<String> updateCartItemQuantity(@PathVariable int cartItemId, @RequestBody CartItemUpdateDTO dto, HttpServletRequest request) {
-        TokenUtil.getUserIdFromRequest(request);
-        String result = cartsService.updateCartItemQuantity(cartItemId, dto.getQuantity());
+        int userId = tokenUtil.getUserIdFromRequest(request);
+        String result = cartsService.updateCartItemQuantity(userId, cartItemId, dto.getQuantity());
         return Response.buildSuccess(result);
     }
 
@@ -83,7 +84,7 @@ public class CartsController {
      */
     @GetMapping()
     public Response<CartsListVO> getCarts(HttpServletRequest request) {
-        int userId = TokenUtil.getUserIdFromRequest(request);
+        int userId = tokenUtil.getUserIdFromRequest(request);
         CartsListVO listVO=cartsService.getCartItems(userId);
         return Response.buildSuccess(listVO);
     }
@@ -97,7 +98,7 @@ public class CartsController {
      */
     @PostMapping("/checkout")
     public Response<OrdersVO> createOrder(HttpServletRequest request, @Valid @RequestBody CreateOrderDTO dto) {
-        int userId = TokenUtil.getUserIdFromRequest(request);
+        int userId = tokenUtil.getUserIdFromRequest(request);
         OrdersVO ordersVO = orderService.addOrder(userId, dto);
         return Response.buildSuccess(ordersVO);
     }

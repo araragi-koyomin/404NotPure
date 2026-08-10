@@ -188,7 +188,7 @@ async function loopUpload() {
       if (typeof url === 'string') {
         imgURLs.value.push(url);
       } else {
-        console.warn('上传返回格式不合法:', res.data.data);
+        console.warn('上传返回格式不合法');
       }
     }
     // 如果是已有的图片（有url属性但没有raw属性）
@@ -208,7 +208,7 @@ async function loopUpload() {
       if (typeof url === 'string') {
         coverURL.value = url;
       } else {
-        console.warn('封面图上传返回格式不合法:', res.data.data);
+        console.warn('封面图上传返回格式不合法');
       }
     }
     // 如果是保留了现有封面

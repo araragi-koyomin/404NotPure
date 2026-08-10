@@ -1,4 +1,5 @@
 import { axios } from "../utils/request.ts";
+import { describeRequestError } from "../utils/safe-error.ts";
 import { PRODUCT_MODULE } from "./_prefix.ts";
 
 // 基于Lab2规范定义的商品类型，更新支持多图片
@@ -47,7 +48,6 @@ export const getAllProducts = async () => {
     return axios
         .get(`${PRODUCT_MODULE}`)
         .then((res) => {
-            console.log(res.data);
             return res;
         })
         .catch((err) => {
@@ -69,7 +69,6 @@ export const getProductById = async (id: string) => {
 
 // 更新商品信息
 export const updateProduct = async (product: Product) => {
-    console.log('%c📦 准备发送到后端的 product 数据：', 'color: #00c1ff; font-weight: bold;', JSON.stringify(product, null, 2));
     return axios
         .put(`${PRODUCT_MODULE}`, product)
         .then((res) => {
@@ -82,15 +81,13 @@ export const updateProduct = async (product: Product) => {
 
 // 增加商品
 export const createProduct = async (product: Product) => {
-    console.log('%c📦 准备发送到后端的 product 数据：', 'color: #00c1ff; font-weight: bold;', JSON.stringify(product, null, 2));
     return axios
         .post(`${PRODUCT_MODULE}`, product)
         .then((res) => {
-            console.log('%c✅ 创建成功，后端返回：', 'color: #00c1ff; font-weight: bold;', res.data);
             return res;
         })
         .catch((err) => {
-            console.error('%c❌ 创建失败，错误信息：', 'color: red; font-weight: bold;', err.response?.data || err);
+            console.error('%c❌ 创建失败，错误信息：', 'color: red; font-weight: bold;', describeRequestError(err));
             return err.response;
         });
 };
@@ -160,11 +157,10 @@ export const addToCart = async (productId: string, quantity: number) => {
     return axios
         .post(`/api/cart`, { productId, quantity })
         .then((res) => {
-            console.log('%c🛒 添加到购物车成功：', 'color: #4CAF50; font-weight: bold;', res.data);
             return res;
         })
         .catch((err) => {
-            console.error('%c❌ 添加到购物车失败：', 'color: red; font-weight: bold;', err.response?.data || err);
+            console.error('%c❌ 添加到购物车失败：', 'color: red; font-weight: bold;', describeRequestError(err));
             return err.response;
         });
 };

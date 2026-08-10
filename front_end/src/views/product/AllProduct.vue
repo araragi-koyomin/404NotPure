@@ -8,6 +8,7 @@ import {addToCart as apiAddToCart, getAllProducts, getProductStockpile, Product}
 import {AdvertisementInfo, getAdvertisements} from "../../api/advertisement.ts";
 import {callTomatoAssistant} from "../../api/tools.ts";
 import {parseBookCategory} from "../../utils";
+import {describeRequestError} from "../../utils/safe-error.ts";
 
 // Reactive states
 const searchKeyword = ref('')
@@ -88,7 +89,7 @@ const loadAdvertisements = async () => {
   try {
     advertisements.value = await getAdvertisements();
   } catch (error) {
-    console.error('获取广告失败:', error);
+    console.error('获取广告失败:', describeRequestError(error));
     ElMessage.error('加载广告失败，请稍后重试');
   }
 };
@@ -174,7 +175,7 @@ onMounted(() => {
     try {
       messages.value = JSON.parse(saved)
     } catch (e) {
-      console.error("聊天记录恢复失败", e)
+      console.error("聊天记录恢复失败", describeRequestError(e))
     }
   }
 })

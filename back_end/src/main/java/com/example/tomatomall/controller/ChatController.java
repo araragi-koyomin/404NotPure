@@ -36,7 +36,7 @@ public class ChatController {
      */
     @PostMapping("/question")
     public void question(HttpServletRequest request){
-        Integer userId = TokenUtil.getUserIdFromRequest(request);
+        Integer userId = tokenUtil.getUserIdFromRequest(request);
         List<Account> admins = userRepository.findByRole("admin");
 
         if (admins.isEmpty()) {
@@ -64,7 +64,7 @@ public class ChatController {
      */
     @PostMapping("/send")
     public void sendMessage(@RequestBody ChatMessage message, HttpServletRequest request) {
-        Integer senderId = TokenUtil.getUserIdFromRequest(request);
+        Integer senderId = tokenUtil.getUserIdFromRequest(request);
         message.setSenderId(senderId);
         chatService.sendMessage(message);
     }
@@ -77,7 +77,7 @@ public class ChatController {
      */
     @GetMapping("/messages")
     public List<ChatMessage> getMessages(@RequestParam Integer peerId, HttpServletRequest request) {
-        Integer userId = TokenUtil.getUserIdFromRequest(request);
+        Integer userId = tokenUtil.getUserIdFromRequest(request);
         return chatMessageRepository.findConversation(userId, peerId);
     }
 
@@ -88,7 +88,7 @@ public class ChatController {
      */
     @GetMapping("/sessions")
     public List<ChatSession> getSessions(HttpServletRequest request) {
-        Integer userId = TokenUtil.getUserIdFromRequest(request);
+        Integer userId = tokenUtil.getUserIdFromRequest(request);
         return chatService.getUserSessionsById(userId);
     }
 }

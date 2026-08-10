@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { router } from '../router';
+import { userLogout } from '../api/user.ts';
+import { performLogout } from '../utils/logout.ts';
 import { ref, onMounted, onUnmounted } from "vue";
 // import { useReactiveSessionStorage } from "../utils/storage.ts";
 import {
@@ -12,7 +14,7 @@ import {
 } from "@element-plus/icons-vue";
 
 // const role = ref(sessionStorage.getItem('role') || '');
-const role = ref("ADMIN");
+const role = ref(sessionStorage.getItem('role') || '');
 
 const updateRoleFromStorage = () => {
   const newVal = sessionStorage.getItem('role') || '';
@@ -28,6 +30,7 @@ const handleStorageChange = (e: StorageEvent) => {
 };
 
 onMounted(() => {
+  updateRoleFromStorage();
   window.addEventListener('storage', handleStorageChange);
 
   // 使用类型断言确保类型安全
@@ -60,9 +63,17 @@ function logout() {
         roundButton: true,
         center: true
       }
-  ).then(() => {
-    sessionStorage.setItem('token', '');
-    router.push({path: "/login"});
+  ).then(async () => {
+    await performLogout({
+      requestLogout: userLogout,
+      clearLocalState: () => {
+        sessionStorage.clear();
+        localStorage.removeItem('payment_temp_token');
+        role.value = '';
+      },
+      navigateToLogin: () => router.push({path: "/login"}),
+      notifyFailure: () => ElMessage.error('退出请求失败，服务器 Cookie 可能仍然有效，请重试。'),
+    });
   });
 }
 
