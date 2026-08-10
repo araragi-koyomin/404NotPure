@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 先建立可持续维护的简历/面试亮点文档，再进入认证与支付展示边界收敛 |
-| 当前阶段 | [PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `dca1acd9`；DB-001A、PAY-001、SEC-009 和 SEC-010 已完成冷层归档。`docs/resume-interview-highlights` 上的 DOC-004 已通过项目所有者审阅和冷启动事实复核，项目所有者已授权提交、推送并创建以 `master` 为目标的 PR |
+| 当前阶段 | [PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `dca1acd9`；DB-001A、PAY-001、SEC-009 和 SEC-010 已完成冷层归档。DOC-004 已通过项目所有者审阅和冷启动事实复核，提交 `e3a6a612` 已推送，并已创建以 `master` 为目标的 [PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移和沙箱探针安全边界均已合并并进入冷层；支付交付证据见[支付回调一致性交付记录](archive/2026-08-10-payment-callback-consistency-delivery.md) |
 | 尚未完成 | SEC-001 需要收紧认证和订单资源所有权；新发现的 SEC-011 需要删除登录页面输出 token 和账户资料的控制台日志；PAY-002 需要让同步返回页只相信服务端订单状态；PAY-003 在二者完成后使用临时公网 HTTPS 地址执行一次沙箱付款与真实异步通知，不要求固定公网 IP 或长期部署；TEST-002 尚未测得默认 Surefire 稳定运行所需的最低合理内存；CACHE-001、ORD-002、ORD-003、DB-001 等继续保持活跃 |
 | 当前阻塞或待确认 | PAY-003 当前没有支付宝服务器可访问的 `notify_url`，且应等待 SEC-001/PAY-002 后再临时开放；这不影响已合并的 PAY-001 回调代码能力。RUN-002 的完整四容器 Compose 验收仍因镜像拉取和本机端口环境保持 P2 blocked |
-| 下一步 | 显式暂存 DOC-004 的 6 个项目文档，检查暂存清单与敏感信息，再提交、推送并创建以 `master` 为目标的 PR；创建成功后回写真实 PR 链接，合并归档后再创建独立分支启动 SEC-001 |
+| 下一步 | 对 [PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 做最终 GitHub 差异审阅；获得明确合并授权后执行 squash merge，写入冷层交付证据并从 BACKLOG 移除 DOC-004；随后从最新 `master` 创建独立分支启动 SEC-001 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -45,12 +45,12 @@ tags:
 | JPA-001 | P2 | planned | 明确服务层事务和关联数据读取边界，在接口测试证明兼容后关闭 JPA 的 Open Session in View | 设置 `spring.jpa.open-in-view=false`；商品、广告和订单接口没有延迟加载错误；响应生成阶段不再依赖仍然打开的数据库会话 | [安全与质量计划](plans/security-and-quality.md) |
 | API-001 | P2 | planned | 对齐前端已调用但后端缺失的订单详情和订单列表 GET 接口 | 前端订单页不再调用不存在接口，所有权测试通过 | [安全与质量计划](plans/security-and-quality.md) |
 | FE-001 | P2 | planned | 清理前端缺失背景资源、错误 CSS 注释和大 chunk 构建警告 | `npm run build` 无资源或 CSS 警告，并记录文件拆分策略 | [安全与质量计划](plans/security-and-quality.md) |
-| DOC-004 | P2 | in_progress | 在 `docs/resume-interview-highlights.md` 持续维护可直接用于简历和面试的项目亮点；每项必须区分已实现能力、测试证据、设计取舍和仍未完成边界，不能把计划项写成现有能力；当前内容已通过项目所有者审阅，等待提交、PR 和合并 | 覆盖订单库存、支付宝回调、Flyway、OSS/图片安全、运行恢复、测试与工程治理；提供简历短句、面试展开、证据链接和禁用表述；AGENTS 与文档治理规则要求后续交付同步维护；冷启动审查无事实夸大或证据错配 | [简历与面试亮点总结](resume-interview-highlights.md) |
+| DOC-004 | P2 | in_progress | 在 `docs/resume-interview-highlights.md` 持续维护可直接用于简历和面试的项目亮点；每项必须区分已实现能力、测试证据、设计取舍和仍未完成边界，不能把计划项写成现有能力；当前内容已通过项目所有者审阅并进入 [PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4)，等待合并与归档 | 覆盖订单库存、支付宝回调、Flyway、OSS/图片安全、运行恢复、测试与工程治理；提供简历短句、面试展开、证据链接和禁用表述；AGENTS 与文档治理规则要求后续交付同步维护；冷启动审查无事实夸大或证据错配 | [简历与面试亮点总结](resume-interview-highlights.md) |
 | DEPLOY-001 | P2 | planned | 规划公网长期部署、域名/CDN、HTTPS、Secret 管理和 OSS 生产访问模式 | 可重复部署文档、环境隔离、健康检查和公网安全验收完成 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`。当前分支为 `docs/resume-interview-highlights`，从包含 PR #3 归档提交 `5fe35260` 的最新 `master` 创建；远端 `fix/payment-callback-consistency` 保留为历史分支。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`。当前分支为 `docs/resume-interview-highlights`，从包含 PR #3 归档提交 `5fe35260` 的最新 `master` 创建；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已创建，目标为 `master`，尚未合并；远端 `fix/payment-callback-consistency` 保留为历史分支。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 的阻塞仅表示完整 Compose 没有完成四容器验收；Java 17 后端、本机 MySQL/Redis、5173 前端代理和主要接口已经在混合运行方式中验证。
