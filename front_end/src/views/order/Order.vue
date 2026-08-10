@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { router } from '../../router'
 import { submitOrder as apiSubmitOrder, initiatePayment as apiInitiatePayment, OrderRequest } from '../../api/order'
 import { removeFromCart } from '../../api/cart' // Import removeFromCart
+import { describeRequestError } from '../../utils/safe-error.ts'
 
 // Types
 type CartItem = {
@@ -60,7 +61,7 @@ const loadCartItems = () => {
       router.back()
     }
   } catch (error) {
-    console.error('加载商品失败:', error)
+    console.error('加载商品失败:', describeRequestError(error))
     ElMessage.error('加载商品失败')
     router.back()
   }
@@ -104,7 +105,7 @@ const submitOrder = async () => {
     // 发起支付
     await initiatePayment(orderId.value)
   } catch (error) {
-    console.error('提交订单失败:', error)
+    console.error('提交订单失败:', describeRequestError(error))
     ElMessage.error('提交订单失败，请重试')
   } finally {
     submitting.value = false
@@ -150,7 +151,7 @@ const initiatePayment = async (orderId: string) => {
       document.body.removeChild(tempDiv)
     }, 1000)
   } catch (error) {
-    console.error('发起支付失败:', error)
+    console.error('发起支付失败:', describeRequestError(error))
     ElMessage.error('发起支付失败，请重试')
   } finally {
     loading.value = false
@@ -220,12 +221,12 @@ const checkPaymentReturn = async () => {
                 try {
                   await removeFromCart(id)
                 } catch (error) {
-                  console.error(`删除购物车商品失败: ${id}`, error)
+                  console.error(`删除购物车商品失败: ${id}`, describeRequestError(error))
                 }
               })
           )
         } catch (error) {
-          console.error('处理购物车商品失败:', error)
+          console.error('处理购物车商品失败:', describeRequestError(error))
         }
       }
 

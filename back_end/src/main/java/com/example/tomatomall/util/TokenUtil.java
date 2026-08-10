@@ -8,49 +8,76 @@ import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Account;
 import com.example.tomatomall.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class TokenUtil {
-    private static final long EXPIRE_TIME = 24 * 60 * 60 * 1000;
-    private static final String SECRET = "404NotPure";
+    public static final String TOKEN_NAME = "token";
+
+    private final UserRepository userRepository;
+    private final Algorithm algorithm;
+    private final JWTVerifier verifier;
+    private final long expirationSeconds;
+    private final boolean secureCookie;
 
     @Autowired
-    UserRepository userRepository;
+    public TokenUtil(
+            UserRepository userRepository,
+            @Value("${auth.jwt.secret}") String secret,
+            @Value("${auth.jwt.expiration-seconds:86400}") long expirationSeconds,
+            @Value("${auth.cookie.secure:false}") boolean secureCookie
+    ) {
+        if (secret == null || secret.trim().length() < 32) {
+            throw new IllegalStateException("JWT_SECRET must contain at least 32 characters");
+        }
+        if (expirationSeconds <= 0 || expirationSeconds > Integer.MAX_VALUE) {
+            throw new IllegalStateException("JWT_EXPIRATION_SECONDS must be a positive integer");
+        }
+        this.userRepository = userRepository;
+        this.algorithm = Algorithm.HMAC256(secret);
+        this.verifier = JWT.require(algorithm).build();
+        this.expirationSeconds = expirationSeconds;
+        this.secureCookie = secureCookie;
+    }
 
     public boolean verifyToken(String token) {
+        if (token == null || token.trim().isEmpty()) return false;
         try {
-            Algorithm algorithm = Algorithm.HMAC256(SECRET);
-            JWTVerifier verifier = JWT.require(algorithm).build();
-            verifier.verify(token); // 校验成功说明 token 有效
+            verifier.verify(token);
             return true;
-        } catch (Exception e) {
+        } catch (Exception exception) {
             return false;
         }
     }
 
     public String generateToken(Integer userId) {
-        Date expireDate = new Date(System.currentTimeMillis() + EXPIRE_TIME);
-        Algorithm algorithm = Algorithm.HMAC256(SECRET);
+        Date expireDate = new Date(System.currentTimeMillis() + Duration.ofSeconds(expirationSeconds).toMillis());
         return JWT.create()
-                .withSubject(String.valueOf(userId)) // 将 id 转为字符串作为 subject
+                .withSubject(String.valueOf(userId))
                 .withExpiresAt(expireDate)
                 .sign(algorithm);
     }
 
-    public static Integer getUserIdFromToken(String token) {
+    public Integer getUserIdFromToken(String token) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(SECRET);
-            JWTVerifier verifier = JWT.require(algorithm).build();
             DecodedJWT decodedJWT = verifier.verify(token);
-            return Integer.parseInt(decodedJWT.getSubject()); // 解析出的是 id
-        } catch (Exception e) {
-            throw TomatoException.notLogin(); // 或自定义异常
+            return Integer.parseInt(decodedJWT.getSubject());
+        } catch (Exception exception) {
+            throw TomatoException.notLogin();
         }
     }
 
@@ -60,75 +87,84 @@ public class TokenUtil {
         return account.getRole();
     }
 
-    /**
-     * 从HTTP请求中提取token
-     * @param request HTTP请求对象
-     * @return token字符串
-     */
     public static String extractTokenFromRequest(HttpServletRequest request) {
-        String token = request.getHeader("token");
-        if (token == null && request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("token".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
+        Set<String> distinctTokens = new LinkedHashSet<>();
+        distinctTokens.addAll(headerTokens(request));
+        distinctTokens.addAll(cookieTokens(request));
+
+        if (distinctTokens.size() > 1) {
+            throw TomatoException.notLogin();
+        }
+        return distinctTokens.stream().findFirst().orElse(null);
+    }
+
+    public String requireToken(HttpServletRequest request) {
+        String token = extractTokenFromRequest(request);
+        if (!verifyToken(token)) {
+            throw TomatoException.notLogin();
         }
         return token;
     }
 
-    /**
-     * 设置token到Cookie
-     * @param response HTTP响应对象
-     * @param token 认证token
-     */
-    public static void setTokenToCookie(HttpServletResponse response, String token) {
-        Cookie cookie = new Cookie("token", token);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60); // 7天有效期
-        response.addCookie(cookie);
+    public void setTokenToCookie(HttpServletResponse response, String token) {
+        ResponseCookie cookie = ResponseCookie.from(TOKEN_NAME, token)
+                .httpOnly(true)
+                .secure(secureCookie)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(Duration.ofSeconds(expirationSeconds))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    /**
-     * 从请求中获取用户ID（包含登录验证）
-     * @param request HTTP请求对象
-     * @return 用户ID
-     * @throws TomatoException 未登录时抛出
-     */
-    public static int getUserIdFromRequest(HttpServletRequest request) {
-        String token = extractTokenFromRequest(request);
-        if (token == null) {
-            throw TomatoException.notLogin();
-        }
-        try {
-            return getUserIdFromToken(token);
-        } catch (Exception e) {
-            throw TomatoException.notLogin();
-        }
+    public void clearTokenCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(TOKEN_NAME, "")
+                .httpOnly(true)
+                .secure(secureCookie)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    /**
-     * 验证管理员权限
-     * @param request – HTTP请求对象
-     * @throws TomatoException 无权限时抛出
-     */
+    public int getUserIdFromRequest(HttpServletRequest request) {
+        return getUserIdFromToken(requireToken(request));
+    }
+
     public void validateAdminRole(HttpServletRequest request) {
-        String token = extractTokenFromRequest(request);
+        String token = requireToken(request);
         String role = getUserRoleFromToken(token);
         if (!"admin".equalsIgnoreCase(role)) {
             throw TomatoException.noPermission();
         }
     }
 
-//    public Integer getUserIdfromToken(String token) {
-//        try {
-//            Algorithm algorithm = Algorithm.HMAC256(SECRET);
-//            JWTVerifier verifier = JWT.require(algorithm).build();
-//            DecodedJWT decodedJWT = verifier.verify(token);
-//            return Integer.parseInt(decodedJWT.getSubject()); // 解析出的是 id
-//        } catch (Exception e) {
-//            throw TomatoException.notLogin(); // 或自定义异常
-//        }
-//    }
+    private static List<String> headerTokens(HttpServletRequest request) {
+        List<String> tokens = new ArrayList<>();
+        Enumeration<String> headers = request.getHeaders(TOKEN_NAME);
+        if (headers == null) return tokens;
+        while (headers.hasMoreElements()) {
+            addNonBlank(tokens, headers.nextElement());
+        }
+        return tokens;
+    }
+
+    private static List<String> cookieTokens(HttpServletRequest request) {
+        List<String> tokens = new ArrayList<>();
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return tokens;
+        for (Cookie cookie : cookies) {
+            if (TOKEN_NAME.equals(cookie.getName())) {
+                addNonBlank(tokens, cookie.getValue());
+            }
+        }
+        return tokens;
+    }
+
+    private static void addNonBlank(List<String> tokens, String value) {
+        if (value != null && !value.trim().isEmpty()) {
+            tokens.add(value.trim());
+        }
+    }
 }

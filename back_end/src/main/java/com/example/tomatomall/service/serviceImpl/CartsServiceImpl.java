@@ -15,10 +15,10 @@ import com.example.tomatomall.vo.CartsListVO;
 import com.example.tomatomall.vo.CartsVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -78,14 +78,11 @@ public class CartsServiceImpl implements CartsService {
      * @throws TomatoException 购物车商品不存在时抛出
      */
     @Override
-    public String deleteCartItem(int cartItemId) {
-        Optional<Carts> cartItemOptional = cartsRepository.findById(cartItemId);
-        if (cartItemOptional.isPresent()) {
-            cartsRepository.deleteById(cartItemId);
-            return "删除成功";
-        } else {
-            throw TomatoException.productNotExist();
-        }
+    @Transactional
+    public String deleteCartItem(int userId, int cartItemId) {
+        Carts cartItem = ownedCartItem(userId, cartItemId);
+        cartsRepository.delete(cartItem);
+        return "删除成功";
     }
 
     /**
@@ -96,9 +93,9 @@ public class CartsServiceImpl implements CartsService {
      * @throws TomatoException 购物车商品不存在或库存不足时抛出
      */
     @Override
-    public String updateCartItemQuantity(int cartItemId, int quantity) {
-        Carts cartItem = cartsRepository.findById(cartItemId)
-                .orElseThrow(TomatoException::productNotExist);
+    @Transactional
+    public String updateCartItemQuantity(int userId, int cartItemId, int quantity) {
+        Carts cartItem = ownedCartItem(userId, cartItemId);
         Product product = cartItem.getProduct();
         StockPile stockPile = stockPileRepository.findByProductId(product.getId())
                 .orElseThrow(TomatoException::productNotExist);
@@ -110,6 +107,16 @@ public class CartsServiceImpl implements CartsService {
         cartItem.setQuantity(quantity);
         cartsRepository.save(cartItem);
         return "修改数量成功";
+    }
+
+    private Carts ownedCartItem(int userId, int cartItemId) {
+        Carts cartItem = cartsRepository.findById(cartItemId)
+                .orElseThrow(TomatoException::productNotExist);
+        if (cartItem.getAccount() == null || cartItem.getAccount().getId() == null
+                || cartItem.getAccount().getId() != userId) {
+            throw TomatoException.noPermission();
+        }
+        return cartItem;
     }
 
     /**

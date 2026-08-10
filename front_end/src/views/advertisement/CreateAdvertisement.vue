@@ -5,6 +5,7 @@ import { UploadFilled } from '@element-plus/icons-vue';
 import { uploadImage } from '../../api/tools.ts';
 import { createAdvertisement, AdvertisementInfo } from '../../api/advertisement.ts';
 import { router } from "../../router";
+import { describeRequestError } from '../../utils/safe-error.ts';
 
 // 表单和校验规则
 const formRef = ref();
@@ -60,11 +61,11 @@ async function loopUpload() {
         coverURL.value = url;
       } else {
         ElMessage.error('封面图上传失败，请稍后重试');
-        console.warn('封面图上传返回格式不合法:', res.data.data);
+        console.warn('封面图上传返回格式不合法');
       }
     } catch (error) {
       ElMessage.error('封面图上传出错，请稍后再试');
-      console.error('封面图上传错误', error);
+      console.error('封面图上传错误', describeRequestError(error));
     }
   }
 }
@@ -107,7 +108,7 @@ const handleSubmit = async () => {
       resetImgCache();
       await router.push({ name: 'allProduct' });
     } catch (err) {
-      console.error('创建广告失败', err);
+      console.error('创建广告失败', describeRequestError(err));
       ElMessage.error('创建失败，请稍后重试');
     } finally {
       loading.value = false;

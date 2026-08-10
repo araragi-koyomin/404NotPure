@@ -54,4 +54,18 @@ class ImageControllerAuthorizationTest {
         );
         verify(tokenUtil, never()).validateAdminRole(request);
     }
+
+    @Test
+    void administratorCanStillUploadManagedProductImage() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/images");
+        when(imageService.upload(file, ImageUsage.PRODUCT)).thenReturn("https://example.invalid/product.png");
+
+        assertEquals(
+                "https://example.invalid/product.png",
+                controller.uploadImage(file, ImageUsage.PRODUCT, request).getData()
+        );
+
+        verify(tokenUtil).validateAdminRole(request);
+        verify(imageService).upload(file, ImageUsage.PRODUCT);
+    }
 }

@@ -19,40 +19,39 @@ const loginDisabled = computed(() => {
 });
 
 //登录按钮触发
-function handleLogin() {
-  userLogin({
+async function handleLogin() {
+  const loginResponse = await userLogin({
     username: username.value,
     password: password.value
-  }).then(res => {
-    if (res.data.code === '200') {
-      console.log(res);
+  });
+  if (loginResponse.data.code === '200') {
       ElMessage({
         message: "登录成功",
         type: 'success',
         center: true,
       });
-      const token = res.data.data;
+      const token = loginResponse.data.data;
       sessionStorage.setItem('token', token);
-      userInfo(username.value).then(res => {
-        console.log(res.data);
-        sessionStorage.setItem('username', res.data.data.username);
-        sessionStorage.setItem('name', res.data.data.name);
-        sessionStorage.setItem('role', res.data.data.role);
-        sessionStorage.setItem('avatar', res.data.data.avatar);
-        sessionStorage.setItem('telephone', res.data.data.telephone);
-        sessionStorage.setItem('email', res.data.data.email);
-        sessionStorage.setItem('location', res.data.data.location);
-      });
-      router.push({path: "/home"});
+      const accountResponse = await userInfo(username.value);
+      sessionStorage.setItem('username', accountResponse.data.data.username);
+      sessionStorage.setItem('name', accountResponse.data.data.name);
+      sessionStorage.setItem('role', accountResponse.data.data.role);
+      sessionStorage.setItem('avatar', accountResponse.data.data.avatar);
+      sessionStorage.setItem('telephone', accountResponse.data.data.telephone);
+      sessionStorage.setItem('email', accountResponse.data.data.email);
+      sessionStorage.setItem('location', accountResponse.data.data.location);
+      window.dispatchEvent(new CustomEvent('sessionstorage-local-update', {
+        detail: { key: 'role', value: accountResponse.data.data.role },
+      }));
+      await router.push({path: "/home"});
     } else  {
       ElMessage({
-        message: res.data.code + res.data.msg,
+        message: loginResponse.data.code + loginResponse.data.msg,
         type: 'error',
         center: true,
       });
       password.value = '';
     }
-  });
 }
 </script>
 

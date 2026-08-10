@@ -1,73 +1,50 @@
 package com.example.tomatomall.configure;
 
-import com.example.tomatomall.exception.TomatoException;
-import com.example.tomatomall.po.Account;
-import com.example.tomatomall.repository.UserRepository;
 import com.example.tomatomall.util.TokenUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Optional;
 
-@Configuration
+@Component
 public class LoginInterceptor implements HandlerInterceptor {
-    private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
-    @Autowired
-    private TokenUtil tokenUtil;
+    private final TokenUtil tokenUtil;
 
-    @Autowired
-    UserRepository userRepository;
+    public LoginInterceptor(TokenUtil tokenUtil) {
+        this.tokenUtil = tokenUtil;
+    }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler){
-        // 排除注册和登录路径
-        logger.info("Request URI: {}", request.getRequestURI());
-        logger.info("Method: {}", request.getMethod());
-        logger.info("Content-Type: {}", request.getContentType());
-        String uri = request.getRequestURI();
-        logger.info("Request URI: {}", uri);
-        if (uri.equals("/api/accounts") || uri.equals("/api/accounts/login") ||
-            uri.startsWith("/api/products") || uri.startsWith("/api/assistant/chat") ||
-            uri.startsWith("/api/orders") || uri.startsWith("/api/cart")){
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (isPublicRequest(request)) {
             return true;
         }
-
-        // 从Cookie中获取Token
-        String token =null;
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("token".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-        if (token == null || !tokenUtil.verifyToken(token)) {
-            throw TomatoException.notLogin();
-        }
-
-        if (uri.startsWith("/api/accounts/")) {
-            String[] parts = uri.split("/");
-            String requestUsername = parts[parts.length - 1];
-            logger.info("Request username/telephone: {}", requestUsername);
-
-            Integer accountId = TokenUtil.getUserIdFromToken(token); // token 中是 id
-            Account account = userRepository.findById(accountId).orElseThrow(TomatoException::notLogin);
-            logger.info("Actual username: {}, telephone: {}", account.getUsername(), account.getTelephone());
-
-            // 允许 requestUsername 是 username 或 telephone
-            if (!account.getUsername().equals(requestUsername) &&
-                    !account.getTelephone().equals(requestUsername)) {
-                throw TomatoException.notLogin();
-            }
-        }
+        tokenUtil.requireToken(request);
         return true;
+    }
+
+    private boolean isPublicRequest(HttpServletRequest request) {
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+
+        if (HttpMethod.OPTIONS.matches(method)) return true;
+        if (HttpMethod.POST.matches(method)
+                && ("/api/accounts".equals(uri)
+                || "/api/accounts/login".equals(uri)
+                || "/api/accounts/logout".equals(uri))) {
+            return true;
+        }
+        if (HttpMethod.GET.matches(method) && isPathOrChild(uri, "/api/products")) return true;
+        if (HttpMethod.POST.matches(method) && "/api/orders/notify".equals(uri)) return true;
+        if (HttpMethod.GET.matches(method) && "/api/orders/returnUrl".equals(uri)) return true;
+
+        // Deprecated assistant endpoint keeps only its existing POST compatibility boundary.
+        return HttpMethod.POST.matches(method) && "/api/assistant/chat".equals(uri);
+    }
+
+    private boolean isPathOrChild(String uri, String path) {
+        return path.equals(uri) || uri.startsWith(path + "/");
     }
 }

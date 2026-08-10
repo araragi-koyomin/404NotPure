@@ -10,11 +10,14 @@ owners:
 tags:
   - local-development
   - configuration
+  - authentication
   - mysql
   - redis
   - alipay
   - oss
 related:
+  - SEC-001
+  - SEC-012
   - PAY-001
   - DB-001A
   - OSS-003
@@ -51,6 +54,21 @@ Copy-Item back_end/.env.example back_end/.env
 ```powershell
 docker compose --env-file back_end/.env up --build
 ```
+
+## 认证 Cookie、JWT 与跨域来源
+
+本轮把 JWT（JSON Web Token，即登录成功后用于证明用户身份的签名令牌）签名密钥从 Java 源码迁移到环境变量。现有真实 `.env` 不会由自动化脚本读取或改写；维护者需要参照 `.env.example` 手工补齐下列变量。缺少 `JWT_SECRET` 时后端会拒绝启动，避免静默退回仓库内置密钥。
+
+| 变量 | 本机填写规则 | 说明 |
+|---|---|---|
+| `JWT_SECRET` | 使用密码生成器创建至少 32 个字符的随机值 | 只保存在忽略的 `.env` 或部署环境，不得提交、打印或复制到测试。不同环境应使用不同值；修改后，旧令牌会立即失效。 |
+| `JWT_EXPIRATION_SECONDS` | 默认 `86400` | JWT 与认证 Cookie 共用该寿命，避免令牌已经过期但浏览器仍长期发送 Cookie。 |
+| `AUTH_COOKIE_SECURE` | 本机 HTTP 调试使用 `false`；HTTPS 部署必须使用 `true` | `true` 表示浏览器只通过 HTTPS 发送认证 Cookie。本机没有 HTTPS 时直接开启会导致浏览器不发送 Cookie。 |
+| `CORS_ALLOWED_ORIGINS` | 默认 `http://127.0.0.1:5173,http://localhost:5173` | CORS 是浏览器的跨来源访问规则。这里只能列完整、可信的前端来源，逗号分隔，不支持任意来源通配，也不要填写路径。 |
+
+浏览器兼容规则是：名为 `token` 的 HttpOnly Cookie 和精确同名的 `token` 请求头可以单独使用；两者同时存在时必须是同一个令牌，否则请求按未登录拒绝。认证 Cookie 使用 `SameSite=Lax`，这会减少第三方网页自动携带 Cookie 的机会，但不等于完整的 CSRF（跨站请求伪造）防护。当前 CSRF 仍关闭，后续兼容方案由 `SEC-012` 跟踪；部署时不能把 CORS 白名单或 `SameSite` 当作已经解决全部跨站请求风险。
+
+退出登录会调用 `POST /api/accounts/logout` 使 HttpOnly Cookie 立即过期；只有服务器成功响应后，前端才清理当前标签页保存的请求头令牌并跳转登录页。若网络中断或服务器不可达，前端会保留当前页面和本地身份并明确提示 Cookie 可能仍有效，用户可以重试，不能把“只清了页面状态”误当成安全退出。该接口允许未登录调用，以便令牌已过期时仍能清理浏览器 Cookie；它不会使已经被复制到其他设备的无状态 JWT 提前失效。
 
 ## MySQL 配置
 

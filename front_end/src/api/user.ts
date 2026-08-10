@@ -1,4 +1,5 @@
 import {axios} from '../utils/request.ts';
+import {describeRequestError} from '../utils/safe-error.ts';
 import {USER_MODULE} from './_prefix';
 
 type LoginInfo = {
@@ -43,9 +44,13 @@ export const userRegister = async (registerInfo: RegisterInfo) => {
     try {
         return await axios.post(`${USER_MODULE}`, registerInfo);
     } catch (err) {
-        console.error('注册失败', err);
+        console.error('注册失败', describeRequestError(err));
         throw err;
     }
+};
+
+export const userLogout = async () => {
+    return axios.post(`${USER_MODULE}/logout`);
 };
 
 
