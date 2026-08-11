@@ -5,6 +5,7 @@ import com.example.tomatomall.po.Product;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.util.TokenUtil;
 import com.example.tomatomall.vo.ProductVO;
+import com.example.tomatomall.vo.ProductPageVO;
 import com.example.tomatomall.vo.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -48,6 +49,17 @@ public class ProductController {
     public Response<List<ProductVO>> getAllProducts() {
         List<ProductVO> productList = productService.getProductList();
         return Response.buildSuccess(productList);
+    }
+
+    @GetMapping("/page")
+    public Response<ProductPageVO> getProductPage(
+            @RequestParam(required = false) String page,
+            @RequestParam(required = false) String size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String categories,
+            @RequestParam(required = false) String sort
+    ) {
+        return Response.buildSuccess(productService.getProductPage(page, size, keyword, categories, sort));
     }
 
     /**

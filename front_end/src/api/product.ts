@@ -4,7 +4,7 @@ import { PRODUCT_MODULE } from "./_prefix.ts";
 
 // 基于Lab2规范定义的商品类型，更新支持多图片
 export type Product = {
-    id?: string;
+    id?: string | number;
     title: string;
     price: number;
     rate: number;
@@ -14,6 +14,32 @@ export type Product = {
     detail?: string;
     specifications?: Specification[];
     category?: string;
+};
+
+export type ProductSummary = {
+    id: number;
+    title: string;
+    price: number | null;
+    rate: number | null;
+    cover?: string;
+    category?: string;
+    author: string | null;
+};
+
+export type ProductPageData = {
+    items: ProductSummary[];
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+};
+
+export type ProductPageQuery = {
+    page: number;
+    size: number;
+    keyword?: string;
+    categories?: string;
+    sort: string;
 };
 
 // 规格说明类型
@@ -55,8 +81,15 @@ export const getAllProducts = async () => {
         });
 };
 
+export const getProductPage = async (query: ProductPageQuery) => {
+    return axios
+        .get(`${PRODUCT_MODULE}/page`, { params: query })
+        .then((res) => res)
+        .catch((err) => err.response);
+};
+
 // 获取指定商品信息
-export const getProductById = async (id: string) => {
+export const getProductById = async (id: string | number) => {
     return axios
         .get(`${PRODUCT_MODULE}/${id}`)
         .then((res) => {
@@ -94,7 +127,7 @@ export const createProduct = async (product: Product) => {
 
 
 // 删除商品
-export const deleteProduct = async (id: string) => {
+export const deleteProduct = async (id: string | number) => {
     return axios
         .delete(`${PRODUCT_MODULE}/${id}`)
         .then((res) => {
@@ -106,7 +139,7 @@ export const deleteProduct = async (id: string) => {
 };
 
 // 调整指定商品的库存
-export const updateProductStockpile = async (productId: string, numberStockpile: number) => {
+export const updateProductStockpile = async (productId: string | number, numberStockpile: number) => {
     return axios.patch(
         `${PRODUCT_MODULE}/stockpile/${productId}`,
         { amount: numberStockpile } // 🔥 必须是对象！
@@ -117,7 +150,7 @@ export const updateProductStockpile = async (productId: string, numberStockpile:
 
 
 // 查询指定商品的库存
-export const getProductStockpile = async (productId: string) => {
+export const getProductStockpile = async (productId: string | number) => {
     return axios
         .get(`${PRODUCT_MODULE}/stockpile/${productId}`)
         .then((res) => {
@@ -153,7 +186,7 @@ export const deleteComment = async (commentId: string) => {
 };
 
 // 将商品添加到购物车
-export const addToCart = async (productId: string, quantity: number) => {
+export const addToCart = async (productId: string | number, quantity: number) => {
     return axios
         .post(`/api/cart`, { productId, quantity })
         .then((res) => {
