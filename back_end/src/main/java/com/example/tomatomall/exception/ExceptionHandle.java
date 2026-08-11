@@ -23,4 +23,10 @@ public class ExceptionHandle {
     public Response<String> handleInvalidRequest(Exception ignored) {
         return Response.buildFailure("请求参数不完整或格式错误", "400");
     }
+
+    @ExceptionHandler(InvalidProductPageRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Response<String> handleInvalidProductPageRequest(InvalidProductPageRequestException exception) {
+        return Response.buildFailure(exception.getMessage(), "400");
+    }
 }

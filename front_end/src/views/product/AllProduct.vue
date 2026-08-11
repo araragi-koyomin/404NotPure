@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import "../../style/fade.css"
-import {computed, nextTick, onMounted, ref} from 'vue'
+import {nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {DArrowLeft, DArrowRight, Search, ShoppingCart} from '@element-plus/icons-vue'
 import {router} from '../../router';
-import {addToCart as apiAddToCart, getAllProducts, getProductStockpile, Product} from "../../api/product.ts";
+import {
+  addToCart as apiAddToCart,
+  getProductPage,
+  getProductStockpile,
+  ProductSummary
+} from "../../api/product.ts";
 import {AdvertisementInfo, getAdvertisements} from "../../api/advertisement.ts";
 import {callTomatoAssistant} from "../../api/tools.ts";
 import {parseBookCategory} from "../../utils";
@@ -18,7 +23,7 @@ const sidebarOpen = ref(true)
 const input = ref('')
 const addCartDialogVisible = ref(false)
 const cartQuantity = ref(1)
-const selectedProduct = ref<Product | null>(null)
+const selectedProduct = ref<ProductSummary | null>(null)
 const selectedStock = ref(0)
 const messages = ref([
   { role: 'assistant', content: '你好，我是番茄助手 🍅 有什么想问我的吗？'}
@@ -52,34 +57,88 @@ const sendMessage = async () => {
     boxRef.value.scrollTop = boxRef.value.scrollHeight
   }
 }
-// Static book categories
-const bookCategories = [
-  "文学小说", "历史传记", "哲学宗教", "艺术设计", "科学技术",
-  "计算机与互联网", "医学与健康", "教育考试", "经济管理",
-  "政治法律", "社会科学", "旅行与地理", "儿童读物"
+type CategoryOption = { label: string; codes: string }
+
+const bookCategories: CategoryOption[] = [
+  {label: "文学小说", codes: "literature"},
+  {label: "历史传记", codes: "biography,history"},
+  {label: "哲学宗教", codes: "philosophy,religion"},
+  {label: "艺术设计", codes: "art,design"},
+  {label: "科学技术", codes: "science"},
+  {label: "计算机与互联网", codes: "computer,internet"},
+  {label: "医学与健康", codes: "medical,health"},
+  {label: "教育考试", codes: "education,exam"},
+  {label: "经济管理", codes: "economics,management"},
+  {label: "政治法律", codes: "politics,law"},
+  {label: "社会科学", codes: "social"},
+  {label: "旅行与地理", codes: "travel,geography"},
+  {label: "儿童读物", codes: "children"}
 ]
 
+const sortOptions = [
+  {label: '默认排序', value: 'id,asc'},
+  {label: '最新上架', value: 'id,desc'},
+  {label: '评分最高', value: 'rate,desc'},
+  {label: '价格从低到高', value: 'price,asc'},
+  {label: '价格从高到低', value: 'price,desc'},
+  {label: '书名排序', value: 'title,asc'}
+]
+
+const allowedPageSizes = [20, 40, 60]
+const page = ref(1)
+const pageSize = ref(20)
+const totalElements = ref(0)
+const totalPages = ref(0)
+const sort = ref('id,asc')
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+let latestRequest = 0
+
+const cancelScheduledKeywordSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = undefined
+  }
+}
+
 // Product and advertisement list
-const products = ref<Product[]>([])
+const products = ref<ProductSummary[]>([])
 const loading = ref(false)
 
 const loadProducts = async () => {
+  const requestId = ++latestRequest
   loading.value = true
   try {
-    const res = await getAllProducts()
-    if (res.data.code === '200') {
-      products.value = res.data.data
+    const categoryCodes = bookCategories.find(category => category.label === activeCategory.value)?.codes
+    const res = await getProductPage({
+      page: page.value,
+      size: pageSize.value,
+      keyword: searchKeyword.value.trim() || undefined,
+      categories: categoryCodes,
+      sort: sort.value
+    })
+    if (requestId !== latestRequest) return
+    if (res?.data?.code === '200') {
+      products.value = res.data.data.items
+      totalElements.value = res.data.data.totalElements
+      totalPages.value = res.data.data.totalPages
     } else {
+      products.value = []
+      totalElements.value = 0
+      totalPages.value = 0
       ElMessage({
-        message: res.data.code + res.data.msg,
+        message: (res?.data?.code || '') + (res?.data?.msg || '加载商品失败'),
         type: 'error',
         center: true,
       });
     }
   } catch (err) {
+    if (requestId !== latestRequest) return
+    products.value = []
+    totalElements.value = 0
+    totalPages.value = 0
     ElMessage.error('加载商品发生异常')
   } finally {
-    loading.value = false
+    if (requestId === latestRequest) loading.value = false
   }
 }
 
@@ -95,25 +154,75 @@ const loadAdvertisements = async () => {
 };
 
 // Helpers
-const normalize = (str: string) => str.trim().toLowerCase()
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }
-const selectCategory = (category: string) => {
-  activeCategory.value = category
+
+const routeQueryValue = (value: unknown): string | undefined =>
+    typeof value === 'string' ? value : undefined
+
+const positiveInteger = (value: unknown, fallback: number): number => {
+  const parsed = Number(routeQueryValue(value))
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
-// Computed product list based on keyword
-const filteredProducts = computed(() =>
-    products.value.filter(p => {
-      const matchKeyword = normalize(p.title).includes(normalize(searchKeyword.value))
-      const matchCategory = !activeCategory.value || parseBookCategory(p.category || null) === activeCategory.value
-      return matchKeyword && matchCategory
-    })
-)
+const currentQuery = (overrides: Record<string, string | number | undefined> = {}) => {
+  const categoryCodes = bookCategories.find(category => category.label === activeCategory.value)?.codes
+  return {
+    page: page.value,
+    size: pageSize.value,
+    sort: sort.value,
+    ...(searchKeyword.value.trim() ? {keyword: searchKeyword.value.trim()} : {}),
+    ...(categoryCodes ? {categories: categoryCodes} : {}),
+    ...overrides
+  }
+}
+
+const navigateWithState = (mode: 'push' | 'replace', overrides: Record<string, string | number | undefined>) => {
+  const query = currentQuery(overrides)
+  Object.keys(query).forEach(key => {
+    if (query[key as keyof typeof query] === undefined || query[key as keyof typeof query] === '') {
+      delete query[key as keyof typeof query]
+    }
+  })
+  return router[mode]({path: '/allProduct', query})
+}
+
+const selectCategory = (category: string | null) => {
+  const codes = bookCategories.find(option => option.label === category)?.codes
+  navigateWithState('push', {page: 1, categories: codes})
+}
+
+const submitKeyword = () => {
+  cancelScheduledKeywordSearch()
+  navigateWithState('replace', {page: 1, keyword: searchKeyword.value.trim() || undefined})
+}
+
+const scheduleKeywordSearch = () => {
+  cancelScheduledKeywordSearch()
+  searchTimer = setTimeout(submitKeyword, 400)
+}
+
+const changeSort = (value: string) => navigateWithState('push', {page: 1, sort: value})
+const changePage = (value: number) => navigateWithState('push', {page: value})
+const changePageSize = (value: number) => navigateWithState('push', {page: 1, size: value})
+
+const applyRouteState = () => {
+  cancelScheduledKeywordSearch()
+  const query = router.currentRoute.value.query
+  page.value = positiveInteger(query.page, 1)
+  const requestedSize = positiveInteger(query.size, 20)
+  pageSize.value = allowedPageSizes.includes(requestedSize) ? requestedSize : 20
+  const requestedSort = routeQueryValue(query.sort)
+  sort.value = sortOptions.some(option => option.value === requestedSort) ? requestedSort! : 'id,asc'
+  searchKeyword.value = routeQueryValue(query.keyword) || ''
+  const requestedCategories = routeQueryValue(query.categories)
+  activeCategory.value = bookCategories.find(category => category.codes === requestedCategories)?.label || null
+  loadProducts()
+}
 
 // Handle add-to-cart event
-const addToCart = async (product: Product) => {
+const addToCart = async (product: ProductSummary) => {
   selectedProduct.value = product
   cartQuantity.value = 1
 
@@ -156,10 +265,10 @@ const confirmAddToCart = async () => {
   }
 }
 
-const goToProduct = (id: string) => {
+const goToProduct = (id: string | number) => {
   router.push(`/product/${id}`)
 }
-const handleCardClick = (product: Product) => {
+const handleCardClick = (product: ProductSummary) => {
   if (product.id) {
     goToProduct(product.id)
   } else {
@@ -167,8 +276,16 @@ const handleCardClick = (product: Product) => {
   }
 }
 
+const formatPrice = (price: number | null) => price === null ? '价格待定' : `¥${price.toFixed(2)}`
+
+watch(() => router.currentRoute.value.query, applyRouteState, {deep: true, immediate: true})
+
+onBeforeUnmount(() => {
+  cancelScheduledKeywordSearch()
+  latestRequest++
+})
+
 onMounted(() => {
-  loadProducts()
   loadAdvertisements()
   const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
   if (saved) {
@@ -198,17 +315,17 @@ onMounted(() => {
       <ul class="category-list">
         <li
             :class="{ active: !activeCategory }"
-            @click="activeCategory = null"
+            @click="selectCategory(null)"
         >
           全部分类
         </li>
         <li
-            v-for="(cat, i) in bookCategories"
-            :key="`${cat}-${i}`"
-            :class="{ active: activeCategory === cat }"
-            @click="selectCategory(cat)"
+            v-for="cat in bookCategories"
+            :key="cat.codes"
+            :class="{ active: activeCategory === cat.label }"
+            @click="selectCategory(cat.label)"
         >
-          {{ cat }}
+          {{ cat.label }}
         </li>
       </ul>
     </el-aside>
@@ -229,6 +346,9 @@ onMounted(() => {
             placeholder="Tomato Mall"
             class="search-input"
             clearable
+            @input="scheduleKeywordSearch"
+            @keyup.enter="submitKeyword"
+            @clear="submitKeyword"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
@@ -290,12 +410,28 @@ onMounted(() => {
       </el-row>
 
       <!-- Product Listing -->
-      <div class="product-display">
-        <template v-if="filteredProducts.length">
+      <div class="product-display" v-loading="loading">
+        <div class="list-toolbar">
+          <span class="result-count">共 {{ totalElements }} 本</span>
+          <el-select
+              :model-value="sort"
+              class="sort-select"
+              aria-label="商品排序"
+              @change="changeSort"
+          >
+            <el-option
+                v-for="option in sortOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+            />
+          </el-select>
+        </div>
+        <template v-if="products.length">
           <el-space wrap :size="20" class="product-space">
             <el-card
                 class="product-card"
-                v-for="product in filteredProducts"
+                v-for="product in products"
                 :key="product.id"
                 shadow="hover"
                 @click="handleCardClick(product)"
@@ -318,10 +454,11 @@ onMounted(() => {
               </div>
               <div class="product-title">{{ product.title }}</div>
               <div class="product-author">
-                作者：{{ product.specifications?.find(spec => spec.item === '作者')?.value || '未知' }}
+                作者：{{ product.author || '未知' }}
               </div>
+              <div class="product-price">{{ formatPrice(product.price) }}</div>
               <el-rate
-                  :model-value="product.rate / 2"
+                  :model-value="(product.rate || 0) / 2"
                   disabled
                   :max="5"
                   :allow-half="true"
@@ -347,6 +484,18 @@ onMounted(() => {
         <template v-else>
           <div class="empty-result">暂无匹配商品</div>
         </template>
+        <el-pagination
+            v-if="totalPages > 0"
+            class="product-pagination"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :current-page="page"
+            :page-size="pageSize"
+            :page-sizes="allowedPageSizes"
+            :total="totalElements"
+            @current-change="changePage"
+            @size-change="changePageSize"
+        />
       </div>
     </el-main>
   </el-container>
@@ -597,12 +746,28 @@ p.user {
   justify-content: center;
 }
 
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.result-count {
+  color: #666;
+  font-size: 14px;
+}
+
+.sort-select {
+  width: 160px;
+}
+
 .product-card {
   background: linear-gradient(180deg, #ffffff 80%, #fef1f0 100%);
   padding: 12px;
   border-radius: 12px;
   width: 200px;
-  height: 310px;
+  height: 335px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -654,6 +819,15 @@ p.user {
   margin-bottom: 4px;
 }
 
+.product-price {
+  display: flex;
+  justify-content: center;
+  color: #e53935;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
 .product-rate {
   display: flex;
   justify-content: center;
@@ -671,6 +845,11 @@ p.user {
   color: #999;
   font-size: 18px;
   margin-top: 40px;
+}
+
+.product-pagination {
+  justify-content: center;
+  margin-top: 28px;
 }
 .card-tag {
   position: absolute;

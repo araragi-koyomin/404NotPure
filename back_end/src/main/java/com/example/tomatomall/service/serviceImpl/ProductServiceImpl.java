@@ -1,6 +1,7 @@
 package com.example.tomatomall.service.serviceImpl;
 
 import com.example.tomatomall.dto.ProductDTO;
+import com.example.tomatomall.dto.ProductPageQuery;
 import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.po.Product;
 import com.example.tomatomall.po.ProductContentImage;
@@ -8,11 +9,13 @@ import com.example.tomatomall.po.ProductSpecification;
 import com.example.tomatomall.po.StockPile;
 import com.example.tomatomall.repository.ContentImageRepository;
 import com.example.tomatomall.repository.ProductRepository;
+import com.example.tomatomall.repository.ProductPageRepository;
 import com.example.tomatomall.repository.SpecificationRepository;
 import com.example.tomatomall.repository.StockPileRepository;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.service.cache.ProductDetailCache;
 import com.example.tomatomall.vo.ProductContentImageVO;
+import com.example.tomatomall.vo.ProductPageVO;
 import com.example.tomatomall.vo.ProductVO;
 import com.example.tomatomall.vo.SpecificationVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +34,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private ProductPageRepository productPageRepository;
 
     @Autowired
     private SpecificationRepository specificationRepository;
@@ -107,6 +113,18 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductVO> getProductList() {
         List<Product> products = productRepository.findAll();
         return products.stream().map(Product::toVO).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductPageVO getProductPage(
+            String page,
+            String size,
+            String keyword,
+            String categories,
+            String sort
+    ) {
+        return productPageRepository.findPage(ProductPageQuery.from(page, size, keyword, categories, sort));
     }
 
     /**
