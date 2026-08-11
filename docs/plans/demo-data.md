@@ -86,6 +86,7 @@ DATA-001 不修改正式领域实体、不增加 Flyway 迁移，也不提前夹
 - Docker Desktop 重启后已使用当前分支重新构建并启动 backend、db、frontend 和 redis 四服务；当前后端容器通过仅对本次命令生效的 `DB_NAME=tomatomall_demo` 覆盖连接演示库，容器启动日志确认 8080 端口和 Spring Boot 正常启动，MySQL 与 Redis 健康检查通过；本机 `.env` 原有日常数据库名没有被改写；
 - 前端通过真实商品响应中的路径返回 `image/svg+xml`，浏览器实际显示《傲慢与偏见》中文封面，未发现路径错误、空白或乱码；登录页正常显示且没有浏览器控制台警告或错误，四服务继续保持运行，供项目所有者人工验收；
 - 项目所有者已使用保持运行的前端完成页面人工验收，确认演示账户登录、300 本商品列表、《傲慢与偏见》详情、本地封面和详情图片、库存与规格以及 6 个广告均符合预期，并于 2026-08-11 明确确认 DATA-001 质量通过；
+- [PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已于 2026-08-11 从 `codex/feat-demo-data` 创建，当前等待审阅；合并成功前本计划继续保留在温层，DATA-001 继续保留在 BACKLOG；
 - 已在被 Git 忽略的本机 `.env` 中生成并保存随机 `JWT_SECRET`，正常 Compose 启动不再依赖临时注入；演示密码和 JWT 密钥值均未进入 Git、日志或文档；
 - 首次脚本验收发现 Exec Maven Plugin 默认等待 MySQL Connector/J 的 JVM 后台清理线程并产生 15 秒警告；DATA-001 配置为不等待该 JVM 级守护线程，导入器自身仍通过 try-with-resources 关闭每一个 JDBC 连接，命令结束时由 JVM 正常终止后台线程，避免把成功导入误报成警告。
 

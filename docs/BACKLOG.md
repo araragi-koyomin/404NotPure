@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | DATA-001 本机与面试演示数据 |
-| 当前阶段 | `codex/feat-demo-data` 已完成 DATA-001 实现、自动验证和项目所有者人工验收：7 项生成测试、8 项真实 MySQL 测试及完整 187 项 Maven 回归通过；脚本在独立 `tomatomall_demo` 首次导入 300 本书、502 个账户、300 条库存、1200 条规格、300 张详情图和 6 个广告，第二次执行新增数量均为 0；Docker Desktop 重启后四服务正常运行，后端明确连接演示库；API 验证商品列表/详情/库存、演示用户登录和登录后广告读取，项目所有者已在页面完成登录、300 本商品列表、《傲慢与偏见》详情及本地图片、库存规格和 6 个广告验收并确认质量通过，当前进入 Git 交付前检查 |
+| 当前阶段 | `codex/feat-demo-data` 已完成 DATA-001 实现、自动验证和项目所有者人工验收：7 项生成测试、8 项真实 MySQL 测试及完整 187 项 Maven 回归通过；脚本在独立 `tomatomall_demo` 首次导入 300 本书、502 个账户、300 条库存、1200 条规格、300 张详情图和 6 个广告，第二次执行新增数量均为 0；Docker Desktop 重启后四服务正常运行，后端明确连接演示库；API 与页面人工验收均通过；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已创建，当前等待 PR 审阅 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005，以及 CACHE-001/TEST-001 均已合并并进入冷层交付记录 |
-| 尚未完成 | DATA-001 尚需完成最终差异/文档检查并取得 Git 授权后提交、推送、创建 PR、合并和冷层归档；PERF-001 将在演示数据完成后建立缓存性能基线，CACHE-002 是否实施取决于压测证据；其余活跃项继续按下表跟踪 |
+| 尚未完成 | DATA-001 尚需完成 PR #8 审阅、问题修正、squash merge 和冷层归档；PERF-001 将在演示数据完成后建立缓存性能基线，CACHE-002 是否实施取决于压测证据；其余活跃项继续按下表跟踪 |
 | 当前阻塞或待确认 | DATA-001 功能与本机验收没有阻塞；真实演示密码和新生成的随机 `JWT_SECRET` 只保存在被 Git 忽略的本机 `.env`，仓库、日志和报告不会保存其值。商品列表全量响应问题已登记为 API-002，本轮不扩大为分页重构。PAY-003 仍缺支付宝服务器可访问的 `notify_url`；RUN-002 仍缺数据卷持久性、日志配置回显和基础镜像稳定拉取证据 |
-| 下一步 | 执行最终文档、格式和 Git 差异检查，报告待提交文件范围并等待提交、推送和创建 PR 的明确授权；合并成功后完成冷层归档并从 BACKLOG 移除 DATA-001。随后优先处理 API-002，再执行 PERF-001，并根据测量结果决定 CACHE-002 |
+| 下一步 | 审阅 PR #8；若发现问题，修复后重新执行针对性验证并复核。项目所有者确认后执行 squash merge，随后完成冷层归档并从 BACKLOG 移除 DATA-001。之后优先处理 API-002，再执行 PERF-001，并根据测量结果决定 CACHE-002 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -54,7 +54,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`。当前开发分支为 `codex/feat-demo-data`，基线是包含 CACHE-001/TEST-001 归档的 `master@3b46b25e`。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已于 2026-08-11 从 `codex/feat-demo-data` 创建，等待审阅。当前开发分支为 `codex/feat-demo-data`，基线是包含 CACHE-001/TEST-001 归档的 `master@3b46b25e`。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。
