@@ -42,7 +42,7 @@
 - `docs/BACKLOG.md`：热层活跃工作索引；只保留未完成项。
 - `docs/DEVELOPMENT_SOP.md`：从需求确认、TDD、验证和独立审查到 Git 授权、合并与归档的标准开发流程。
 - `docs/plans/`：温层活跃设计、范围、TDD 清单和验收标准。
-- `docs/plans/demo-data.md`：DATA-001 本机/面试演示书籍、库存、规格、本地图片和广告的可重复导入边界；演示数据不属于默认测试夹具。
+- `docs/plans/demo-data.md`：DATA-001 在独立 `tomatomall_demo` 中生成书籍、库存、规格、本地 SVG、广告和本地演示用户的可重复导入边界；演示数据不属于默认测试夹具，也不代表真实业务用户。
 - `docs/archive/`：冷层已完成、被替代或取消文档；归档不等于删除。
 
 ## 文档与三层记忆
@@ -182,7 +182,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - 测试不能调用真实支付宝或 OSS 服务。支付宝签名验证应封装出可替换边界，业务服务测试直接传入已验证的通知数据。废弃的 assistant 不新增维护性测试。
 - 真实 OSS 只能通过显式外部探针执行：`OssLifecycleProbeIT` 必须设置 `RUN_REAL_OSS_PROBE=true`，`OssBusinessDeletePermissionIT` 必须设置 `RUN_REAL_OSS_PERMISSION_PROBE=true`。两者的 `*IT` 命名都不进入默认 Surefire 发现范围，只能由对应脚本或 `-Dtest=...` 明确选择；生命周期探针只能使用 `_validation` 隔离前缀并在 `finally` 中清理，权限探针只能针对预先确认不存在的随机业务对象名验证拒绝结果。它们都不能作为默认单元测试运行。
 - 需要 MySQL/Redis 的测试应明确标注并使用隔离数据；若本机依赖不可用，必须报告未执行项、阻塞原因和替代验证。不要让测试读取开发者真实 `.env`。
-- CACHE-001/TEST-001 的真实 Redis 测试必须自行创建带随机标识的少量 MySQL 商品和缓存 key，只清理自己创建的数据且禁止 `FLUSHDB`；不得依赖 DATA-001 演示书籍。DATA-001 只用于本机和面试浏览器演示，默认 Maven 测试不得自动导入。
+- CACHE-001/TEST-001 的真实 Redis 测试必须自行创建带随机标识的少量 MySQL 商品和缓存 key，只清理自己创建的数据且禁止 `FLUSHDB`；不得依赖 DATA-001。DATA-001 只允许人工显式写入名称严格等于 `tomatomall_demo` 的独立数据库，密码从运行时 `TOMATOMALL_DEMO_PASSWORD` 读取且不得回显；普通应用启动和默认 Maven 测试不得自动导入。
 - 完成交付前至少执行 `mvn compile`、`mvn test`、适用的 MySQL/Redis 集成测试以及仓库根目录的 `git diff --check`。前端契约发生变化时还需执行 `npm run build`。
 
 代码开发严格遵循 TDD 的 Red → Green → Refactor：先写能因目标缺陷而失败的测试并确认失败原因，再写最小实现，最后在持续绿灯下重构。禁止测试剧场：不得用只验证 Mock 调用次数的测试替代结果/状态验证，不得复制生产实现到测试，不得用无意义断言或跳过真实事务、并发、金额精度和缓存失效语义。数据库锁、条件更新、事务回滚和并发库存必须由真实 MySQL 集成测试证明；Redis TTL、序列化和失效必须由真实 Redis 集成测试证明。

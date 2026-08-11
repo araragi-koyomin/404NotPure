@@ -24,6 +24,7 @@ dist/
 out/
 .cache/
 .temp/
+front_end/public/demo-data/generated/
 .env.local
 .env.*.local
 
