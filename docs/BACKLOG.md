@@ -20,12 +20,12 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | API-002 商品列表分页与服务端查询 |
-| 当前阶段 | API-002 的实现、回归和真实浏览器验收已经完成：真实 MySQL 针对性测试 11/11、完整 Maven 回归 31 类 198/198、前端构建和敏感日志检查均通过，四服务运行正常。Chrome 插件完成常规分页、分类、排序、搜索、详情返回和浏览器前进/后退验收；最终独立复核发现的“输入关键词后不满 400 毫秒立即后退时，旧搜索计时器可能把恢复页码重置为第 1 页”P2 缺陷已通过路由恢复前取消待执行搜索修复，修复后针对性代码复核未发现剩余 P0～P2，新的 Chrome 会话也确认等待超过 400 毫秒后仍正确停留在恢复的第 2 页，并可前进恢复第 3 页 |
-| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001，以及 DATA-001 均已合并并进入冷层交付记录 |
-| 尚未完成 | API-002 只剩整理 Git 交付报告，并在项目所有者授权后暂存本批次文件、提交、推送和创建 PR。项目所有者明确选择不引入前端组件测试框架，因此搜索等待和 URL 历史虽然通过真实 Chrome 验收，仍不能声称具备组件级自动回归保护。PERF-001 与其他活跃项继续按下表跟踪 |
-| 当前阻塞或待确认 | API-002 当前没有功能或测试阻塞。Chrome 复测中 Vue “尝试写入只读计算值”警告再次出现，但 URL、页码和结果正确，继续由 FE-003 单独跟踪；废弃助手的 Live2D 渲染错误不属于本轮维护范围。Docker Desktop 的内部镜像数据块 `input/output error` 已恢复，仍作为 RUN-002 环境稳定性证据保留。PAY-003 仍缺支付宝服务器可访问的 `notify_url` |
-| 下一步 | 完成文档和格式终检，整理 API-002 新增/修改文件、测试、浏览器证据和遗留风险；随后等待项目所有者明确授权 Git 操作 |
+| 主开发批次 | PERF-001 Redis/MySQL 缓存性能基线（待项目所有者确认具体压测范围后开始） |
+| 当前阶段 | API-002 已通过 PR #9 合并到个人仓库 `master@b0fb0754`，功能计划已转为冷层交付记录并从活跃清单移除；当前只完成合并后的文档生命周期收尾，不提前实施 PERF-001 |
+| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001，以及 API-002 商品列表分页与服务端查询均已合并并进入冷层交付记录 |
+| 尚未完成 | PERF-001 仍需确认压测工具、固定环境、请求场景和结果记录格式；CACHE-002 只有在压测证明热点过期确实造成明显重复查库或连接等待后才实施。项目所有者明确选择不引入前端组件测试框架，因此 API-002 的搜索等待和 URL 历史只有真实 Chrome 验收，不能声称具备组件级自动回归保护 |
+| 当前阻塞或待确认 | PERF-001 尚未开始，需先讨论压测资源边界和验收指标。API-002 Chrome 复测中的 Vue “尝试写入只读计算值”警告没有造成可见功能错误，继续由 FE-003 跟踪；Docker Desktop 的内部镜像数据块 `input/output error` 已恢复，仍作为 RUN-002 环境稳定性证据保留；PAY-003 仍缺支付宝服务器可访问的 `notify_url` |
+| 下一步 | 合并 API-002 冷层归档后，与项目所有者确认 PERF-001 的测试环境、场景和诚实可复现的指标，再创建独立开发分支并按 TDD/测量计划实施 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -34,7 +34,6 @@ tags:
 | ORD-003 | P1 | planned | 增加待支付订单取消和超时关闭规则，安全地把冻结库存恢复为可用库存；当前只有 `PENDING -> PAID`，长期未支付订单会一直占用冻结库存 | 明确 `PENDING -> CANCELLED/CLOSED` 的来源、权限、超时依据和库存动作；支付与取消并发时只有一个方向成功；重复取消不重复恢复库存；真实 MySQL 事务和并发测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-002 | P2 | planned | 修复支付宝同步返回页仅凭浏览器参数显示支付成功并清理购物车的问题，同时统一支付表单接口的失败 `Response`；页面必须以服务端订单状态为准 | 伪造或提前到达的同步返回不会显示成功或清理购物车；订单不存在、非法状态等失败保持 `code/msg/data`；前后端接口测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-003 | P2 | planned | 面向个人项目和面试演示完成一次支付宝沙箱端到端验收：不购买固定公网 IP，不做长期部署；SEC-001/PAY-002 完成后，临时提供支付宝服务器可访问的 HTTPS `notify_url`，`return_url` 只承担浏览器跳转 | 沙箱买家完成虚拟付款；支付宝侧交易查询成功；真实异步通知通过验签并返回 `success`；本地订单变为 `PAID`，支付时间和交易号落库，冻结库存只释放一次；验收记录不含账号、订单号、签名或密钥；测试后关闭临时公网入口 | [交易链路一致性计划](plans/transaction-integrity.md) |
-| API-002 | P1 | in_progress | 商品列表当前由 `findAll()` 一次返回全部商品，响应包含规格和详情图，前端再在内存中过滤；300 本演示书籍的一次请求已测得约 242 KB 响应和 601 次 MySQL `SELECT`。保留旧接口并新增分页摘要接口，列表不逐个访问 Redis 详情缓存 | 分页、书名/作者搜索、13 个中文分类对应的英文代码组合、稳定排序和 URL 状态完成；真实 MySQL 测试证明查询数量不随当前页商品数线性增长；前端构建、浏览器验收、改造前后单请求测量和完整回归通过 | [商品列表分页与服务端查询计划](plans/product-list-pagination.md) |
 | PERF-001 | P1 | planned | 在 DATA-001 后建立可重复的 Redis/MySQL 压力测试，分别测量冷缓存、热缓存、热门 key 过期、相同/随机无效 ID、大量 key 接近过期、Redis 不可用和读写并发；当前没有 QPS、P95/P99 或数据库减压数据，不能提前声称生产级高并发能力 | 固定代码、环境、数据量、并发和持续时间；记录吞吐量、延迟、错误率、Redis 命中率、MySQL 查询/连接/锁等待和资源使用；相同参数至少可重复运行并形成冷层报告，不虚构性能数字 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | CACHE-002 | P1 | planned | 只有 PERF-001 证明热门商品过期会产生明显重复查库或连接池等待后，才实现同一商品在同一时刻只由一个请求查库回填、其他请求等待后重查 Redis；随机无效 ID 和 Redis 整体重启按测量结果分别处理，不提前引入复杂组件 | 真实 MySQL/Redis 并发测试证明同一热门 key 只发生受控回源、异常后不会遗留永久锁或无限等待；用 PERF-001 的相同参数复测并归档对比；缓存故障不破坏数据库正确性 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | TEST-002 | P1 | in_progress | 默认 Surefire 独立 JVM 已在一次性 Maven 3.9.9/Java 17 容器中连续两轮完成 104/104，但当前只证明现有环境可运行，尚未测量稳定通过所需的最低合理内存，也未在项目中覆盖 Surefire 默认 fork 设置 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录经测量的最低合理内存、实际容器限制和 Surefire 设置；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
@@ -54,7 +53,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已于 2026-08-11 合并，提交为 `f3b42dca`。当前开发分支为 `codex/feat-product-list-pagination`，基线为完成 DATA-001 归档的 `master@9423290f`。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已于同日合并，提交为 `f3b42dca`；[PR #9](https://github.com/araragi-koyomin/404NotPure/pull/9) 已于同日合并，提交为 `b0fb0754`。本次合并后归档使用 `codex/docs-api002-archive`，目标分支为 `master@b0fb0754`；下一项功能开发分支尚未创建。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。
