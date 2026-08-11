@@ -4,7 +4,7 @@ type: governance
 layer: warm
 status: active
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-11
 owners:
   - maintainers
 tags:
@@ -87,6 +87,41 @@ docker compose --env-file back_end/.env up --build
 | `FLYWAY_BASELINE_ON_MIGRATE` | `false` | 全新数据库、已经有 `flyway_schema_history` 的数据库以及当前已迁移开发库都保持 `false`。 |
 
 只有“数据库已有旧表、但完全没有 Flyway 历史”时，才可能在备份并人工确认它与 V1 结构一致后，临时设为 `true` 运行一次。完成后立即恢复 `false`。不能把它长期打开，也不能用它强行接受来源不明或结构不一致的旧数据库。
+
+## DATA-001 独立演示数据库
+
+DATA-001 不写入日常开发数据库 `Tomato`，只允许写入名称严格等于 `tomatomall_demo` 的独立数据库。导入器不会创建、删除或重建数据库，也不会清空任何表。首次使用时，在 MySQL Compose 服务已经运行后执行下面的交互式命令；`-p` 会让 MySQL 在终端询问本机数据库密码，命令行和文档都不保存密码值：
+
+```powershell
+docker compose --env-file back_end/.env exec db `
+  mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS tomatomall_demo CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+```
+
+然后在当前 PowerShell 会话中提供只用于本地演示账户的密码并运行单一入口。请自行填写密码，不要把示例占位符原样使用，也不要截图或提交真实值：
+
+```powershell
+$env:TOMATOMALL_DEMO_PASSWORD = '<仅限本地的演示密码，至少 12 个字符>'
+.\scripts\demo-data\import-demo-data.ps1
+```
+
+默认生成 300 本书、500 个规模用户、`demo_admin` 和 `demo_user` 两个可登录账户，以及库存、规格、本地 SVG 和 6 个广告。数量和固定随机种子可以显式调整：
+
+```powershell
+.\scripts\demo-data\import-demo-data.ps1 -Books 500 -Users 800 -Seed 404
+```
+
+脚本只从 `back_end/.env` 读取 `DB_HOST`、`DB_PORT`、`DB_USER` 和 `DB_PASSWORD`，不会读取或输出 OSS、支付宝、JWT 等配置；运行时强制把目标数据库设为 `tomatomall_demo`，Java 导入器连接后还会执行第二次数据库名称校验。`TOMATOMALL_DEMO_PASSWORD` 经过 BCrypt 后入库，脚本结束时不会主动清除调用者原先设置的该变量；不使用时可以手工执行 `Remove-Item Env:TOMATOMALL_DEMO_PASSWORD`。
+
+重复执行会补齐缺失的 DATA-001 记录，但不会覆盖已有演示账户后来修改的密码/资料，也不会重置业务操作改变过的库存。生成的 SVG 位于被 Git 忽略的 `front_end/public/demo-data/generated/`；同一 seed 会覆盖为相同内容，不需要把几百张生成图片提交到 Git。文件生成和 MySQL 事务无法组成同一个跨系统事务：数据库失败时可能留下未被引用的本地 SVG，但再次执行会确定性覆盖它们，不会留下半套数据库记录。
+
+要让完整 Compose 后端连接演示数据库，可以在启动命令所在的 PowerShell 会话临时覆盖 `DB_NAME`：
+
+```powershell
+$env:DB_NAME = 'tomatomall_demo'
+docker compose --env-file back_end/.env up --build
+```
+
+停止演示后执行 `Remove-Item Env:DB_NAME`，恢复 `.env` 中的日常开发数据库名。DATA-001 不提供自动清库或删除 Docker volume 的命令。
 
 ## Redis 配置
 

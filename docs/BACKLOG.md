@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | DATA-001 本机与面试演示数据 |
-| 当前阶段 | CACHE-001/TEST-001 已通过 [PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) squash merge 到 `master@acff6078`，并完成[冷层交付记录](archive/2026-08-11-product-cache-aside-delivery.md)；当前尚未为 DATA-001 创建开发分支 |
+| 当前阶段 | `codex/feat-demo-data` 已完成 DATA-001 实现、自动验证和项目所有者人工验收：7 项生成测试、8 项真实 MySQL 测试及完整 187 项 Maven 回归通过；脚本在独立 `tomatomall_demo` 首次导入 300 本书、502 个账户、300 条库存、1200 条规格、300 张详情图和 6 个广告，第二次执行新增数量均为 0；Docker Desktop 重启后四服务正常运行，后端明确连接演示库；API 与页面人工验收均通过；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已创建，当前等待 PR 审阅 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005，以及 CACHE-001/TEST-001 均已合并并进入冷层交付记录 |
-| 尚未完成 | DATA-001 需要提供不会清空数据库的可重复演示数据脚本；PERF-001 将在演示数据完成后建立缓存性能基线，CACHE-002 是否实施取决于压测证据；其余活跃项继续按下表跟踪 |
-| 当前阻塞或待确认 | DATA-001 没有需求或环境阻塞，实施前需要从最新 `master` 创建独立分支。PAY-003 仍缺支付宝服务器可访问的 `notify_url`；RUN-002 仍缺数据卷重启、日志配置回显和基础镜像稳定拉取证据 |
-| 下一步 | 按本机与面试演示数据计划创建 DATA-001 独立分支，先写可重复导入和不覆盖用户数据的失败测试，再实现约 12～20 本公版书籍、库存、规格、本地图片和广告；完成后执行 PERF-001，再根据测量结果决定是否实施 CACHE-002 |
+| 尚未完成 | DATA-001 尚需完成 PR #8 审阅、问题修正、squash merge 和冷层归档；PERF-001 将在演示数据完成后建立缓存性能基线，CACHE-002 是否实施取决于压测证据；其余活跃项继续按下表跟踪 |
+| 当前阻塞或待确认 | DATA-001 功能与本机验收没有阻塞；真实演示密码和新生成的随机 `JWT_SECRET` 只保存在被 Git 忽略的本机 `.env`，仓库、日志和报告不会保存其值。商品列表全量响应问题已登记为 API-002，本轮不扩大为分页重构。PAY-003 仍缺支付宝服务器可访问的 `notify_url`；RUN-002 仍缺数据卷持久性、日志配置回显和基础镜像稳定拉取证据 |
+| 下一步 | 审阅 PR #8；若发现问题，修复后重新执行针对性验证并复核。项目所有者确认后执行 squash merge，随后完成冷层归档并从 BACKLOG 移除 DATA-001。之后优先处理 API-002，再执行 PERF-001，并根据测量结果决定 CACHE-002 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -34,7 +34,8 @@ tags:
 | ORD-003 | P1 | planned | 增加待支付订单取消和超时关闭规则，安全地把冻结库存恢复为可用库存；当前只有 `PENDING -> PAID`，长期未支付订单会一直占用冻结库存 | 明确 `PENDING -> CANCELLED/CLOSED` 的来源、权限、超时依据和库存动作；支付与取消并发时只有一个方向成功；重复取消不重复恢复库存；真实 MySQL 事务和并发测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-002 | P2 | planned | 修复支付宝同步返回页仅凭浏览器参数显示支付成功并清理购物车的问题，同时统一支付表单接口的失败 `Response`；页面必须以服务端订单状态为准 | 伪造或提前到达的同步返回不会显示成功或清理购物车；订单不存在、非法状态等失败保持 `code/msg/data`；前后端接口测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-003 | P2 | planned | 面向个人项目和面试演示完成一次支付宝沙箱端到端验收：不购买固定公网 IP，不做长期部署；SEC-001/PAY-002 完成后，临时提供支付宝服务器可访问的 HTTPS `notify_url`，`return_url` 只承担浏览器跳转 | 沙箱买家完成虚拟付款；支付宝侧交易查询成功；真实异步通知通过验签并返回 `success`；本地订单变为 `PAID`，支付时间和交易号落库，冻结库存只释放一次；验收记录不含账号、订单号、签名或密钥；测试后关闭临时公网入口 | [交易链路一致性计划](plans/transaction-integrity.md) |
-| DATA-001 | P1 | planned | 为当前空数据库提供本机和面试演示数据：只包含约 12～20 本公版经典书籍、库存、规格、仓库内本地图片和 3～5 个广告，不创建账户、购物车、评论、订单或支付记录；不把演示数据混入 Flyway 正式结构迁移或默认测试 | 提供人工显式执行、可重复且不会清空数据库的注入脚本；重复执行不重复插入；失败不留下半套数据；不会删除用户数据；全新数据库导入后商品列表、详情、库存和广告可用；图片不依赖 OSS/第三方链接 | [本机与面试演示数据计划](plans/demo-data.md) |
+| DATA-001 | P1 | in_progress | 在独立 `tomatomall_demo` 中默认生成 300 本书、500 个普通用户、1 个演示管理员、1 个演示普通用户、库存、规格、本地生成 SVG 图片和 5～8 个广告；约 20 本使用公版书名/作者事实，其余由固定种子确定性生成；不创建购物车、评论、订单或支付记录，不混入 Flyway 或默认测试 | PowerShell 单一入口人工执行；严格拒绝非 `tomatomall_demo`；密码只从运行时环境变量读取并经 BCrypt 保存；批量事务失败不留半套数据；重复执行不重复、不覆盖已修改密码/资料/库存；固定种子输出稳定；全新数据库浏览器和 API 验收通过 | [本机与面试演示数据计划](plans/demo-data.md) |
+| API-002 | P1 | planned | 商品列表当前由 `findAll()` 一次返回全部商品，响应包含规格和详情图，前端再在内存中过滤；300 本演示书籍会放大响应和潜在关联查询，且这一列表链路不使用商品详情 Redis 缓存。本轮只记录，不把 DATA-001 扩成接口重构 | 增加向后兼容的服务端分页、分类/关键词查询和明确排序；前端分页或渐进加载；测试记录固定数据量下 SQL 查询次数、响应大小和延迟，并证明商品详情 Cache-Aside 行为不被混淆 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | PERF-001 | P1 | planned | 在 DATA-001 后建立可重复的 Redis/MySQL 压力测试，分别测量冷缓存、热缓存、热门 key 过期、相同/随机无效 ID、大量 key 接近过期、Redis 不可用和读写并发；当前没有 QPS、P95/P99 或数据库减压数据，不能提前声称生产级高并发能力 | 固定代码、环境、数据量、并发和持续时间；记录吞吐量、延迟、错误率、Redis 命中率、MySQL 查询/连接/锁等待和资源使用；相同参数至少可重复运行并形成冷层报告，不虚构性能数字 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | CACHE-002 | P1 | planned | 只有 PERF-001 证明热门商品过期会产生明显重复查库或连接池等待后，才实现同一商品在同一时刻只由一个请求查库回填、其他请求等待后重查 Redis；随机无效 ID 和 Redis 整体重启按测量结果分别处理，不提前引入复杂组件 | 真实 MySQL/Redis 并发测试证明同一热门 key 只发生受控回源、异常后不会遗留永久锁或无限等待；用 PERF-001 的相同参数复测并归档对比；缓存故障不破坏数据库正确性 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | TEST-002 | P1 | in_progress | 默认 Surefire 独立 JVM 已在一次性 Maven 3.9.9/Java 17 容器中连续两轮完成 104/104，但当前只证明现有环境可运行，尚未测量稳定通过所需的最低合理内存，也未在项目中覆盖 Surefire 默认 fork 设置 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录经测量的最低合理内存、实际容器限制和 Surefire 设置；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
@@ -53,7 +54,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`。当前位于最新个人 `master`，DATA-001 开发分支尚未创建。
+- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已于 2026-08-11 从 `codex/feat-demo-data` 创建，等待审阅。当前开发分支为 `codex/feat-demo-data`，基线是包含 CACHE-001/TEST-001 归档的 `master@3b46b25e`。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。

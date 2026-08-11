@@ -145,4 +145,26 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>demo-data</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <configuration>
+                            <mainClass>com.example.tomatomall.demo.DemoDataCommand</mainClass>
+                            <classpathScope>runtime</classpathScope>
+                            <!-- The command owns and closes every JDBC connection. Do not wait 15 seconds
+                                 for MySQL Connector/J's JVM-wide daemon cleanup thread after each import. -->
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>

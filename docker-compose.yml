@@ -30,6 +30,7 @@ services:
       # 数据库配置
       - DB_HOST=db
       - DB_PORT=3306
+      - DB_NAME=${DB_NAME:?run Docker Compose with --env-file back_end/.env}
 
       # Redis配置
       - REDIS_HOST=redis
