@@ -69,8 +69,34 @@ try {
     } finally {
         Remove-Item -LiteralPath $partialSnapshot -Force -ErrorAction SilentlyContinue
     }
+
+    $detailScript = Get-Content -Raw -LiteralPath "$PSScriptRoot/../k6/detail.js"
+    if ($detailScript -notmatch 'ALLOW_PROTECTIVE_503' `
+            -or $detailScript -notmatch "p\(99\)<=1000" `
+            -or $detailScript -notmatch 'max<=2000' `
+            -or $detailScript -notmatch 'protective_503_responses') {
+        throw 'Redis outage k6 scenario must accept only the explicit 503 contract and enforce latency limits'
+    }
+    $outageScript = Get-Content -Raw -LiteralPath "$PSScriptRoot/../scripts/Invoke-RedisOutageScenario.ps1"
+    if ($outageScript -notmatch 'databaseUpdateObserved' `
+            -or $outageScript -notmatch 'nonProductKeyPreserved' `
+            -or $outageScript -notmatch 'cache003:recovery-proof') {
+        throw 'Redis outage recovery must verify a database update and preserve a non-product key'
+    }
+    $restoreMarkerPosition = $outageScript.IndexOf('$productRestoreRequired = $true')
+    $updateRequestPosition = $outageScript.IndexOf('$updated = Invoke-RestMethod')
+    if ($restoreMarkerPosition -lt 0 -or $updateRequestPosition -lt 0 `
+            -or $restoreMarkerPosition -gt $updateRequestPosition `
+            -or $outageScript -notmatch 'finally\s*\{[\s\S]*finally\s*\{[\s\S]*DEL \$nonProductKey') {
+        throw 'Redis outage cleanup must schedule product restoration before the update request and always delete the proof key'
+    }
+    if ($outageScript -notmatch '\$recoveryProbe\.code -ne ''200''' `
+            -or $outageScript -notmatch '\$recoveryProbe\.data\.id -ne \$productId' `
+            -or $outageScript -match 'A bounded 503 response is allowed until') {
+        throw 'Every Redis recovery polling request must return the correct product; 503, 500 and network errors cannot be ignored'
+    }
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Output 'PerformanceScripts.Tests.ps1: 4/4 passed'
+Write-Output 'PerformanceScripts.Tests.ps1: 6/6 passed'

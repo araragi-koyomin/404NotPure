@@ -10,11 +10,17 @@ const preAllocatedVUs = parsePositiveInteger(__ENV.PRE_ALLOCATED_VUS, Math.max(2
 const maxVUs = parsePositiveInteger(__ENV.MAX_VUS, Math.max(4, requestRate * 2));
 const fixedMissingId = parsePositiveInteger(__ENV.MISSING_ID, 900000001);
 const resultName = safeResultName(__ENV.RESULT_NAME || `${scenario}-${Date.now()}`);
+const allowProtective503 = (__ENV.ALLOW_PROTECTIVE_503 || 'false').toLowerCase() === 'true';
+
+if (allowProtective503) {
+  http.setResponseCallback(http.expectedStatuses(200, 503));
+}
 
 const businessFailures = new Rate('business_failures');
 const validResponses = new Counter('valid_business_responses');
 const businessRequests = new Counter('business_requests');
 const businessDuration = new Trend('business_duration', true);
+const protectiveResponses = new Counter('protective_503_responses');
 
 export const options = {
   scenarios: {
@@ -33,6 +39,9 @@ export const options = {
     business_failures: [{ threshold: 'rate==0', abortOnFail: true, delayAbortEval: '10s' }],
     http_req_failed: [{ threshold: 'rate==0', abortOnFail: true, delayAbortEval: '10s' }],
     dropped_iterations: [{ threshold: 'count==0', abortOnFail: true, delayAbortEval: '10s' }],
+    ...(allowProtective503 ? {
+      business_duration: ['p(99)<=1000', 'max<=2000'],
+    } : {}),
   },
   summaryTrendStats: ['avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
   noConnectionReuse: false,
@@ -77,15 +86,24 @@ export default function (data) {
   const correct = expectedMissing
     ? response.status === 200 && body.code === '404' && body.data === null
     : response.status === 200 && body.code === '200' && body.data && body.data.id === productId;
+  const protective503 = allowProtective503
+    && response.status === 503
+    && body.code === '503'
+    && body.msg === '商品服务暂时繁忙，请稍后重试'
+    && body.data === null;
+  const accepted = correct || protective503;
 
-  businessFailures.add(!correct);
+  businessFailures.add(!accepted);
   businessRequests.add(1);
   businessDuration.add(response.timings.duration);
   if (correct) {
     validResponses.add(1);
   }
+  if (protective503) {
+    protectiveResponses.add(1);
+  }
   check(response, {
-    'HTTP and business response are correct': () => correct,
+    'HTTP and business response are correct or explicitly protected': () => accepted,
   });
 }
 
@@ -118,6 +136,7 @@ function compactLine(data) {
     p99Ms: latency['p(99)'],
     maxMs: latency.max,
     businessFailureRate: failures,
+    protective503Responses: metricValue(data, 'protective_503_responses', 'count'),
   });
 }
 

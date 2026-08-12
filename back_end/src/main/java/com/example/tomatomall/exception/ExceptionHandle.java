@@ -3,6 +3,7 @@ package com.example.tomatomall.exception;
 catch全局exception并处理
 */
 import com.example.tomatomall.vo.Response;
+import com.example.tomatomall.service.cache.ProductCacheFallbackRejectedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -28,5 +29,11 @@ public class ExceptionHandle {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Response<String> handleInvalidProductPageRequest(InvalidProductPageRequestException exception) {
         return Response.buildFailure(exception.getMessage(), "400");
+    }
+
+    @ExceptionHandler(ProductCacheFallbackRejectedException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public Response<String> handleProductCacheFallbackRejected(ProductCacheFallbackRejectedException exception) {
+        return Response.buildFailure(exception.getMessage(), "503");
     }
 }

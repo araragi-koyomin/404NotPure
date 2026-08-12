@@ -93,6 +93,15 @@ $snapshot = [ordered]@{
         Read-ActuatorMetric 'jvm.memory.used'
         Read-ActuatorMetric 'jvm.gc.pause'
         Read-ActuatorMetric 'process.cpu.usage'
+        Read-ActuatorMetric 'tomatomall.cache.product.redis.failures'
+        Read-ActuatorMetric 'tomatomall.cache.product.redis.bypassed'
+        Read-ActuatorMetric 'tomatomall.cache.product.redis.circuit.state'
+        Read-ActuatorMetric 'tomatomall.cache.product.database.fallback.active'
+        Read-ActuatorMetric 'tomatomall.cache.product.database.fallback.success'
+        Read-ActuatorMetric 'tomatomall.cache.product.database.fallback.rejected'
+        Read-ActuatorMetric 'tomatomall.cache.product.redis.recovery.attempts'
+        Read-ActuatorMetric 'tomatomall.cache.product.redis.recovery.success'
+        Read-ActuatorMetric 'tomatomall.cache.product.redis.recovery.cleanup.failures'
     )
     containers = $containerStats
 }
