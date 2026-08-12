@@ -161,7 +161,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - 类型与故障：缓存值类型错误时删除并回查数据库；Redis 读取、写入或删除失败时不应让正确的数据库请求失败，也不得在警告日志中输出缓存值、连接配置或敏感信息。
 - Redis Repository：项目只使用 `RedisTemplate<String, Object>`，没有 Redis Repository，因此通过 `spring.data.redis.repositories.enabled=false` 关闭无用扫描；JPA Repository 保持正常加载。
 
-真实 Redis 测试必须验证序列化后的对象类型、上述两个 TTL 范围、缓存命中/回填、商品和广告写后的失效、数据库事务回滚时缓存保持不变，以及回填/广告预热与商品更新的真实并发顺序。PERF-001 已在隔离 Compose 环境测量冷/热缓存、热点失效、固定/随机无效 ID、Redis 完全停止和读写并发；可复现结果位于 `docs/plans/cache-performance-results.md`。这些是固定本机资源下的基线，不能外推为生产容量。热点瞬时请求的重复回源由 CACHE-002 跟踪；Redis 完全停止时的连接等待阻塞由 CACHE-003 跟踪。Cache-Aside 不是数据库与 Redis 的强一致协议；即使数据库提交成功，如果提交后的 Redis 删除失败，旧值仍可能继续存在到原 TTL，这一风险不能隐瞒。
+真实 Redis 测试必须验证序列化后的对象类型、上述两个 TTL 范围、缓存命中/回填、商品和广告写后的失效、数据库事务回滚时缓存保持不变，以及回填/广告预热与商品更新的真实并发顺序。PERF-001 已在隔离 Compose 环境测量冷/热缓存、热点失效、固定/随机无效 ID、Redis 完全停止和读写并发；可复现结果位于 `docs/archive/2026-08-12-cache-performance-baseline-delivery.md`。这些是固定本机资源下的基线，不能外推为生产容量。热点瞬时请求的重复回源由 CACHE-002 跟踪；Redis 完全停止时的连接等待阻塞由 CACHE-003 跟踪。Cache-Aside 不是数据库与 Redis 的强一致协议；即使数据库提交成功，如果提交后的 Redis 删除失败，旧值仍可能继续存在到原 TTL，这一风险不能隐瞒。
 
 ## 认证与权限注意事项
 
@@ -204,7 +204,7 @@ Compose 对外端口当前为前端 `5173`、后端 `8080`、MySQL `3307`；Redi
 - DB-001A 已通过 PR #3 建立 Flyway V1 完整基线和 V2 订单支付字段，并将 JPA 切换为 `ddl-auto: validate`；库存商品唯一约束和历史重复库存处理仍由 DB-001 跟踪。后续实体结构变化必须增加新迁移版本，不能修改已应用的 V1/V2。
 - JPA 当前依赖 Spring Boot 默认开启的 Open Session in View；部分实体关联为延迟加载，可能把数据库查询推迟到控制器或响应生成阶段。JPA-001 要求先用接口测试明确数据读取边界，再关闭该选项。
 - SEC-001 已收紧精确公开路由、认证来源、账户/购物车/支付表单资源所有权、JWT 配置和 CORS 白名单；但 Spring Security 仍使用 `permitAll`，具体边界分布在拦截器、控制器和服务层，且 CSRF 当前关闭。后续改动必须避免形成相互矛盾的双重认证实现，SEC-012 继续跟踪 CSRF。
-- 测试已覆盖 OSS 图片上传安全边界、ORD-001 下单事务与真实 MySQL 并发库存、PAY-001 的真实 MySQL 迁移与并发重复通知、CACHE-001 的真实 Redis 序列化/TTL/回填/失效/事务回滚和带线程启动信号的并发顺序，以及 DATA-001 的确定性生成、真实 MySQL 重复导入、失败回滚和命名锁并发顺序。支付宝沙箱只读查询探针必须显式设置 `RUN_REAL_ALIPAY_PROBE=true`，默认测试不会访问支付宝；探针只允许 HTTPS 的 `alipaydev.com` 官方沙箱网关，只接受随机订单返回 `40004 / ACQ.TRADE_NOT_EXIST`，且不能替代公网异步通知。PERF-001 分支的默认 Maven 回归为 32 个测试类、201/201；仍未测量默认测试稳定通过所需的最低合理内存，因此 TEST-002 继续保持活跃。本机没有全局 Maven 时，当前可使用固定 `maven:3.9.9-eclipse-temurin-17` 容器执行。
+- 测试已覆盖 OSS 图片上传安全边界、ORD-001 下单事务与真实 MySQL 并发库存、PAY-001 的真实 MySQL 迁移与并发重复通知、CACHE-001 的真实 Redis 序列化/TTL/回填/失效/事务回滚和带线程启动信号的并发顺序，以及 DATA-001 的确定性生成、真实 MySQL 重复导入、失败回滚和命名锁并发顺序。支付宝沙箱只读查询探针必须显式设置 `RUN_REAL_ALIPAY_PROBE=true`，默认测试不会访问支付宝；探针只允许 HTTPS 的 `alipaydev.com` 官方沙箱网关，只接受随机订单返回 `40004 / ACQ.TRADE_NOT_EXIST`，且不能替代公网异步通知。PR #11 合并代码的默认 Maven 回归为 32 个测试类、201/201；仍未测量默认测试稳定通过所需的最低合理内存，因此 TEST-002 继续保持活跃。本机没有全局 Maven 时，当前可使用固定 `maven:3.9.9-eclipse-temurin-17` 容器执行。
 - 前端 `order.ts` 声明了获取订单详情/列表接口，但后端当前没有对应 GET 订单接口；不要误认为这两条链路已经实现。
 - AI assistant 已废弃；现存控制器、服务、前端入口和 Ark SDK 均视为遗留代码，不投入维护，不得让其配置或故障阻塞商城主链路。
 - 存在重复 Lombok 注解、字段注入、`Optional.get()`、实体/DTO 命名混乱和异常码语义不一致等可维护性问题；优先在改动触及范围内渐进修复，不做无关大重写。

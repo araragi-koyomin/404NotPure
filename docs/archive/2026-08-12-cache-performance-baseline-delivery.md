@@ -1,10 +1,11 @@
 ---
-title: PERF-001 Redis 与 MySQL 本机性能测量结果
+title: PERF-001 Redis 与 MySQL 本机性能基线交付记录
 type: report
-layer: warm
-status: active
+layer: cold
+status: completed
 created: 2026-08-12
 updated: 2026-08-12
+archived_at: 2026-08-12
 owners:
   - maintainers
 tags:
@@ -19,9 +20,9 @@ related:
   - CACHE-003
 ---
 
-# PERF-001 Redis 与 MySQL 本机性能测量结果
+# PERF-001 Redis 与 MySQL 本机性能基线交付记录
 
-本文记录 `codex/perf-cache-baseline` 尚未合并阶段的可复核结果。它属于温层活跃报告，不是已交付能力声明；合并到个人 `master` 后才转入冷层，并同步判断是否更新简历/面试亮点。
+本文记录 PERF-001 的最终可复核结果。实现通过 [Pull Request #11](https://github.com/araragi-koyomin/404NotPure/pull/11) 以 squash 方式合并到个人 `master`，合并提交为 `d19a64e9`；本文因此转入冷层。CACHE-002 和 CACHE-003 仍是独立活跃任务，不因 PERF-001 完成而视为已修复。
 
 ## 测量环境与方法
 
