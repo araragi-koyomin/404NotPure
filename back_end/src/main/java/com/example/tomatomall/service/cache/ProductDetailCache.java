@@ -3,6 +3,8 @@ package com.example.tomatomall.service.cache;
 import com.example.tomatomall.dto.MissingProductCacheEntry;
 import com.example.tomatomall.dto.ProductDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.stereotype.Component;
@@ -23,9 +25,17 @@ public class ProductDetailCache {
     private static final long MISSING_TTL_MAX_SECONDS = 119;
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final boolean enabled;
 
     public ProductDetailCache(RedisTemplate<String, Object> redisTemplate) {
+        this(redisTemplate, true);
+    }
+
+    @Autowired
+    public ProductDetailCache(RedisTemplate<String, Object> redisTemplate,
+                              @Value("${tomatomall.cache.product-detail.enabled:true}") boolean enabled) {
         this.redisTemplate = redisTemplate;
+        this.enabled = enabled;
     }
 
     public static String key(int productId) {
@@ -33,6 +43,9 @@ public class ProductDetailCache {
     }
 
     public LookupResult lookup(int productId) {
+        if (!enabled) {
+            return LookupResult.miss();
+        }
         String cacheKey = key(productId);
         try {
             Object cachedValue = redisTemplate.opsForValue().get(cacheKey);
@@ -58,23 +71,38 @@ public class ProductDetailCache {
     }
 
     public void putProduct(int productId, ProductDTO product) {
+        if (!enabled) {
+            return;
+        }
         put(key(productId), product, randomTtl(PRODUCT_TTL_MIN_SECONDS, PRODUCT_TTL_MAX_SECONDS));
     }
 
     public void putMissing(int productId) {
+        if (!enabled) {
+            return;
+        }
         put(key(productId), new MissingProductCacheEntry(),
                 randomTtl(MISSING_TTL_MIN_SECONDS, MISSING_TTL_MAX_SECONDS));
     }
 
     public void evict(int productId) {
+        if (!enabled) {
+            return;
+        }
         safeDelete(key(productId));
     }
 
     public void evictAfterCommit(int productId) {
+        if (!enabled) {
+            return;
+        }
         afterCommit(() -> evict(productId));
     }
 
     public void runAfterCommit(Runnable action) {
+        if (!enabled) {
+            return;
+        }
         afterCommit(action);
     }
 

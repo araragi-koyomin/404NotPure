@@ -1,0 +1,133 @@
+services:
+  backend:
+    build:
+      context: ./back_end
+    ports:
+      - "127.0.0.1:18080:8080"
+    env_file:
+      - ./performance/runtime.env
+      - ./performance/cache-mode.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: tomatomall_demo
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in back_end/.env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_PROFILES_ACTIVE: perf
+      TZ: Asia/Shanghai
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    cpus: 4.0
+    mem_limit: 2g
+    networks:
+      - perf-network
+
+  db:
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --ssl=0
+    ports:
+      - "127.0.0.1:13307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in back_end/.env}
+      MYSQL_DATABASE: tomatomall_demo
+      TZ: Asia/Shanghai
+    volumes:
+      - perf-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cpus: 2.0
+    mem_limit: 2g
+    networks:
+      - perf-network
+
+  redis:
+    image: redis:6-alpine@sha256:ec5e187c913d422cdf60f4216a5fdfb95246792c6de6fe21ff5bed75cbfc8c23
+    command: redis-server
+    ports:
+      - "127.0.0.1:16379:6379"
+    volumes:
+      - perf-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cpus: 1.0
+    mem_limit: 512m
+    networks:
+      - perf-network
+
+  seed:
+    build:
+      context: ./back_end
+    profiles: ["tools"]
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: tomatomall_demo
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in back_end/.env}
+      TOMATOMALL_DEMO_PASSWORD: ${TOMATOMALL_DEMO_PASSWORD:?set TOMATOMALL_DEMO_PASSWORD in back_end/.env}
+      TOMATOMALL_DEMO_ASSET_DIR: /demo-assets
+      DEMO_DATA_BOOK_COUNT: 300
+      DEMO_DATA_USER_COUNT: 500
+      DEMO_DATA_SEED: 404
+    command:
+      - java
+      - -Dloader.main=com.example.tomatomall.demo.DemoDataCommand
+      - -cp
+      - app.jar
+      - org.springframework.boot.loader.PropertiesLauncher
+    volumes:
+      - ./performance/generated-demo-assets:/demo-assets
+    depends_on:
+      db:
+        condition: service_healthy
+    cpus: 2.0
+    mem_limit: 1g
+    networks:
+      - perf-network
+
+  k6:
+    image: grafana/k6:2.0.0@sha256:a33a0cfdc4d2483d6b7a3a22e726a499ff2831a671a49239104cd34a9937523c
+    profiles: ["tools"]
+    environment:
+      BASE_URL: http://backend:8080
+    volumes:
+      - ./performance/k6:/scripts:ro
+      - ./performance/results:/results
+      - ./performance/admin-password.txt:/run/secrets/perf_admin_password:ro
+    depends_on:
+      backend:
+        condition: service_started
+    cpus: 2.0
+    mem_limit: 1g
+    networks:
+      - perf-network
+
+  metrics:
+    image: curlimages/curl:8.12.1@sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6
+    profiles: ["tools"]
+    command: ["sh", "-c", "sleep infinity"]
+    cpus: 0.25
+    mem_limit: 64m
+    networks:
+      - perf-network
+
+volumes:
+  perf-mysql-data:
+  perf-redis-data:
+
+networks:
+  perf-network:
+    driver: bridge

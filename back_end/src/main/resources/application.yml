@@ -35,6 +35,15 @@ server:
     include-message: always
     include-binding-errors: always
 
+tomatomall:
+  cache:
+    product-detail:
+      enabled: ${PRODUCT_DETAIL_CACHE_ENABLED:true}
+
+management:
+  endpoints:
+    enabled-by-default: false
+
 auth:
   jwt:
     secret: ${JWT_SECRET}
