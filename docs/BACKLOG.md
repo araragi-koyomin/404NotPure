@@ -20,12 +20,12 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | CACHE-003 Redis 故障时的有界等待与数据库回退 |
-| 当前阶段 | CACHE-003 已按 TDD 完成生产实现、18/18 针对性测试、38 类 219/219 完整 Maven 回归、前端构建和 50 QPS/10 秒真实 Redis 停止/恢复验收；冷启动独立审查发现的问题均已修复并通过针对性复核。项目所有者已授权暂存、提交、推送、创建 PR 和 squash 合并，正在执行功能交付；合并成功后再转入冷层归档。 |
-| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002 商品列表分页与服务端查询，以及 PERF-001 Redis/MySQL 本机性能基线均已合并并进入冷层交付记录 |
-| 尚未完成 | CACHE-003 尚需完成独立审查、修正审查发现、用户验收和 Git 交付；CACHE-002 仍未实现热门商品同一时刻只回源一次。 |
-| 当前阻塞或待确认 | 当前无代码和需求阻塞。独立审查后收紧了恢复轮询：每次请求都必须返回正确商品，HTTP 503、500、网络超时或错误商品都会使验收失败；收紧后因本机可用内存约 5.26 GiB 低于 8 GiB 安全线，未强行重跑 50 QPS 真实停机场景。修复后的完整代码回归与脚本静态检查均已重跑，原 v4 真实停机与恢复数据继续作为生产实现证据。 |
-| 下一步 | 暂存明确属于 CACHE-003 的文件，提交并推送当前开发分支，创建和 squash 合并功能 PR；随后从 BACKLOG 移除 CACHE-003、生成冷层交付记录并更新简历/面试亮点。 |
+| 主开发批次 | CACHE-002 热门商品缓存单次回填 |
+| 当前阶段 | CACHE-003 已通过 [PR #13](https://github.com/araragi-koyomin/404NotPure/pull/13) squash 合并到个人 `master`，合并提交为 `d99cd254`；冷层交付记录、AGENTS 事实和简历/面试亮点已同步。CACHE-002 尚未创建代码分支。 |
+| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001，以及 CACHE-003 Redis 故障时的有界等待与数据库保护均已合并并进入冷层交付记录 |
+| 尚未完成 | CACHE-002 尚未实现同一热门商品同一时刻只由一个请求查库回填；TEST-002、订单幂等与取消、库存唯一约束、CSRF 等活跃项继续按表格跟踪。 |
+| 当前阻塞或待确认 | CACHE-002 尚未完成需求澄清，不应直接复制 CACHE-003 的全局故障状态或数据库回退信号量作为热点商品协调方案。CACHE-003 收紧后的恢复轮询脚本因本机可用内存低于 8 GiB 安全线未重新执行 50 QPS，证据限制已写入冷层，不再阻止归档。 |
+| 下一步 | 讨论 CACHE-002 的每商品等待上限、异常语义、锁对象生命周期、Redis 故障兼容和真实 100 请求瞬时验收方法，确认后再更新计划并创建独立代码分支。 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -35,7 +35,6 @@ tags:
 | PAY-002 | P2 | planned | 修复支付宝同步返回页仅凭浏览器参数显示支付成功并清理购物车的问题，同时统一支付表单接口的失败 `Response`；页面必须以服务端订单状态为准 | 伪造或提前到达的同步返回不会显示成功或清理购物车；订单不存在、非法状态等失败保持 `code/msg/data`；前后端接口测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-003 | P2 | planned | 面向个人项目和面试演示完成一次支付宝沙箱端到端验收：不购买固定公网 IP，不做长期部署；SEC-001/PAY-002 完成后，临时提供支付宝服务器可访问的 HTTPS `notify_url`，`return_url` 只承担浏览器跳转 | 沙箱买家完成虚拟付款；支付宝侧交易查询成功；真实异步通知通过验签并返回 `success`；本地订单变为 `PAID`，支付时间和交易号落库，冻结库存只释放一次；验收记录不含账号、订单号、签名或密钥；测试后关闭临时公网入口 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | CACHE-002 | P1 | planned | PERF-001 已证明同一热门商品缓存刚失效时会发生重复回源和数据库行锁排队：100 个同时请求全部正确，但产生 10 次 Redis 未命中、33 次 MySQL `SELECT`、9 次锁等待，累计锁等待约 172 ms，P95 从热缓存稳定场景约 3.56 ms 上升到约 39.79 ms。实现同一商品同一时刻只由一个请求查库回填、其他请求等待后重查 Redis | 真实 MySQL/Redis 并发测试证明同一热门 key 只发生受控回源、异常后不会遗留永久锁或无限等待；用 PERF-001 的 100 请求瞬时场景复测，MySQL 回源与锁等待明显减少且业务结果保持正确；缓存故障不破坏数据库正确性 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
-| CACHE-003 | P1 | in_progress | 为全部商品缓存操作建立有界 Redis 故障保护：250 ms 建连、500 ms 命令、首次基础设施失败立即绕过 5 秒；商品详情最多 4 个请求同时回退 MySQL并只等 50 ms，超出返回 HTTP 503；恢复时由单一检查者分批清理 `product:detail:v1:*` 后再启用缓存；单 key 损坏不触发全局绕过 | 单元/并发/接口测试覆盖故障分类、超时、名额释放、HTTP 503、恢复竞争、清理失败和旧值；Micrometer 指标可解释故障与保护；前端明确提示且不自动重试；50 QPS/10 秒真实 Redis 停止场景中已发请求最长不超过 2 秒、P99 不超过 1 秒、无网络超时或丢弃、MySQL 连接池超时为 0，恢复后请求全部正确 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | TEST-002 | P1 | in_progress | 默认 Surefire 独立 JVM 已在一次性 Maven 3.9.9/Java 17 容器中连续两轮完成 104/104，但当前只证明现有环境可运行，尚未测量稳定通过所需的最低合理内存，也未在项目中覆盖 Surefire 默认 fork 设置 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录经测量的最低合理内存、实际容器限制和 Surefire 设置；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
 | RUN-002 | P2 | blocked | Compose 端口配置已修复且四服务可运行；Docker Desktop 曾出现内部镜像数据块错误。2026-08-12 进一步确认 frontend 以 Windows bind mount、`CHOKIDAR_USEPOLLING=true` 和 Vite 开发服务器运行，空闲时持续占约 54%～55% 的一个逻辑 CPU；停止 frontend 15 秒后整机 CPU 从 35% 降至 16%，backend/MySQL/Redis 保持健康。项目所有者选择先停止并记录，完整开发模式修复延后 | 除既有端口、数据卷、日志和镜像稳定证据外，使文件轮询默认关闭或可配置；验证热更新仍可用且 frontend 空闲 CPU 回落；生产静态镜像仍由 DEPLOY-001 处理 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-012 | P1 | planned | 本轮先把 CORS 从反射任意 Origin 改为明确前端来源白名单，并给认证 Cookie 增加 `SameSite=Lax`；CSRF 暂不直接开启，后续需要设计前端 CSRF token、登录/注册和支付宝 notify 精确例外 | 状态修改请求需要可信 CSRF token；前端正常调用、匿名公开接口和支付宝 notify 均有兼容测试；不能只打开开关造成商城请求全部失败 | [安全与质量计划](plans/security-and-quality.md) |
@@ -53,7 +52,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1 已于 2026-08-10 通过 squash merge 进入个人 Fork 的 `master`，合并提交为 `f8c9687f`；PR #2 已于同日合并，提交为 `39dbd59d`；[PR #3](https://github.com/araragi-koyomin/404NotPure/pull/3) 已于同日合并，提交为 `dca1acd9`；[PR #4](https://github.com/araragi-koyomin/404NotPure/pull/4) 已于同日合并，提交为 `4c042501`；[PR #5](https://github.com/araragi-koyomin/404NotPure/pull/5) 已于同日合并，提交为 `21463e4f`；[PR #6](https://github.com/araragi-koyomin/404NotPure/pull/6) 已于同日合并，提交为 `1170d4b2`；[PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) 已于 2026-08-11 合并，提交为 `acff6078`；[PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8) 已于同日合并，提交为 `f3b42dca`；[PR #9](https://github.com/araragi-koyomin/404NotPure/pull/9) 已于同日合并，提交为 `b0fb0754`；[PR #10](https://github.com/araragi-koyomin/404NotPure/pull/10) 已于同日合并，提交为 `62acf0f8`；后续 API-002 与 PERF-001 也已合并，当前 `master` 基线为 `0cd41c82`。当前开发分支为 `codex/cache-redis-failure-protection`，目标集成分支为个人 Fork 的 `master`。
+- PR #1～#12 的交付历史保留在对应冷层记录；[PR #13](https://github.com/araragi-koyomin/404NotPure/pull/13) 已于 2026-08-13 squash 合并 CACHE-003，提交为 `d99cd254`。合并后归档使用 `codex/archive-cache003` 分支并回到个人 `master`；CACHE-002 尚未创建代码分支。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。
