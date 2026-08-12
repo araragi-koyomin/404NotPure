@@ -14,6 +14,7 @@ import com.example.tomatomall.repository.SpecificationRepository;
 import com.example.tomatomall.repository.StockPileRepository;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.service.cache.ProductDetailCache;
+import com.example.tomatomall.service.cache.ProductCacheResilience;
 import com.example.tomatomall.vo.ProductContentImageVO;
 import com.example.tomatomall.vo.ProductPageVO;
 import com.example.tomatomall.vo.ProductVO;
@@ -49,6 +50,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductDetailCache productDetailCache;
+
+    @Autowired
+    private ProductCacheResilience productCacheResilience;
 
     /**
      * 创建商品
@@ -144,6 +148,13 @@ public class ProductServiceImpl implements ProductService {
             throw TomatoException.productNotExist();
         }
 
+        if (lookupResult.requiresDatabaseFallback()) {
+            return productCacheResilience.executeDatabaseFallback(() -> loadProductFromDatabase(id));
+        }
+        return loadProductFromDatabase(id);
+    }
+
+    private ProductVO loadProductFromDatabase(int id) {
         Product product = productRepository.findByIdForUpdate(id).orElse(null);
         if (product == null) {
             productDetailCache.putMissing(id);

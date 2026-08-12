@@ -24,6 +24,8 @@ spring:
   redis:
     host: ${REDIS_HOST:redis}
     port: ${REDIS_PORT:6379}
+    connect-timeout: ${REDIS_CONNECT_TIMEOUT:250ms}
+    timeout: ${REDIS_COMMAND_TIMEOUT:500ms}
   data:
     redis:
       repositories:
@@ -39,6 +41,11 @@ tomatomall:
   cache:
     product-detail:
       enabled: ${PRODUCT_DETAIL_CACHE_ENABLED:true}
+      resilience:
+        bypass-duration: ${PRODUCT_CACHE_FAILURE_BYPASS_DURATION:5s}
+        max-concurrent-database-fallbacks: ${PRODUCT_CACHE_DB_FALLBACK_MAX_CONCURRENT:4}
+        database-fallback-wait: ${PRODUCT_CACHE_DB_FALLBACK_WAIT:50ms}
+        cleanup-batch-size: ${PRODUCT_CACHE_RECOVERY_CLEANUP_BATCH_SIZE:100}
 
 management:
   endpoints:

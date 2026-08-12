@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]*s$')][string]$Duration,
     [Parameter(Mandatory)][ValidatePattern('^[a-zA-Z0-9._-]+$')][string]$ResultName,
     [switch]$AllowRedisUnavailable,
+    [switch]$AllowProtective503,
     [switch]$SkipBeforeSnapshot,
     [switch]$SkipSnapshots
 )
@@ -51,6 +52,7 @@ $arguments = @('compose','--env-file','back_end/.env','-f','docker-compose.perf.
     '-p','404notpure-perf','--profile','tools','run','--rm','--no-deps',
     '-e',"SCENARIO=$Scenario",'-e',"RATE=$Rate",'-e',"DURATION=$Duration",
     '-e',"BURST_VUS=$Rate",'-e',"READ_RATE=$Rate",'-e','WRITE_RATE=1',
+    '-e',"ALLOW_PROTECTIVE_503=$($AllowProtective503.IsPresent.ToString().ToLowerInvariant())",
     '-e',"RESULT_NAME=$ResultName",'k6','run','--include-system-env-vars',"/scripts/$scriptName")
 $startInfo = New-Object System.Diagnostics.ProcessStartInfo
 $startInfo.FileName = 'docker'

@@ -103,11 +103,13 @@ async function loadProductData() {
       // 按照Cart.vue的格式保存到sessionStorage，作为一个单元素数组
       saveProductToSessionStorage();
 
+    } else if (response?.status === 503 && response.data?.code === '503') {
+      ElMessage.error(response.data.msg || '商品服务暂时繁忙，请稍后重试');
     } else {
-      ElMessage.error('加载产品信息失败：' + response.data.msg);
+      ElMessage.error('加载产品信息失败：' + (response?.data?.msg || '请稍后重试'));
     }
   } catch (error) {
-    ElMessage.error('系统错误：' + error);
+    ElMessage.error('商品信息暂时无法加载，请稍后重试');
   }
 }
 

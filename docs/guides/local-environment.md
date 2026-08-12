@@ -4,7 +4,7 @@ type: governance
 layer: warm
 status: active
 created: 2026-08-10
-updated: 2026-08-12
+updated: 2026-08-13
 owners:
   - maintainers
 tags:
@@ -129,7 +129,13 @@ docker compose --env-file back_end/.env up --build
 |---|---|---|
 | `REDIS_HOST` | `127.0.0.1` | Compose Redis 只映射到本机回环地址，不对局域网公开。 |
 | `REDIS_PORT` | `6379` | 当前 Compose Redis 使用默认端口。 |
+| `REDIS_CONNECT_TIMEOUT` | `250ms` | 与 Redis 建立连接最多等待 250 毫秒；超时后商品缓存进入故障回退，不要设为无限等待。 |
+| `REDIS_COMMAND_TIMEOUT` | `500ms` | Redis `GET`、`SET`、`DELETE`、恢复扫描等命令最多等待 500 毫秒。 |
 | `PRODUCT_DETAIL_CACHE_ENABLED` | `true` | 商品详情 Cache-Aside 总开关；普通本机和 Compose 运行必须保持默认开启。仅 PERF-001 的隔离性能项目可以临时设为 `false`，用于获得不包含 Redis 失败开销的纯 MySQL 对照组。 |
+| `PRODUCT_CACHE_FAILURE_BYPASS_DURATION` | `5s` | 第一次 Redis 连接或命令故障后，商品缓存临时跳过 Redis 的时间；到期后只允许一个请求检查恢复。 |
+| `PRODUCT_CACHE_DB_FALLBACK_MAX_CONCURRENT` | `4` | Redis 故障期间允许同时回退 MySQL 的商品详情请求数；限制商品读取占用数据库连接，为订单和支付保留容量。 |
+| `PRODUCT_CACHE_DB_FALLBACK_WAIT` | `50ms` | 4 个回退名额用满后，新请求最多等待 50 毫秒；仍无名额则返回 HTTP 503。 |
+| `PRODUCT_CACHE_RECOVERY_CLEANUP_BATCH_SIZE` | `100` | Redis 恢复时使用 `SCAN` 分批删除 `product:detail:v1:*` 的批量大小；不执行 `FLUSHDB`。 |
 
 当前本机 Redis 没有密码，因此不得把端口绑定改回 `0.0.0.0:6379` 或简写成对所有网络接口开放的 `6379:6379`。
 
