@@ -4,7 +4,7 @@ type: governance
 layer: warm
 status: active
 created: 2026-08-10
-updated: 2026-08-11
+updated: 2026-08-12
 owners:
   - maintainers
 tags:
@@ -129,8 +129,11 @@ docker compose --env-file back_end/.env up --build
 |---|---|---|
 | `REDIS_HOST` | `127.0.0.1` | Compose Redis 只映射到本机回环地址，不对局域网公开。 |
 | `REDIS_PORT` | `6379` | 当前 Compose Redis 使用默认端口。 |
+| `PRODUCT_DETAIL_CACHE_ENABLED` | `true` | 商品详情 Cache-Aside 总开关；普通本机和 Compose 运行必须保持默认开启。仅 PERF-001 的隔离性能项目可以临时设为 `false`，用于获得不包含 Redis 失败开销的纯 MySQL 对照组。 |
 
 当前本机 Redis 没有密码，因此不得把端口绑定改回 `0.0.0.0:6379` 或简写成对所有网络接口开放的 `6379:6379`。
+
+PERF-001 使用 `performance/scripts/Initialize-PerfRuntime.ps1` 生成被 Git 忽略的性能运行文件。该脚本只把性能数据库连接必需的 `DB_PASSWORD` 写入 `performance/runtime.env`，另行生成性能专用 JWT 密钥和不会访问真实服务的 OSS/支付宝占位配置；演示管理员密码单独写入只读挂载文件。性能后端和 Maven 回归不得加载整份日常 `.env`，因此不会接收真实 OSS AccessKey、支付宝密钥、废弃 AI 配置或演示账户密码。所有文件均不得提交或写入结果报告。
 
 ## 阿里云 OSS 配置
 

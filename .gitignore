@@ -68,6 +68,17 @@ buildNumber.properties
 # Docker
 docker-compose.override.yml
 
+# PERF-001 运行产物；紧凑结论会转写到 docs 冷层报告
+performance/generated-demo-assets/
+performance/results/raw/
+performance/results/*.json
+performance/results/*.csv
+performance/results/*.svg
+performance/results/report/
+performance/runtime.env
+performance/admin-password.txt
+performance/cache-mode.env
+
 # 系统文件
 Thumbs.db
 ehthumbs.db

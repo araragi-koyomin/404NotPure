@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -156,5 +157,21 @@ class ProductDetailCacheTest {
             synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
         }
         verify(redisTemplate, never()).delete(ProductDetailCache.key(48));
+    }
+
+    @Test
+    void disabledCacheNeverReadsWritesDeletesOrSchedulesCacheWork() {
+        ProductDetailCache cache = new ProductDetailCache(redisTemplate, false);
+        Runnable afterCommitAction = org.mockito.Mockito.mock(Runnable.class);
+
+        ProductDetailCache.LookupResult result = cache.lookup(50);
+        cache.putProduct(50, new ProductDTO());
+        cache.putMissing(50);
+        cache.evict(50);
+        cache.evictAfterCommit(50);
+        cache.runAfterCommit(afterCommitAction);
+
+        assertTrue(result.isMiss());
+        verifyNoInteractions(redisTemplate, afterCommitAction);
     }
 }
