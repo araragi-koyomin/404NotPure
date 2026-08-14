@@ -20,12 +20,12 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | CACHE-002 热门商品缓存单次回填 |
-| 当前阶段 | CACHE-002 已完成生产代码、配置、指标、脚本、自动化测试和正式 100 并发开关对照验收；修复独立审查问题后的默认 Maven 回归为 40 个测试类、245/245，真实 Spring + MySQL 8 + Redis 6 的 `ProductCacheIntegrationTest` 为 25/25，最终独立复核没有发现新的 P0～P2 问题。2026-08-14 正式验收在资源预检通过后执行三轮关闭、三轮开启，每轮 100 个虚拟用户各请求一次，600/600 响应正确；P95 三轮中位数由 627.365 ms 降至 79.705 ms，P99 三轮中位数由 644.037 ms 降至 81.992 ms。 |
-| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001，以及 CACHE-003 Redis 故障时的有界等待与数据库保护均已合并并进入冷层交付记录 |
-| 尚未完成 | CACHE-002 尚待项目所有者审阅并授权 Git 交付；TEST-002、订单幂等与取消、库存唯一约束、CSRF 等活跃项继续按表格跟踪。 |
-| 当前阻塞或待确认 | 没有实现或测试阻塞。正式对照数据只代表本机固定容器资源、300 本演示商品、Redis 正常和单个后端实例，不能外推为生产容量或多实例全局只回源一次。当前版本尚未执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测；已有受控 Spring 集成测试只证明代码分流方向。 |
-| 下一步 | 项目所有者审阅 CACHE-002 的代码、测试和本机压测证据；审阅通过并明确授权后，才能暂存、提交、推送、创建 PR 和合并。 |
+| 主开发批次 | 待项目所有者选择下一项活跃任务 |
+| 当前阶段 | CACHE-002 已通过 [PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15) squash 合并到个人 `master`，合并提交为 `28b41ad4`；生产实现、40 个测试类 245/245 回归、25/25 真实 Spring + MySQL 8 + Redis 6 集成测试、最终独立复核和六轮 100 并发开关对照均已完成，详细证据已进入冷层。 |
+| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001、CACHE-003 Redis 故障保护，以及 CACHE-002 热门商品单次回填均已合并并进入冷层交付记录。 |
+| 尚未完成 | TEST-002、订单幂等与取消、库存唯一约束、CSRF 等活跃项继续按表格跟踪；当前版本没有执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测。 |
+| 当前阻塞或待确认 | 没有正在实施的开发任务。CACHE-002 正式对照数据只代表本机固定容器资源、300 本演示商品、Redis 正常和单个后端实例，不能外推为生产容量或多实例全局只回源一次；CACHE-002 与 CACHE-003 目前只有受控 Spring 集成测试证明代码分流方向，不能称为已完成真实故障综合压测。 |
+| 下一步 | 从仍在 BACKLOG 中的活跃项选择下一批次并完成需求澄清；不得在未确认前自行扩大范围。 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -34,7 +34,6 @@ tags:
 | ORD-003 | P1 | planned | 增加待支付订单取消和超时关闭规则，安全地把冻结库存恢复为可用库存；当前只有 `PENDING -> PAID`，长期未支付订单会一直占用冻结库存 | 明确 `PENDING -> CANCELLED/CLOSED` 的来源、权限、超时依据和库存动作；支付与取消并发时只有一个方向成功；重复取消不重复恢复库存；真实 MySQL 事务和并发测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-002 | P2 | planned | 修复支付宝同步返回页仅凭浏览器参数显示支付成功并清理购物车的问题，同时统一支付表单接口的失败 `Response`；页面必须以服务端订单状态为准 | 伪造或提前到达的同步返回不会显示成功或清理购物车；订单不存在、非法状态等失败保持 `code/msg/data`；前后端接口测试通过 | [交易链路一致性计划](plans/transaction-integrity.md) |
 | PAY-003 | P2 | planned | 面向个人项目和面试演示完成一次支付宝沙箱端到端验收：不购买固定公网 IP，不做长期部署；SEC-001/PAY-002 完成后，临时提供支付宝服务器可访问的 HTTPS `notify_url`，`return_url` 只承担浏览器跳转 | 沙箱买家完成虚拟付款；支付宝侧交易查询成功；真实异步通知通过验签并返回 `success`；本地订单变为 `PAID`，支付时间和交易号落库，冻结库存只释放一次；验收记录不含账号、订单号、签名或密钥；测试后关闭临时公网入口 | [交易链路一致性计划](plans/transaction-integrity.md) |
-| CACHE-002 | P1 | in_progress | PERF-001 已证明同一热门商品缓存刚失效时会发生重复回源和数据库行锁排队。当前批次在单个后端实例内按商品 ID 合并正常缓存未命中请求：同商品一个负责人查库回填，其他请求累计等待最多 500 ms 后重查 Redis；Redis 基础设施故障仍由 CACHE-003 处理 | 真实 Spring + MySQL 8 + Redis 6 测试为 25/25；正式三轮关闭、三轮开启功能开关的 100 并发对照为 600/600 正确。关闭时每轮 MySQL `SELECT` 303 次、行锁等待 99 次；开启后每轮 `SELECT` 6 次、行锁等待 0 次，负责人均为 1，等待超时、负责人失败、连接池等待和超时均为 0；P95/P99 三轮中位数由 627.365/644.037 ms 降至 79.705/81.992 ms。尚待项目所有者审阅和 Git 交付 | [Redis 缓存性能验证与热点保护计划](plans/cache-performance.md) |
 | TEST-002 | P1 | in_progress | 默认 Surefire 独立 JVM 已在一次性 Maven 3.9.9/Java 17 容器中连续两轮完成 104/104，但当前只证明现有环境可运行，尚未测量稳定通过所需的最低合理内存，也未在项目中覆盖 Surefire 默认 fork 设置 | 不添加 `-DforkCount=0` 的 `mvn test` 连续两次通过；记录经测量的最低合理内存、实际容器限制和 Surefire 设置；默认测试不访问真实 OSS 或支付宝 | [安全与质量计划](plans/security-and-quality.md) |
 | RUN-002 | P2 | blocked | Compose 端口配置已修复且四服务可运行；Docker Desktop 曾出现内部镜像数据块错误。2026-08-12 进一步确认 frontend 以 Windows bind mount、`CHOKIDAR_USEPOLLING=true` 和 Vite 开发服务器运行，空闲时持续占约 54%～55% 的一个逻辑 CPU；停止 frontend 15 秒后整机 CPU 从 35% 降至 16%，backend/MySQL/Redis 保持健康。项目所有者选择先停止并记录，完整开发模式修复延后 | 除既有端口、数据卷、日志和镜像稳定证据外，使文件轮询默认关闭或可配置；验证热更新仍可用且 frontend 空闲 CPU 回落；生产静态镜像仍由 DEPLOY-001 处理 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-012 | P1 | planned | 本轮先把 CORS 从反射任意 Origin 改为明确前端来源白名单，并给认证 Cookie 增加 `SameSite=Lax`；CSRF 暂不直接开启，后续需要设计前端 CSRF token、登录/注册和支付宝 notify 精确例外 | 状态修改请求需要可信 CSRF token；前端正常调用、匿名公开接口和支付宝 notify 均有兼容测试；不能只打开开关造成商城请求全部失败 | [安全与质量计划](plans/security-and-quality.md) |
@@ -52,7 +51,7 @@ tags:
 
 ## 当前分支与阻塞
 
-- PR #1～#12 的交付历史保留在对应冷层记录；[PR #13](https://github.com/araragi-koyomin/404NotPure/pull/13) 已于 2026-08-13 squash 合并 CACHE-003，提交为 `d99cd254`。合并后归档使用 `codex/archive-cache003` 分支并回到个人 `master`；CACHE-002 从个人 `master@7e5fffd4` 创建 `codex/cache-hotspot-single-flight`，目标集成分支仍为个人 `master`。
+- PR #1～#13 的交付历史保留在对应冷层记录；[PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15) 已于 2026-08-14 squash 合并 CACHE-002，提交为 `28b41ad4`。功能分支为 `codex/cache-hotspot-single-flight`，合并后冷层归档使用 `codex/archive-cache002`；目标集成分支始终为个人 `master`。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。
