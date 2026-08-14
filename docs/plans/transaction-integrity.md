@@ -4,7 +4,7 @@ type: plan
 layer: warm
 status: active
 created: 2026-08-09
-updated: 2026-08-12
+updated: 2026-08-14
 owners:
   - maintainers
 tags:
@@ -180,7 +180,7 @@ Red 阶段先运行真实集成测试，8 项中出现 1 个失败和 7 个错�
 
 审查生命周期：首轮冷启动审查发现 1 个 P1、3 个 P2 和 2 个 P3，阻止合并的问题均按上述失败测试与实现修复。新的针对性复核未发现 P0～P2，只指出缺失行间隙锁依赖 MySQL `REPEATABLE READ`、以及并发测试应先确认写线程开始执行这一项非阻塞 P3；当前文档已明确隔离级别边界，三个并发测试均增加线程启动信号，随后定向测试 25/25、最终默认回归 172/172、`git diff --check` 通过。CACHE-001/TEST-001 已通过 [PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7) squash merge 到 `master@acff6078`，完成证据见[冷层交付记录](../archive/2026-08-11-product-cache-aside-delivery.md)。
 
-功能和并发正确性测试不等于性能测试。PERF-001 已在固定本机资源下测量 QPS（每秒请求数）、P95/P99 延迟、缓存命中与数据库查询量，并证明热门 key 失效会发生重复回源和行锁等待；详细结果由 [Redis 缓存性能验证与热点保护计划](cache-performance.md) 跟踪。CACHE-002 因此具备后续实施依据，但当前仍没有实现热门 key 过期时的严格单次回填。Redis 完全停止时的请求阻塞由 CACHE-003 独立处理。
+功能和并发正确性测试不等于性能测试。PERF-001 已在固定本机资源下测量 QPS（每秒请求数）、P95/P99 延迟、缓存命中与数据库查询量，并证明热门 key 失效会发生重复回源和行锁等待；详细结果由 [Redis 缓存性能验证与热点保护计划](cache-performance.md) 跟踪。CACHE-002 当前开发分支已经实现单个后端进程内按商品 ID 合并正常缓存未命中请求，并通过真实 MySQL/Redis 并发测试；三轮关闭、三轮开启功能开关的 100 并发真实对照仍因本机可用内存低于 8 GiB 安全线而未执行，不能提前声称性能验收完成。Redis 完全停止时的请求阻塞由 CACHE-003 独立处理。
 
 ## 测试真实性要求
 

@@ -45,5 +45,9 @@ if (-not $demoPasswordLine) { throw 'TOMATOMALL_DEMO_PASSWORD is missing from ba
 $demoPassword = ($demoPasswordLine -split '=', 2)[1]
 if ([string]::IsNullOrWhiteSpace($demoPassword)) { throw 'TOMATOMALL_DEMO_PASSWORD is empty' }
 [System.IO.File]::WriteAllText($passwordPath, $demoPassword.Trim(), [System.Text.Encoding]::UTF8)
-[System.IO.File]::WriteAllText($cacheModePath, "PRODUCT_DETAIL_CACHE_ENABLED=true`n", [System.Text.Encoding]::ASCII)
+[System.IO.File]::WriteAllText(
+    $cacheModePath,
+    "PRODUCT_DETAIL_CACHE_ENABLED=true`nPRODUCT_CACHE_SINGLE_FLIGHT_ENABLED=true`n",
+    [System.Text.Encoding]::ASCII
+)
 Write-Output 'Generated ignored, performance-only runtime files without copying external-service credentials.'
