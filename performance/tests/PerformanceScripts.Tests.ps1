@@ -95,8 +95,87 @@ try {
             -or $outageScript -match 'A bounded 503 response is allowed until') {
         throw 'Every Redis recovery polling request must return the correct product; 503, 500 and network errors cannot be ignored'
     }
+
+    $snapshotScript = Get-Content -Raw -LiteralPath "$PSScriptRoot/../scripts/Collect-PerfSnapshot.ps1"
+    $requiredSingleFlightMetrics = @(
+        'tomatomall.cache.product.singleflight.leader',
+        'tomatomall.cache.product.singleflight.follower',
+        'tomatomall.cache.product.singleflight.wait.success',
+        'tomatomall.cache.product.singleflight.wait.timeout',
+        'tomatomall.cache.product.singleflight.wait.interrupted',
+        'tomatomall.cache.product.singleflight.leader.failures',
+        'tomatomall.cache.product.singleflight.active',
+        'tomatomall.cache.product.singleflight.waiters.active',
+        'tomatomall.cache.product.singleflight.wait.duration'
+        'tomatomall.cache.product.singleflight.enabled'
+    )
+    foreach ($metric in $requiredSingleFlightMetrics) {
+        if ($snapshotScript -notmatch [regex]::Escape($metric)) {
+            throw "Performance snapshots must collect CACHE-002 metric $metric"
+        }
+    }
+
+    $burstScript = Get-Content -Raw -LiteralPath "$PSScriptRoot/../scripts/Invoke-HotspotBurst.ps1"
+    foreach ($requiredText in @(
+        'singleFlightLeaderDelta',
+        'singleFlightTimeoutDelta',
+        'singleFlightFailureDelta',
+        'singleFlightActiveAfter',
+        'singleFlightWaitersAfter',
+        'mysqlSelectDelta',
+        'mysqlRowLockWaitDelta'
+        'singleFlightEffectiveBefore'
+        'singleFlightFollowerDelta'
+        'maxHikariPending'
+    )) {
+        if ($burstScript -notmatch $requiredText) {
+            throw "Hotspot burst acceptance must validate $requiredText"
+        }
+    }
+
+    $cache002Acceptance = Get-Content -Raw -LiteralPath `
+        "$PSScriptRoot/../scripts/Invoke-Cache002Acceptance.ps1"
+    foreach ($requiredText in @(
+        "Invoke-Mode 'disabled'",
+        "Invoke-Mode 'enabled'",
+        'p95MedianMs',
+        'p99MedianMs',
+        'Invoke-PerfPreflight -Seconds 30'
+    )) {
+        if ($cache002Acceptance -notmatch [regex]::Escape($requiredText)) {
+            throw "CACHE-002 acceptance script must contain $requiredText"
+        }
+    }
+    if ($cache002Acceptance -notmatch '\[ValidateSet\(100\)\]\[int\]\$VirtualUsers = 100') {
+        throw 'CACHE-002 formal acceptance must require exactly 100 virtual users'
+    }
+    $burstK6 = Get-Content -Raw -LiteralPath "$PSScriptRoot/../k6/burst.js"
+    if ($burstK6 -notmatch "executor: 'per-vu-iterations'" `
+            -or $burstK6 -notmatch 'iterations: 1' `
+            -or $burstK6 -notmatch 'participating_vus' `
+            -or $burstK6 -notmatch 'startAt') {
+        throw 'CACHE-002 burst must run exactly one synchronized request per virtual user'
+    }
+    $singleFlightModeScript = Get-Content -Raw -LiteralPath `
+        "$PSScriptRoot/../scripts/Set-PerfSingleFlightMode.ps1"
+    if ($singleFlightModeScript -notmatch '--build --force-recreate backend') {
+        throw 'CACHE-002 formal mode switch must rebuild the backend from current source'
+    }
+    $cacheModeScript = Get-Content -Raw -LiteralPath `
+        "$PSScriptRoot/../scripts/Set-PerfCacheMode.ps1"
+    foreach ($modeScript in @($cacheModeScript, $singleFlightModeScript)) {
+        if ($modeScript -notmatch '--profile tools' -or $modeScript -notmatch 'up -d metrics') {
+            throw 'Performance mode switches must start the metrics helper before probing Actuator'
+        }
+    }
+    $runScript = Get-Content -Raw -LiteralPath "$PSScriptRoot/../scripts/Run-PerfScenario.ps1"
+    if ($runScript -notmatch 'hikaricp\.connections\.pending' `
+            -or $runScript -notmatch 'maxHikariPending' `
+            -or $runScript -notmatch 'Start-Sleep -Milliseconds 100') {
+        throw 'CACHE-002 hotspot run must sample Hikari pending connections throughout the burst'
+    }
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Output 'PerformanceScripts.Tests.ps1: 6/6 passed'
+Write-Output 'PerformanceScripts.Tests.ps1: 9/9 passed'

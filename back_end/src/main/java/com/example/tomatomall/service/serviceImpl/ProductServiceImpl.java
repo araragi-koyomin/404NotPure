@@ -15,6 +15,8 @@ import com.example.tomatomall.repository.StockPileRepository;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.service.cache.ProductDetailCache;
 import com.example.tomatomall.service.cache.ProductCacheResilience;
+import com.example.tomatomall.service.cache.ProductCacheSingleFlight;
+import com.example.tomatomall.service.cache.ProductDetailDatabaseLoader;
 import com.example.tomatomall.vo.ProductContentImageVO;
 import com.example.tomatomall.vo.ProductPageVO;
 import com.example.tomatomall.vo.ProductVO;
@@ -53,6 +55,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductCacheResilience productCacheResilience;
+
+    @Autowired
+    private ProductCacheSingleFlight productCacheSingleFlight;
+
+    @Autowired
+    private ProductDetailDatabaseLoader productDetailDatabaseLoader;
 
     /**
      * 创建商品
@@ -138,31 +146,45 @@ public class ProductServiceImpl implements ProductService {
      * @throws TomatoException 商品不存在时抛出
      */
     @Override
-    @Transactional
     public ProductVO getProductById(int id) {
-        ProductDetailCache.LookupResult lookupResult = productDetailCache.lookup(id);
-        if (lookupResult.getProduct() != null) {
-            return convertToVO(lookupResult.getProduct());
-        }
-        if (lookupResult.isMissing()) {
-            throw TomatoException.productNotExist();
-        }
+        long deadlineNanos = 0L;
+        boolean deadlineInitialized = false;
+        while (true) {
+            ProductDetailCache.LookupResult lookupResult = productDetailCache.lookup(id);
+            if (lookupResult.getProduct() != null) {
+                return convertToVO(lookupResult.getProduct());
+            }
+            if (lookupResult.isMissing()) {
+                throw TomatoException.productNotExist();
+            }
+            if (lookupResult.requiresDatabaseFallback()) {
+                return resolveLoadResult(productCacheResilience.executeDatabaseFallback(
+                        () -> productDetailDatabaseLoader.loadAndCache(id)
+                ));
+            }
 
-        if (lookupResult.requiresDatabaseFallback()) {
-            return productCacheResilience.executeDatabaseFallback(() -> loadProductFromDatabase(id));
+            if (!deadlineInitialized) {
+                deadlineNanos = productCacheSingleFlight.newDeadlineNanos();
+                deadlineInitialized = true;
+            }
+
+            ProductCacheSingleFlight.Outcome<ProductDetailDatabaseLoader.LoadResult> outcome =
+                    productCacheSingleFlight.execute(
+                            id,
+                            deadlineNanos,
+                            () -> productDetailDatabaseLoader.loadAndCache(id)
+                    );
+            if (outcome.isLeader()) {
+                return resolveLoadResult(outcome.getLeaderResult());
+            }
         }
-        return loadProductFromDatabase(id);
     }
 
-    private ProductVO loadProductFromDatabase(int id) {
-        Product product = productRepository.findByIdForUpdate(id).orElse(null);
-        if (product == null) {
-            productDetailCache.putMissing(id);
+    private ProductVO resolveLoadResult(ProductDetailDatabaseLoader.LoadResult result) {
+        if (result.isMissing()) {
             throw TomatoException.productNotExist();
         }
-        ProductDTO productDTO = ProductDTO.fromProduct(product);
-        productDetailCache.putProduct(id, productDTO);
-        return convertToVO(productDTO);
+        return convertToVO(result.getProduct());
     }
 
     /**

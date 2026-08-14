@@ -3,6 +3,7 @@ package com.example.tomatomall.controller;
 import com.example.tomatomall.exception.ExceptionHandle;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.service.cache.ProductCacheFallbackRejectedException;
+import com.example.tomatomall.service.cache.ProductCacheSingleFlightTimeoutException;
 import com.example.tomatomall.util.TokenUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,20 @@ class ProductCacheFallbackHttpTest {
                 .build();
 
         mockMvc.perform(get("/api/products/71"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("503"))
+                .andExpect(jsonPath("$.msg").value("商品服务暂时繁忙，请稍后重试"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    void hotspotFillWaitTimeoutUsesTheSameExternalHttp503Response() throws Exception {
+        when(productService.getProductById(72)).thenThrow(new ProductCacheSingleFlightTimeoutException());
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(productController)
+                .setControllerAdvice(new ExceptionHandle())
+                .build();
+
+        mockMvc.perform(get("/api/products/72"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("503"))
                 .andExpect(jsonPath("$.msg").value("商品服务暂时繁忙，请稍后重试"))

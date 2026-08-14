@@ -102,6 +102,16 @@ $snapshot = [ordered]@{
         Read-ActuatorMetric 'tomatomall.cache.product.redis.recovery.attempts'
         Read-ActuatorMetric 'tomatomall.cache.product.redis.recovery.success'
         Read-ActuatorMetric 'tomatomall.cache.product.redis.recovery.cleanup.failures'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.leader'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.follower'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.wait.success'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.wait.timeout'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.wait.interrupted'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.leader.failures'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.active'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.waiters.active'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.wait.duration'
+        Read-ActuatorMetric 'tomatomall.cache.product.singleflight.enabled'
     )
     containers = $containerStats
 }

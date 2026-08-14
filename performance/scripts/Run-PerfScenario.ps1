@@ -76,6 +76,8 @@ try {
     $minimumFreeMemoryGiB = [double]::PositiveInfinity
     $minimumCDriveFreeGiB = [double]::PositiveInfinity
     $minimumEDriveFreeGiB = [double]::PositiveInfinity
+    $maxHikariPending = 0.0
+    $lastSafetySampleAt = [DateTime]::MinValue
     $protectedServices = @('404notpure-perf-backend-1','404notpure-perf-db-1')
     if (-not $AllowRedisUnavailable) {
         $protectedServices += '404notpure-perf-redis-1'
@@ -86,7 +88,17 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Could not inspect $containerName before k6" }
     }
     while (-not $process.HasExited) {
-        Start-Sleep -Seconds 2
+        if ($Scenario -eq 'hotspot-burst') {
+            Start-Sleep -Milliseconds 100
+            $pendingRaw = docker exec 404notpure-perf-metrics-1 curl -fsS `
+                'http://backend:9090/actuator/metrics/hikaricp.connections.pending' 2>$null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not sample Hikari pending connections during hotspot burst' }
+            $pendingMetric = $pendingRaw | ConvertFrom-Json
+            $pendingValue = [double](@($pendingMetric.measurements | Where-Object { $_.statistic -eq 'VALUE' })[0].value)
+            $maxHikariPending = [math]::Max($maxHikariPending, $pendingValue)
+        } else { Start-Sleep -Seconds 2 }
+        if (((Get-Date) - $lastSafetySampleAt).TotalSeconds -lt 2) { continue }
+        $lastSafetySampleAt = Get-Date
         $snapshot = Get-HostResourceSnapshot
         $peakCpuPercent = [math]::Max($peakCpuPercent, $snapshot.CpuPercent)
         $minimumFreeMemoryGiB = [math]::Min($minimumFreeMemoryGiB, $snapshot.FreeMemoryGiB)
@@ -127,6 +139,7 @@ try {
         minimumFreeMemoryGiB = $minimumFreeMemoryGiB
         minimumCDriveFreeGiB = $minimumCDriveFreeGiB
         minimumEDriveFreeGiB = $minimumEDriveFreeGiB
+        maxHikariPending = $maxHikariPending
         watchdogStopReason = $stopReason
     } | ConvertTo-Json | Set-Content -Encoding utf8 -LiteralPath $runtimePath
     if (-not $SkipSnapshots) {

@@ -4,7 +4,7 @@ type: governance
 layer: warm
 status: active
 created: 2026-08-10
-updated: 2026-08-13
+updated: 2026-08-14
 owners:
   - maintainers
 tags:
@@ -132,6 +132,8 @@ docker compose --env-file back_end/.env up --build
 | `REDIS_CONNECT_TIMEOUT` | `250ms` | 与 Redis 建立连接最多等待 250 毫秒；超时后商品缓存进入故障回退，不要设为无限等待。 |
 | `REDIS_COMMAND_TIMEOUT` | `500ms` | Redis `GET`、`SET`、`DELETE`、恢复扫描等命令最多等待 500 毫秒。 |
 | `PRODUCT_DETAIL_CACHE_ENABLED` | `true` | 商品详情 Cache-Aside 总开关；普通本机和 Compose 运行必须保持默认开启。仅 PERF-001 的隔离性能项目可以临时设为 `false`，用于获得不包含 Redis 失败开销的纯 MySQL 对照组。 |
+| `PRODUCT_CACHE_SINGLE_FLIGHT_ENABLED` | `true` | CACHE-002 的单实例热点商品请求合并开关。开启后，同一商品正常缓存未命中时只有一个请求查询数据库，其他请求等待后重读 Redis；关闭只用于同版本性能对照或紧急诊断，不代表数据库正确性保护被关闭。 |
+| `PRODUCT_CACHE_SINGLE_FLIGHT_WAIT_TIMEOUT` | `500ms` | 同一商品的等待者在 CACHE-002 中累计最多等待 500 毫秒；超时返回统一 HTTP 503。必须使用明确时间单位，0、负数或无法识别的值会导致应用拒绝启动。该时间只约束单个后端实例内的等待，不是多实例集群的全局锁超时。 |
 | `PRODUCT_CACHE_FAILURE_BYPASS_DURATION` | `5s` | 第一次 Redis 连接或命令故障后，商品缓存临时跳过 Redis 的时间；到期后只允许一个请求检查恢复。 |
 | `PRODUCT_CACHE_DB_FALLBACK_MAX_CONCURRENT` | `4` | Redis 故障期间允许同时回退 MySQL 的商品详情请求数；限制商品读取占用数据库连接，为订单和支付保留容量。 |
 | `PRODUCT_CACHE_DB_FALLBACK_WAIT` | `50ms` | 4 个回退名额用满后，新请求最多等待 50 毫秒；仍无名额则返回 HTTP 503。 |

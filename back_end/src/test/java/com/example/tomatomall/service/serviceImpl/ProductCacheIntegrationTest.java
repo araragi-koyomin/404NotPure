@@ -9,6 +9,11 @@ import com.example.tomatomall.repository.ProductRepository;
 import com.example.tomatomall.service.AdvertisementsService;
 import com.example.tomatomall.service.ProductService;
 import com.example.tomatomall.service.cache.ProductDetailCache;
+import com.example.tomatomall.service.cache.ProductCacheResilience;
+import com.example.tomatomall.service.cache.ProductCacheSingleFlight;
+import com.example.tomatomall.service.cache.ProductCacheSingleFlightInterruptedException;
+import com.example.tomatomall.service.cache.ProductCacheSingleFlightTimeoutException;
+import com.example.tomatomall.service.cache.ProductDetailDatabaseLoader;
 import com.example.tomatomall.vo.AdvertisementsVO;
 import com.example.tomatomall.vo.ProductVO;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +27,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.aop.support.AopUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -33,18 +40,25 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.atLeastOnce;
 
-@SpringBootTest
+@SpringBootTest(properties = "tomatomall.cache.product-detail.single-flight.wait-timeout=5s")
 class ProductCacheIntegrationTest {
 
     private static final String KEY_PREFIX = "product:detail:v1:";
@@ -76,6 +90,15 @@ class ProductCacheIntegrationTest {
 
     @SpyBean
     private ProductDetailCache productDetailCache;
+
+    @SpyBean
+    private ProductDetailDatabaseLoader productDetailDatabaseLoader;
+
+    @Autowired
+    private ProductCacheSingleFlight productCacheSingleFlight;
+
+    @SpyBean
+    private ProductCacheResilience productCacheResilience;
 
     private final List<Integer> productIds = new ArrayList<>();
     private final List<Integer> advertisementIds = new ArrayList<>();
@@ -115,6 +138,329 @@ class ProductCacheIntegrationTest {
         ProductDTO cachedProduct = assertInstanceOf(ProductDTO.class, cached);
         assertEquals(product.getTitle(), cachedProduct.getTitle());
         assertTtlBetween(cacheKey(product.getId()), 1800, 3599);
+    }
+
+    @Test
+    void databaseLoaderIsARealTransactionalProxyAndCacheHitSkipsIt() {
+        assertTrue(AopUtils.isAopProxy(productDetailDatabaseLoader));
+        Product product = createProduct("transaction-boundary");
+        AtomicInteger transactionChecks = new AtomicInteger();
+        doAnswer(invocation -> {
+            assertTrue(
+                    TransactionSynchronizationManager.isActualTransactionActive(),
+                    "数据库加载组件必须在真实 Spring 事务中执行"
+            );
+            transactionChecks.incrementAndGet();
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(product.getId());
+
+        ProductVO first = productService.getProductById(product.getId());
+        ProductVO second = productService.getProductById(product.getId());
+
+        assertEquals(product.getTitle(), first.getTitle());
+        assertEquals(product.getTitle(), second.getTitle());
+        assertEquals(1, transactionChecks.get());
+        verify(productDetailDatabaseLoader, times(1)).loadAndCache(product.getId());
+    }
+
+    @Test
+    void simultaneousMissesForOneExistingProductUseOneDatabaseLoader() throws Exception {
+        Product product = createProduct("single-flight-existing");
+        int requestCount = 12;
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        AtomicInteger loaderCalls = new AtomicInteger();
+        doAnswer(invocation -> {
+            loaderCalls.incrementAndGet();
+            loaderEntered.countDown();
+            assertTrue(releaseLoader.await(5, TimeUnit.SECONDS));
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(product.getId());
+
+        ExecutorService executor = Executors.newFixedThreadPool(requestCount);
+        CountDownLatch ready = new CountDownLatch(requestCount);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<ProductVO>> requests = new ArrayList<>();
+            for (int index = 0; index < requestCount; index++) {
+                requests.add(executor.submit(() -> {
+                    ready.countDown();
+                    assertTrue(start.await(5, TimeUnit.SECONDS));
+                    return productService.getProductById(product.getId());
+                }));
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            awaitCondition(
+                    () -> productCacheSingleFlight.activeWaiters() == requestCount - 1,
+                    5,
+                    TimeUnit.SECONDS
+            );
+            assertEquals(1, productCacheSingleFlight.activeFlights());
+            releaseLoader.countDown();
+
+            for (Future<ProductVO> request : requests) {
+                ProductVO result = request.get(5, TimeUnit.SECONDS);
+                assertEquals(product.getId(), result.getId());
+                assertEquals(product.getTitle(), result.getTitle());
+            }
+            assertEquals(1, loaderCalls.get());
+            verify(productDetailDatabaseLoader, times(1)).loadAndCache(product.getId());
+            ProductDTO cached = assertInstanceOf(
+                    ProductDTO.class,
+                    redisTemplate.opsForValue().get(cacheKey(product.getId()))
+            );
+            assertEquals(product.getTitle(), cached.getTitle());
+            assertEquals(0, productCacheSingleFlight.activeFlights());
+            assertEquals(0, productCacheSingleFlight.activeWaiters());
+        } finally {
+            start.countDown();
+            releaseLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void simultaneousMissesForOneMissingProductUseOneDatabaseConfirmation() throws Exception {
+        int missingProductId = 1_800_000_000 + Math.abs(marker.hashCode() % 100_000_000);
+        cacheIds.add(missingProductId);
+        int requestCount = 10;
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        AtomicInteger loaderCalls = new AtomicInteger();
+        doAnswer(invocation -> {
+            loaderCalls.incrementAndGet();
+            loaderEntered.countDown();
+            assertTrue(releaseLoader.await(5, TimeUnit.SECONDS));
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(missingProductId);
+
+        ExecutorService executor = Executors.newFixedThreadPool(requestCount);
+        CountDownLatch ready = new CountDownLatch(requestCount);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<TomatoException>> requests = new ArrayList<>();
+            for (int index = 0; index < requestCount; index++) {
+                requests.add(executor.submit(() -> {
+                    ready.countDown();
+                    assertTrue(start.await(5, TimeUnit.SECONDS));
+                    return assertThrows(
+                            TomatoException.class,
+                            () -> productService.getProductById(missingProductId)
+                    );
+                }));
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            awaitCondition(
+                    () -> productCacheSingleFlight.activeWaiters() == requestCount - 1,
+                    5,
+                    TimeUnit.SECONDS
+            );
+            releaseLoader.countDown();
+
+            for (Future<TomatoException> request : requests) {
+                assertEquals("404", request.get(5, TimeUnit.SECONDS).getCode());
+            }
+            assertEquals(1, loaderCalls.get());
+            verify(productDetailDatabaseLoader, times(1)).loadAndCache(missingProductId);
+            assertInstanceOf(
+                    MissingProductCacheEntry.class,
+                    redisTemplate.opsForValue().get(cacheKey(missingProductId))
+            );
+            assertEquals(0, productCacheSingleFlight.activeFlights());
+            assertEquals(0, productCacheSingleFlight.activeWaiters());
+        } finally {
+            start.countDown();
+            releaseLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void failedLeaderReleasesFollowersLeavesNoCacheAndAllowsANewRequest() throws Exception {
+        Product product = createProduct("single-flight-failure");
+        IllegalStateException controlledFailure = new IllegalStateException("controlled loader failure");
+        CountDownLatch leaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLeader = new CountDownLatch(1);
+        AtomicInteger failedCalls = new AtomicInteger();
+        doAnswer(invocation -> {
+            if (failedCalls.getAndIncrement() == 0) {
+                leaderEntered.countDown();
+                assertTrue(releaseLeader.await(5, TimeUnit.SECONDS));
+                throw controlledFailure;
+            }
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(product.getId());
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Throwable> leader = executor.submit(() -> assertThrows(
+                    IllegalStateException.class,
+                    () -> productService.getProductById(product.getId())
+            ));
+            assertTrue(leaderEntered.await(5, TimeUnit.SECONDS));
+            Future<Throwable> follower = executor.submit(() -> assertThrows(
+                    IllegalStateException.class,
+                    () -> productService.getProductById(product.getId())
+            ));
+            awaitCondition(() -> productCacheSingleFlight.activeWaiters() == 1, 5, TimeUnit.SECONDS);
+            releaseLeader.countDown();
+
+            assertSame(controlledFailure, leader.get(5, TimeUnit.SECONDS));
+            assertSame(controlledFailure, follower.get(5, TimeUnit.SECONDS));
+            assertNull(redisTemplate.opsForValue().get(cacheKey(product.getId())));
+            assertEquals(0, productCacheSingleFlight.activeFlights());
+            assertEquals(0, productCacheSingleFlight.activeWaiters());
+
+            ProductVO retry = productService.getProductById(product.getId());
+            assertEquals(product.getTitle(), retry.getTitle());
+            assertInstanceOf(
+                    ProductDTO.class,
+                    redisTemplate.opsForValue().get(cacheKey(product.getId()))
+            );
+        } finally {
+            releaseLeader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void missesForDifferentProductsEnterIndependentDatabaseLoads() throws Exception {
+        Product first = createProduct("single-flight-different-a");
+        Product second = createProduct("single-flight-different-b");
+        CountDownLatch bothLoadersEntered = new CountDownLatch(2);
+        CountDownLatch releaseLoaders = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            bothLoadersEntered.countDown();
+            assertTrue(releaseLoaders.await(5, TimeUnit.SECONDS));
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(first.getId());
+        doAnswer(invocation -> {
+            bothLoadersEntered.countDown();
+            assertTrue(releaseLoaders.await(5, TimeUnit.SECONDS));
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(second.getId());
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<ProductVO> firstRequest = executor.submit(() -> productService.getProductById(first.getId()));
+            Future<ProductVO> secondRequest = executor.submit(() -> productService.getProductById(second.getId()));
+            assertTrue(bothLoadersEntered.await(5, TimeUnit.SECONDS),
+                    "不同商品必须能够同时进入各自的数据库加载事务");
+            assertEquals(2, productCacheSingleFlight.activeFlights());
+            releaseLoaders.countDown();
+            assertEquals(first.getId(), firstRequest.get(5, TimeUnit.SECONDS).getId());
+            assertEquals(second.getId(), secondRequest.get(5, TimeUnit.SECONDS).getId());
+        } finally {
+            releaseLoaders.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void realServiceFollowerTimesOutWithoutCancellingDatabaseLeader() throws Exception {
+        Product product = createProduct("single-flight-timeout");
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            loaderEntered.countDown();
+            assertTrue(releaseLoader.await(8, TimeUnit.SECONDS));
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(product.getId());
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<ProductVO> leader = executor.submit(() -> productService.getProductById(product.getId()));
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            Future<Throwable> follower = executor.submit(() -> assertThrows(
+                    ProductCacheSingleFlightTimeoutException.class,
+                    () -> productService.getProductById(product.getId())
+            ));
+            assertInstanceOf(ProductCacheSingleFlightTimeoutException.class,
+                    follower.get(7, TimeUnit.SECONDS));
+            assertFalse(leader.isDone(), "等待者超时不能取消仍在数据库事务中的负责人");
+            releaseLoader.countDown();
+            assertEquals(product.getId(), leader.get(5, TimeUnit.SECONDS).getId());
+        } finally {
+            releaseLoader.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void interruptedRealServiceFollowerRestoresFlagAndKeepsLeaderRunning() throws Exception {
+        Product product = createProduct("single-flight-interrupt");
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            loaderEntered.countDown();
+            assertTrue(releaseLoader.await(5, TimeUnit.SECONDS));
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(product.getId());
+
+        ExecutorService leaderExecutor = Executors.newSingleThreadExecutor();
+        AtomicInteger interruptFlagObserved = new AtomicInteger();
+        try {
+            Future<ProductVO> leader = leaderExecutor.submit(() -> productService.getProductById(product.getId()));
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            Thread follower = new Thread(() -> {
+                assertThrows(ProductCacheSingleFlightInterruptedException.class,
+                        () -> productService.getProductById(product.getId()));
+                if (Thread.currentThread().isInterrupted()) interruptFlagObserved.incrementAndGet();
+            });
+            follower.start();
+            awaitCondition(() -> productCacheSingleFlight.activeWaiters() == 1, 5, TimeUnit.SECONDS);
+            follower.interrupt();
+            follower.join(2000);
+            assertFalse(follower.isAlive());
+            assertEquals(1, interruptFlagObserved.get());
+            assertFalse(leader.isDone());
+            releaseLoader.countDown();
+            assertEquals(product.getId(), leader.get(5, TimeUnit.SECONDS).getId());
+        } finally {
+            releaseLoader.countDown();
+            leaderExecutor.shutdownNow();
+        }
+    }
+
+    @Test
+    void followerRedisFailureResultUsesCache003LimiterInSpringContext() throws Exception {
+        Product product = createProduct("single-flight-redis-failure-routing");
+        AtomicInteger lookups = new AtomicInteger();
+        doAnswer(invocation -> {
+            int call = lookups.incrementAndGet();
+            if (call <= 2) return ProductDetailCache.LookupResult.miss();
+            if (call == 3) return ProductDetailCache.LookupResult.databaseFallback();
+            return invocation.callRealMethod();
+        }).when(productDetailCache).lookup(product.getId());
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseFirstLoader = new CountDownLatch(1);
+        AtomicInteger loads = new AtomicInteger();
+        doAnswer(invocation -> {
+            if (loads.getAndIncrement() == 0) {
+                loaderEntered.countDown();
+                assertTrue(releaseFirstLoader.await(5, TimeUnit.SECONDS));
+            }
+            return invocation.callRealMethod();
+        }).when(productDetailDatabaseLoader).loadAndCache(product.getId());
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<ProductVO> leader = executor.submit(() -> productService.getProductById(product.getId()));
+            assertTrue(loaderEntered.await(5, TimeUnit.SECONDS));
+            Future<ProductVO> follower = executor.submit(() -> productService.getProductById(product.getId()));
+            awaitCondition(() -> productCacheSingleFlight.activeWaiters() == 1, 5, TimeUnit.SECONDS);
+            releaseFirstLoader.countDown();
+            assertEquals(product.getId(), leader.get(5, TimeUnit.SECONDS).getId());
+            assertEquals(product.getId(), follower.get(5, TimeUnit.SECONDS).getId());
+            verify(productCacheResilience, atLeastOnce()).executeDatabaseFallback(any());
+        } finally {
+            releaseFirstLoader.countDown();
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -584,5 +930,18 @@ class ProductCacheIntegrationTest {
 
     private String cacheKey(int productId) {
         return KEY_PREFIX + productId;
+    }
+
+    private void awaitCondition(Check check, long timeout, TimeUnit unit) throws InterruptedException {
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        while (!check.satisfied() && System.nanoTime() < deadline) {
+            Thread.sleep(5);
+        }
+        assertTrue(check.satisfied(), "condition was not satisfied before timeout");
+    }
+
+    @FunctionalInterface
+    private interface Check {
+        boolean satisfied();
     }
 }

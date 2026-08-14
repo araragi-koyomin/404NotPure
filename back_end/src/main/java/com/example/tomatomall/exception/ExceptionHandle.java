@@ -4,6 +4,7 @@ catch全局exception并处理
 */
 import com.example.tomatomall.vo.Response;
 import com.example.tomatomall.service.cache.ProductCacheFallbackRejectedException;
+import com.example.tomatomall.service.cache.ProductCacheSingleFlightRejectedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -34,6 +35,14 @@ public class ExceptionHandle {
     @ExceptionHandler(ProductCacheFallbackRejectedException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public Response<String> handleProductCacheFallbackRejected(ProductCacheFallbackRejectedException exception) {
+        return Response.buildFailure(exception.getMessage(), "503");
+    }
+
+    @ExceptionHandler(ProductCacheSingleFlightRejectedException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public Response<String> handleProductCacheSingleFlightRejected(
+            ProductCacheSingleFlightRejectedException exception
+    ) {
         return Response.buildFailure(exception.getMessage(), "503");
     }
 }

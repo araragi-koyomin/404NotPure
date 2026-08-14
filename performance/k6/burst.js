@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 
 const baseUrl = __ENV.BASE_URL || 'http://backend:8080';
@@ -8,13 +8,14 @@ const resultName = safeName(__ENV.RESULT_NAME || 'hotspot-burst');
 const businessFailures = new Rate('business_failures');
 const businessRequests = new Counter('business_requests');
 const businessDuration = new Trend('business_duration', true);
+const participatingVus = new Counter('participating_vus');
 
 export const options = {
   scenarios: {
     burst: {
-      executor: 'shared-iterations',
+      executor: 'per-vu-iterations',
       vus,
-      iterations: vus,
+      iterations: 1,
       maxDuration: '30s',
     },
   },
@@ -23,6 +24,7 @@ export const options = {
     business_failures: ['rate==0'],
     http_req_failed: ['rate==0'],
     business_requests: [`count==${vus}`],
+    participating_vus: [`count==${vus}`],
     iterations: [`count==${vus}`],
   },
   summaryTrendStats: ['avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
@@ -37,10 +39,13 @@ export function setup() {
   if (response.status !== 200 || body.code !== '200' || !body.data || body.data.items.length !== 1) {
     throw new Error('Could not select the hotspot product');
   }
-  return { productId: body.data.items[0].id };
+  return { productId: body.data.items[0].id, startAt: Date.now() + 3000 };
 }
 
 export default function (data) {
+  const waitMilliseconds = data.startAt - Date.now();
+  if (waitMilliseconds > 0) sleep(waitMilliseconds / 1000);
+  participatingVus.add(1);
   const response = http.get(`${baseUrl}/api/products/${data.productId}`, {
     tags: { operation: 'hotspot_burst' },
   });

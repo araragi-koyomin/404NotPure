@@ -26,6 +26,10 @@ class RedisFailureProtectionConfigurationTest {
                 property(sources, "tomatomall.cache.product-detail.resilience.max-concurrent-database-fallbacks"));
         assertEquals("${PRODUCT_CACHE_DB_FALLBACK_WAIT:50ms}",
                 property(sources, "tomatomall.cache.product-detail.resilience.database-fallback-wait"));
+        assertEquals("${PRODUCT_CACHE_SINGLE_FLIGHT_ENABLED:true}",
+                property(sources, "tomatomall.cache.product-detail.single-flight.enabled"));
+        assertEquals("${PRODUCT_CACHE_SINGLE_FLIGHT_WAIT_TIMEOUT:500ms}",
+                property(sources, "tomatomall.cache.product-detail.single-flight.wait-timeout"));
     }
 
     private Object property(List<PropertySource<?>> sources, String name) {
