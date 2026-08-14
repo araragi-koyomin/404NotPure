@@ -4,7 +4,7 @@ type: governance
 layer: warm
 status: active
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-15
 owners:
   - maintainers
 tags:
@@ -131,7 +131,7 @@ mvn compile
 mvn test
 ```
 
-涉及事务、锁、数据库约束或 Redis 行为时，还必须运行对应的真实 MySQL/Redis 集成测试。当前 `TEST-002` 尚未解决时，如果临时使用 `-DforkCount=0`，必须明确说明这不是默认测试方式已经恢复的证据。
+涉及事务、锁、数据库约束或 Redis 行为时，还必须运行对应的真实 MySQL/Redis 集成测试。TEST-002 已恢复并验证 Surefire 独立测试进程；后续不得用 `-DforkCount=0` 的结果冒充默认测试通过。若因诊断需要临时禁用独立测试进程，必须单独说明原因、命令和证据边界，并在交付前重新执行默认 `mvn test`。
 
 #### 前端代码或接口契约改动
 
