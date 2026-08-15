@@ -4,7 +4,7 @@ type: plan
 layer: warm
 status: active
 created: 2026-08-09
-updated: 2026-08-10
+updated: 2026-08-15
 owners:
   - maintainers
 tags:
@@ -147,6 +147,8 @@ docker compose --env-file back_end/.env up --build
 历史镜像拉取阻塞已在本轮成功构建和启动时暂时解除，但尚未证明选定 registry 在清空本机镜像缓存后仍能稳定拉取。当前剩余证据是：对数据库与 Redis 命名卷执行受控重启并核对数据、检查 Compose 启动日志不会回显真实 `.env` 值，以及记录一次无本机镜像缓存条件下的稳定构建。完成这些验证前，RUN-002 不能标记完成。
 
 历史配置缺陷已经修复：同一份 `back_end/.env` 在本机混合模式中使用 `DB_HOST=127.0.0.1`、`DB_PORT=3307`，而 Compose 内 backend 必须使用 `DB_HOST=db`、`DB_PORT=3306`。当前 Compose 已同时显式覆盖这两个容器内值，`Test-ComposeConfiguration.ps1` 也会检查它们，避免再次继承宿主机端口。本轮四个服务运行和 5173 浏览器主链路已经验证；RUN-002 尚未完成的原因收窄为数据卷重启、日志配置回显和无本机缓存镜像拉取三类可重复证据仍缺。
+
+2026-08-15 执行 DB-001B 启动验收时，Windows 同时把 IPv4/IPv6 TCP 8062～8161 列为保留端口，8080 位于其中。普通 Windows `TcpListener` 和 Docker 的 `8080:8080` 映射都会被操作系统以“禁止访问套接字”拒绝，因此常驻 Compose backend 不能建立宿主机端口映射。相同后端镜像在不映射宿主机端口的容器中能够通过 Flyway、Hibernate 并正常启动，容器网络内商品与库存接口也通过，说明这不是 Java 应用或数据库迁移故障。后续处理 RUN-002 时应先重新检查系统保留范围，再选择让系统释放 8080，或在保持前后端代理、文档和测试一致的前提下整体迁移开发端口；不得只改一处端口制造新的契约不一致。
 
 ## OSS-003：业务未引用图片的长期清理
 
