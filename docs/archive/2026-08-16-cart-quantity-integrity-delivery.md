@@ -1,10 +1,11 @@
 ---
-title: CART-001 购物车数量与库存状态计划
-type: plan
-layer: warm
-status: active
+title: CART-001 购物车数量与库存状态交付记录
+type: report
+layer: cold
+status: completed
 created: 2026-08-15
 updated: 2026-08-16
+archived_at: 2026-08-16
 owners:
   - maintainers
 tags:
@@ -21,7 +22,7 @@ related:
   - PAY-002
 ---
 
-# CART-001 购物车数量与库存状态计划
+# CART-001 购物车数量与库存状态交付记录
 
 ## 目标与实际缺陷
 
@@ -69,7 +70,7 @@ related:
 - 添加和修改只接受严格 JSON 正整数；非法请求为 HTTP 400、业务码 `400`，服务未被调用且数据库不变。
 - 数量超过当前 `amount` 时返回稳定库存冲突，购物车原值和 `amount/frozen` 均不变。
 - 同一用户、同一商品普通重复加入和并发重复加入都最多产生一条记录；并发失败方获得稳定的已存在响应。
-- 全新库执行 V1～V5并通过 Hibernate `validate`；正常 V4 数据升级保留购物车主键和数量；异常数据阻止 V5 且不留下单项约束；重复迁移执行 0 项。
+- 全新库执行 V1～V5 并通过 Hibernate `validate`；正常 V4 数据升级保留购物车主键和数量；异常数据阻止 V5 且不留下单项约束；重复迁移执行 0 项。
 - 预检脚本对正常库返回 `READY`，对非正数或重复组合返回 `BLOCKED`，完整计数和前 100 条边界有测试且输出不含用户资料。
 - 购物车列表通过批量库存查询返回 `availableStock` 和三种状态；缺失库存商品不可结算但不阻断其他商品。
 - 商品详情和购物车不再计算 `amount - frozen`；库存不足商品保留、提示明确、不能勾选，全选跳过；失败修改后页面恢复数据库值。
@@ -100,4 +101,12 @@ related:
 
 项目所有者随后在 Codex 内置浏览器完成页面验收，并确认以下五项均无问题：库存充足商品数量修改成功；修改为超过可用库存时显示后端原始错误并恢复数据库数量；原本库存不足的商品降低数量后恢复为可选择；缺失库存记录的商品可以删除；全选只选择可结算商品。该结果补齐了构建检查无法证明的真实 Element Plus 数量输入、错误提示、重新加载和勾选状态行为。
 
-验收后已按精确账户 ID、用户名、商品 ID 和专用标题清理临时账户、3 件商品、购物车、库存及可能的关联记录，清理查询确认账户、商品、购物车和库存剩余数量均为 0；三个专用商品缓存 key 也单独删除，没有使用 `FLUSHDB`。只停止 `404notpure-cart-frontend` 和 `404notpure-cart-backend` 两个验收容器，MySQL 与 Redis 保持健康运行。代码尚未暂存、提交或推送，计划文档继续保持温层 `active`，等待 Git 交付授权。
+验收后已按精确账户 ID、用户名、商品 ID 和专用标题清理临时账户、3 件商品、购物车、库存及可能的关联记录，清理查询确认账户、商品、购物车和库存剩余数量均为 0；三个专用商品缓存 key 也单独删除，没有使用 `FLUSHDB`。只停止 `404notpure-cart-frontend` 和 `404notpure-cart-backend` 两个验收容器，MySQL 与 Redis 保持健康运行。
+
+## Git 交付证据
+
+- 功能分支：`codex/cart-quantity-integrity`，从 `master@4ce6f617` 创建。
+- 功能提交：`f88c04c5 feat(cart): enforce quantity and stock integrity`。
+- [Pull Request #21](https://github.com/araragi-koyomin/404NotPure/pull/21) 已通过 squash 方式合并到个人 `master`。
+- 合并提交：`abbb9fecf7d9f40743da483cc3237588982050d9`。
+- 合并后的文档归档分支：`codex/archive-cart001`。
