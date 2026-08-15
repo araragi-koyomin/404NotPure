@@ -4,7 +4,7 @@ type: plan
 layer: warm
 status: active
 created: 2026-08-09
-updated: 2026-08-15
+updated: 2026-08-16
 owners:
   - maintainers
 tags:
@@ -63,7 +63,7 @@ SEC-001 当时先写权限矩阵失败测试，再统一 Security/拦截器职�
 - CORS 由反射任意 Origin 改为明确前端来源白名单；认证 Cookie 增加 `SameSite=Lax`。CSRF 本轮仍保持关闭，不把“尚未建立 CSRF token 前端协议”伪装成已经解决；后续由 SEC-012 完成前端 token、公开登录/注册和支付宝 notify 例外的兼容设计与测试。
 - JWT 签名密钥迁移为环境变量配置，真实 `.env` 不读取也不修改；测试使用专门的伪密钥。JWT 与 Cookie 使用同一个可配置有效期。
 - `PATCH /api/accounts/{username}/points` 当前没有可信业务授权规则，且没有前端调用证据。本轮保持拒绝并由 ACCT-001 单独定义，不能因为移除旧拦截器路径判断而意外允许用户自行设置积分。
-- 购物车零数/负数问题由 CART-001 单独跟踪；SEC-001 只处理身份与资源所有权。CART-001 当前已在 `codex/cart-quantity-integrity` 完成实现和审查修复，审查后默认回归为 45 个测试类、292/292，仍需真实 Chrome 验收和 Git 交付；详细证据见[购物车数量与库存状态计划](cart-quantity-integrity.md)。支付成功后的购物车清理仍属于 PAY-002。
+- 购物车零数/负数问题未混入 SEC-001。CART-001 已通过 [PR #21](https://github.com/araragi-koyomin/404NotPure/pull/21) 合并：添加和修改只接受严格正整数且不超过当前可用库存，V5 增加数量检查和用户商品唯一约束，列表批量返回库存状态，前端跳过不可结算商品；完整证据见[购物车数量与库存状态交付记录](../archive/2026-08-16-cart-quantity-integrity-delivery.md)。支付成功后的购物车清理仍属于 PAY-002。
 
 建议分层职责：MVC 拦截器只负责精确公开路由和是否登录；`TokenUtil` 集中解析并验证认证来源；控制器和服务负责购物车、订单等具体资源所有权；商品、库存、广告继续保留管理员角色检查；支付宝 notify 是精确公开的外部回调。Spring Security 本轮不大规模改写成另一套 JWT 过滤器，避免形成互相矛盾的双重认证实现。
 
@@ -144,7 +144,7 @@ DB-001B 审计同时发现管理员库存调整接口允许把可用库存直接
 
 2026-08-10 已通过 PR #3 合并：独立支付完成时间、唯一支付宝交易号、现有数据库版本 1 基线策略和真实 MySQL 迁移测试。V1 使用本机实际 Hibernate schema 作为当前基线，全新数据库执行 V1+V2；已有非空 schema 只有在人工确认与 V1 一致后，才能临时设置 `FLYWAY_BASELINE_ON_MIGRATE=true` 建立版本 1 基线并执行 V2，完成后必须恢复默认关闭。应用先由 Flyway 迁移，再由 Hibernate 验证结构。完成证据见[支付回调一致性交付记录](../archive/2026-08-10-payment-callback-consistency-delivery.md)。
 
-支付迁移测试继续只创建并清理名称以 `tomato_payment_migration_test_` 开头的临时数据库，不删除或重建开发数据库。DB-001A 当时证明默认配置不会自动接受陌生非空数据库，并建立 V1/V2 与 Hibernate 全实体验证；DB-001B 已把该测试扩展到当前 V1～V4，并新增 `tomato_inventory_migration_test_` 隔离库覆盖库存唯一约束、商品外键、历史缺失库存补齐、异常数据拒绝和并发创建。开发库与演示库实际迁移结果及完整验证证据见[库存结构完整性交付记录](../archive/2026-08-15-inventory-schema-integrity-delivery.md)。
+支付迁移测试继续只创建并清理名称以 `tomato_payment_migration_test_` 开头的临时数据库，不删除或重建开发数据库。DB-001A 当时证明默认配置不会自动接受陌生非空数据库，并建立 V1/V2 与 Hibernate 全实体验证；DB-001B 把该测试扩展到 V1～V4，并新增 `tomato_inventory_migration_test_` 隔离库覆盖库存唯一约束、商品外键、历史缺失库存补齐、异常数据拒绝和并发创建。CART-001 又把完整迁移链扩展到当前 V1～V5，新增购物车非正数量、重复用户商品组合和并发重复加入测试。开发库与演示库实际迁移及完整证据分别见[库存结构完整性交付记录](../archive/2026-08-15-inventory-schema-integrity-delivery.md)和[购物车数量与库存状态交付记录](../archive/2026-08-16-cart-quantity-integrity-delivery.md)。
 
 ## TEST-002：恢复 Maven 默认测试进程隔离
 
