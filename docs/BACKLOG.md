@@ -4,7 +4,7 @@ type: backlog
 layer: hot
 status: active
 created: 2026-08-09
-updated: 2026-08-15
+updated: 2026-08-16
 owners:
   - maintainers
 tags:
@@ -20,12 +20,12 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | 等待项目所有者选择下一批；当前首选为 CART-001 购物车数量规则 |
-| 当前阶段 | DB-001B 已通过 [PR #19](https://github.com/araragi-koyomin/404NotPure/pull/19) squash 合并到个人 `master`，合并提交为 `d82a23c9`；本分支只完成合并后的冷层归档和事实同步。 |
+| 主开发批次 | CART-001：购物车正整数、库存状态和数据库约束 |
+| 当前阶段 | CART-001 已在 `codex/cart-quantity-integrity` 完成实现、审查问题修复和审查修复后的回归：默认 Maven 为 45 个测试类、292/292；真实 MySQL 覆盖 V5、异常历史数据、并发唯一约束与事务状态；前端生产构建通过。人工验收发现并修复了前端固定请求 8080、无法连接 9000 验收后端的问题；修复后项目所有者已在 Codex 内置浏览器确认数量成功修改、超库存失败恢复、库存不足降低后恢复可选、不可用商品删除和全选跳过不可结算项全部通过。临时账户、3 件商品、购物车和库存数据已精确清理，专用前后端容器已停止；尚未提交或推送。 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001、CACHE-003 Redis 故障保护、CACHE-002 热门商品单次回填、TEST-002 默认测试进程与内存基线，以及 DB-001B 库存唯一记录与商品外键均已合并并进入冷层交付记录。 |
-| 尚未完成 | 购物车数量校验、订单取消与结算幂等、订单读取接口、支付返回页、CSRF 等活跃项继续按表格跟踪。当前版本也没有执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测。 |
-| 当前阻塞或待确认 | 当前 Windows 把 TCP 8062～8161 保留，8080 位于其中，导致 Compose 常驻后端无法建立宿主机端口映射；不映射宿主机端口的同镜像后端已通过 Flyway、Hibernate、商品列表及 3 个补建库存接口验证。这是 RUN-002 的本机端口环境问题，不是 DB-001B 迁移失败。 |
-| 下一步 | 与项目所有者讨论 CART-001：明确购物车数量上限、库存不足时的返回和失败后购物车保持不变的规则；确认需求前不开始代码修改。 |
+| 尚未完成 | CART-001 的实现、自动测试、真实 MySQL 验证、前端构建、独立审查和项目所有者页面验收均已完成；目前只缺 Git 暂存、提交、推送、PR 审阅合并和合并后的冷层归档。订单取消与结算幂等、订单读取接口、支付返回页、CSRF 等活跃项继续按表格跟踪。当前版本也没有执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测。 |
+| 当前阻塞或待确认 | 无功能或环境阻塞。自动控制插件对本机 `/api` 的限制仍然存在，但项目所有者已经在 Codex 内置浏览器完成并确认五项页面验收，因此不再阻塞 CART-001；当前只等待明确的 Git 交付授权。 |
+| 下一步 | 项目所有者审阅本批次文件并明确授权后，暂存 CART-001 范围文件、提交、推送并创建 PR；合并成功后把温层计划转入冷层、从 BACKLOG 移除 CART-001，并判断是否更新简历/面试亮点。支付成功后的购物车清理仍明确留给 PAY-002。 |
 | 本批次不处理 | 已废弃的 AI assistant 和公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -37,7 +37,7 @@ tags:
 | RUN-002 | P2 | blocked | Compose 端口配置已修复且四服务曾可运行；Docker Desktop 曾出现内部镜像数据块错误。2026-08-12 确认 frontend 以 Windows bind mount、`CHOKIDAR_USEPOLLING=true` 和 Vite 开发服务器运行，空闲时持续占约 54%～55% 的一个逻辑 CPU，项目所有者因此选择停止前端并延后完整开发模式修复。2026-08-15 又确认 Windows 当前同时把 IPv4/IPv6 TCP 8062～8161 列为保留范围，8080 位于其中，导致普通本机监听和 Docker 后端端口映射被系统拒绝；不映射宿主机端口的后端容器仍可正常启动和访问数据库 | 除既有端口、数据卷、日志和镜像稳定证据外，使文件轮询默认关闭或可配置；解决或避开 Windows 8080 保留范围且保持前后端契约一致；验证热更新仍可用且 frontend 空闲 CPU 回落；生产静态镜像仍由 DEPLOY-001 处理 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-012 | P1 | planned | 本轮先把 CORS 从反射任意 Origin 改为明确前端来源白名单，并给认证 Cookie 增加 `SameSite=Lax`；CSRF 暂不直接开启，后续需要设计前端 CSRF token、登录/注册和支付宝 notify 精确例外 | 状态修改请求需要可信 CSRF token；前端正常调用、匿名公开接口和支付宝 notify 均有兼容测试；不能只打开开关造成商城请求全部失败 | [安全与质量计划](plans/security-and-quality.md) |
 | SEC-013 | P2 | planned | 全局异常处理目前对预期的未登录、越权和业务校验异常直接执行 `printStackTrace()`，会把完整内部调用栈写入控制台并让正常拒绝场景产生大量噪声；本轮不扩大 SEC-011 的前端敏感响应日志范围 | 预期业务拒绝只记录不含 token、Cookie、账户资料和内部堆栈的必要信息；非预期异常仍保留可诊断且经过脱敏的结构化日志，并有日志捕获测试 | [安全与质量计划](plans/security-and-quality.md) |
-| CART-001 | P1 | planned | 购物车添加和数量更新目前允许零数或负数，可能保存没有业务意义的数量；本轮 SEC-001 只处理认证与所有权，不把数量规则悄悄包装成已完成 | 添加和更新均只接受正整数；库存上限、失败后购物车不变和统一 `Response` 有接口与数据库状态测试 | [安全与质量计划](plans/security-and-quality.md) |
+| CART-001 | P1 | in_progress | 在 `codex/cart-quantity-integrity` 中统一添加/修改正整数与当前 `amount` 上限；V5 增加数量检查和用户商品唯一约束；列表批量返回库存状态，前端保留但禁止结算库存不足商品 | 严格输入、普通/并发重复加入、失败不写入、V1～V5、异常数据拒绝、预检、批量库存三状态、前端构建与 Chrome 验收均通过 | [购物车数量与库存状态计划](plans/cart-quantity-integrity.md) |
 | ACCT-001 | P1 | planned | `PATCH /api/accounts/{username}/points` 没有可信积分发放规则；旧拦截器路径解析使该接口实际上无法正常使用，本轮保持拒绝，不因认证重构把它意外开放 | 明确谁能因何种业务事件改变积分、是否允许管理员人工调整，并测试普通用户不能自行设置积分 | [安全与质量计划](plans/security-and-quality.md) |
 | OSS-003 | P2 | planned | 本机/面试阶段暂不自动清理未被商品、广告或头像引用的 OSS 图片；长期实现临时上传、业务保存后确认和过期清理，同时不授予应用删除真实业务图片的权限 | 覆盖业务保存失败、超时重试、重复确认和清理失败；在此之前保持业务图片删除权限关闭 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | STOCK-001 | P1 | planned | 管理员库存调整接口当前可以把 `amount` 设置为负数，而且尚未定义它表示新的可用库存还是新的总库存；该缺陷在 DB-001B 审计中发现，但数量业务规则与记录唯一性不同，不混入本批次 | 明确调整语义及其与 `frozen` 的关系；拒绝负数和冲突数量；根据规则决定是否增加数据库非负检查约束；并发下单与管理员调整的最终库存由真实 MySQL 测试证明 | [安全与质量计划](plans/security-and-quality.md) |
@@ -67,6 +67,7 @@ DB-001C、SEC-013、JPA-001、运行环境和前端质量任务继续按风险�
 
 - PR #1～#13 的交付历史保留在对应冷层记录；[PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15) 已于 2026-08-14 squash 合并 CACHE-002，提交为 `28b41ad4`。功能分支为 `codex/cache-hotspot-single-flight`，合并后冷层归档使用 `codex/archive-cache002`；目标集成分支始终为个人 `master`。
 - TEST-002 功能分支 `codex/test-default-surefire-memory` 已通过 PR #17 squash 合并，合并提交为 `73f73836`；合并后冷层归档使用 `codex/archive-test002`。DB-001B 功能分支 `codex/db-inventory-unique` 已通过 PR #19 squash 合并，合并提交为 `d82a23c9`；合并后冷层归档使用 `codex/archive-db001b`，目标集成分支仍为个人 `master`。
+- CART-001 已从 `master@4ce6f617` 创建功能分支 `codex/cart-quantity-integrity`；当前没有提交或推送，目标集成分支仍为个人 `master`。
 - 原多人仓库保留为只读 `upstream`，其 push URL 为 `DISABLED`。个人 Fork 是当前 `origin`，默认分支为 `master`。
 - 原仓库 `main` 与有效项目基线 `lab4` 没有共同祖先，因此个人 `master` 从已验证基线 `093a6c9e` 建立，不强行拼接两段历史。
 - RUN-002 本轮已经增加四个 Compose 服务运行和 5173 浏览器主链路证据，但尚未覆盖原完成标准中的数据卷重启、日志配置回显和基础镜像稳定拉取，因此继续保持 blocked；这不影响本机/面试演示已经验证的当前运行方式。

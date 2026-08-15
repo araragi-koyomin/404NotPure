@@ -74,11 +74,19 @@ public class TomatoException extends RuntimeException{
     }
 
     public static TomatoException existInCart() {
-        return new TomatoException("商品已存在于购物车中", "400");
+        return new TomatoException("商品已存在于购物车中", "409");
     }
 
     public static TomatoException spillStock() {
-        return new TomatoException("修改数量超出库存", "400");
+        return new TomatoException("购物车数量超过当前可用库存", "409");
+    }
+
+    public static TomatoException invalidCartQuantity() {
+        return new TomatoException("购物车商品数量必须是正整数", "400");
+    }
+
+    public static TomatoException invalidCartProductId() {
+        return new TomatoException("购物车商品编号必须是正整数", "400");
     }
 
     public static TomatoException failToUploadFile() {

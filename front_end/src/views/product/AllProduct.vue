@@ -229,7 +229,7 @@ const addToCart = async (product: ProductSummary) => {
   try {
     const res = await getProductStockpile(product.id!)
     if (res.data.code === "200") {
-      selectedStock.value = res.data.data.amount - res.data.data.frozen
+      selectedStock.value = res.data.data.amount
       addCartDialogVisible.value = true
     } else {
       ElMessage.error("加载库存失败：" + res.data.msg)

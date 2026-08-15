@@ -8,7 +8,13 @@ import java.io.Serializable;
 
 @Data
 @Entity
-@Table(name = "carts")
+@Table(
+        name = "carts",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_carts_user_product",
+                columnNames = {"userId", "product_id"}
+        )
+)
 public class Carts implements Serializable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

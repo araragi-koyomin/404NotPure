@@ -2,14 +2,14 @@
 import {computed, onMounted, ref, watch} from 'vue'
 import {ElMessage} from 'element-plus'
 import {getCartList, removeFromCart as apiRemoveFromCart, updateCartQuantity} from '../../api/cart'
-import {getProductStockpile} from '../../api/product'
+import type {CartItem} from '../../api/cart'
 import {Search} from '@element-plus/icons-vue'
 import {router} from '../../router'
 
 // -------------------------
 // 🛒 购物车相关状态
 // -------------------------
-const cartList = ref<{ items: any[]; total: number; totalAmount: number }>({
+const cartList = ref<{ items: CartItem[]; total: number; totalAmount: number }>({
   items: [],
   total: 0,
   totalAmount: 0
@@ -18,27 +18,17 @@ const searchKeyword = ref('')
 const selectedItems = ref<string[]>([])
 const isAllSelected = ref(false)
 const isIndeterminate = ref(false)
+const canCheckout = (item: CartItem) => item.stockStatus === 'AVAILABLE'
+const selectableItems = computed(() => cartList.value.items.filter(canCheckout))
 
 // -------------------------
-// 📦 加载购物车 + 库存信息
+// 📦 后端一次返回购物车和对应的可用库存，避免每件商品再请求一次库存接口。
 // -------------------------
 const loadCart = async () => {
   try {
     cartList.value = await getCartList()
-
-    await Promise.all(
-        cartList.value.items.map(async (item) => {
-          try {
-            const stockRes = await getProductStockpile(item.productId)
-            const { amount = 0, frozen = 0 } = stockRes.data.code === '200' ? stockRes.data.data : {}
-            item.amount = amount
-            item.frozen = frozen
-          } catch {
-            ElMessage.error(`商品 ${item.title} 库存加载失败`)
-            item.amount = 0
-            item.frozen = 0
-          }
-        })
+    selectedItems.value = selectedItems.value.filter(id =>
+        cartList.value.items.some(item => item.cartItemId === id && canCheckout(item))
     )
   } catch (error) {
     ElMessage.error('获取购物车数据失败！')
@@ -64,7 +54,8 @@ const updateQuantity = async (cartItemId: string, quantity: number) => {
     ElMessage.success('商品数量已更新')
     await loadCart()
   } catch {
-    ElMessage.error('修改商品数量失败')
+    // API 层已经展示后端的具体错误；重新加载以恢复服务端保存的原数量。
+    await loadCart()
   }
 }
 
@@ -72,14 +63,14 @@ const updateQuantity = async (cartItemId: string, quantity: number) => {
 // ✅ 勾选操作
 // -------------------------
 const toggleSelectAll = () => {
-  selectedItems.value = isAllSelected.value ? cartList.value.items.map(i => i.cartItemId) : []
+  selectedItems.value = isAllSelected.value ? selectableItems.value.map(i => i.cartItemId) : []
   isIndeterminate.value = false
 }
 
 watch(selectedItems, () => {
-  const total = cartList.value.items.length
+  const total = selectableItems.value.length
   const selected = selectedItems.value.length
-  isAllSelected.value = selected === total
+  isAllSelected.value = total > 0 && selected === total
   isIndeterminate.value = selected > 0 && selected < total
 })
 
@@ -99,16 +90,15 @@ const checkout = () => {
     return
   }
 
-  // 先从 cartList 中找到选中的原始商品（包含 amount、frozen）
+  // 从 cartList 中找到选中的原始商品。
   const rawSelectedItems = cartList.value.items.filter(item =>
       selectedItems.value.includes(item.cartItemId)
   )
 
-  // 校验库存：quantity 是否超过 (amount - frozen)
+  // 页面再次确认可结算；最终并发库存校验仍由下单事务完成。
   for (const item of rawSelectedItems) {
-    const availableStock = item.amount - item.frozen
-    if (item.quantity > availableStock) {
-      ElMessage.error(`${item.title} 库存不足，当前可用库存为 ${availableStock} 件`)
+    if (!canCheckout(item)) {
+      ElMessage.error(`${item.title} 当前库存不足或库存信息不可用，请先调整数量`)
       return
     }
   }
@@ -198,7 +188,7 @@ onMounted(loadCart)
                 >
                   <el-row :gutter="10" class="product-info" wrap>
                     <el-col :span="1">
-                      <el-checkbox :label="item.cartItemId">&nbsp;</el-checkbox>
+                      <el-checkbox :label="item.cartItemId" :disabled="!canCheckout(item)">&nbsp;</el-checkbox>
                     </el-col>
                     <el-col :span="3" class="image-col">
                       <el-image :src="item.cover" class="product-image" fit="contain" />
@@ -209,8 +199,9 @@ onMounted(loadCart)
                       <div class="product-description">描述：{{ item.description }}</div>
                       <!-- 展示库存信息 -->
                       <div class="product-stock">
-                        <span>库存: {{ item.amount }}件 </span>
-                        <span>冻结: {{ item.frozen }}件</span>
+                        <span>当前可用库存：{{ item.availableStock }} 件</span>
+                        <span v-if="item.stockStatus === 'INSUFFICIENT'" class="stock-warning">库存不足，请减少数量</span>
+                        <span v-else-if="item.stockStatus === 'UNAVAILABLE'" class="stock-warning">库存信息不可用，可删除该商品</span>
                       </div>
                     </el-col>
                     <el-col :span="5" class="quantity-wrapper">
@@ -218,7 +209,7 @@ onMounted(loadCart)
                           v-model="item.quantity"
                           :min="1"
                           :step="1"
-                          @change.stop="updateQuantity(item.cartItemId, item.quantity)"
+                          @change="updateQuantity(item.cartItemId, item.quantity)"
                       />
                     </el-col>
                     <el-col :span="2" class="product-actions">
@@ -393,6 +384,11 @@ onMounted(loadCart)
   color: #999;
   display: flex;
   gap: 10px;
+}
+
+.stock-warning {
+  color: #e6a23c;
+  font-weight: 600;
 }
 
 .product-actions {

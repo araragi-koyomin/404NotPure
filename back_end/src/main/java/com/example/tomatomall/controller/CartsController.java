@@ -41,7 +41,7 @@ public class CartsController {
      * @throws TomatoException 未登录时抛出
      */
     @PostMapping()
-    public Response<CartsVO> addProductToCart(@RequestBody AddProductToCartDTO dto, HttpServletRequest request) {
+    public Response<CartsVO> addProductToCart(@Valid @RequestBody AddProductToCartDTO dto, HttpServletRequest request) {
         int userId = tokenUtil.getUserIdFromRequest(request);
         CartsVO cartItemVO = cartsService.addProductToCart(userId, dto.getProductId(), dto.getQuantity());
         return Response.buildSuccess(cartItemVO);
@@ -70,7 +70,7 @@ public class CartsController {
      * @throws TomatoException 未登录时抛出
      */
     @PatchMapping("/{cartItemId}")
-    public Response<String> updateCartItemQuantity(@PathVariable int cartItemId, @RequestBody CartItemUpdateDTO dto, HttpServletRequest request) {
+    public Response<String> updateCartItemQuantity(@PathVariable int cartItemId, @Valid @RequestBody CartItemUpdateDTO dto, HttpServletRequest request) {
         int userId = tokenUtil.getUserIdFromRequest(request);
         String result = cartsService.updateCartItemQuantity(userId, cartItemId, dto.getQuantity());
         return Response.buildSuccess(result);

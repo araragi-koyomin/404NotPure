@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +28,12 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -44,7 +51,7 @@ class CartOwnershipIntegrationTest {
     @Autowired private TokenUtil tokenUtil;
     @Autowired private UserRepository userRepository;
     @Autowired private ProductRepository productRepository;
-    @Autowired private StockPileRepository stockPileRepository;
+    @SpyBean private StockPileRepository stockPileRepository;
     @Autowired private CartsRepository cartsRepository;
     @Autowired private OrdersRepository ordersRepository;
 
@@ -99,6 +106,159 @@ class CartOwnershipIntegrationTest {
 
         assertEquals(2, reloadCartItem().getQuantity());
         assertStockUnchanged();
+    }
+
+    @Test
+    void ownerCannotAddTheSameProductTwice() throws Exception {
+        mockMvc.perform(post("/api/cart")
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":" + product.getId() + ",\"quantity\":2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("409"));
+
+        assertEquals(cartCountAfterSetup, cartsRepository.count());
+        assertEquals(1, reloadCartItem().getQuantity());
+        assertStockUnchanged();
+    }
+
+    @Test
+    void addRejectsQuantityAboveAvailableStockWithoutCreatingCartItem() throws Exception {
+        Product anotherProduct = createProduct("cart-overstock");
+        stockPileRepository.saveAndFlush(StockPile.builder()
+                .productId(anotherProduct.getId())
+                .amount(2)
+                .frozen(7)
+                .build());
+
+        mockMvc.perform(post("/api/cart")
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":" + anotherProduct.getId() + ",\"quantity\":3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("409"));
+
+        assertTrue(cartsRepository.findByAccount(owner).stream()
+                .noneMatch(item -> item.getProduct().getId() == anotherProduct.getId()));
+        StockPile stock = stockPileRepository.findByProductId(anotherProduct.getId())
+                .orElseThrow(AssertionError::new);
+        assertEquals(2, stock.getAmount());
+        assertEquals(7, stock.getFrozen());
+    }
+
+    @Test
+    void addAllowsQuantityEqualToAmountBecauseAmountAlreadyMeansAvailableStock() throws Exception {
+        Product anotherProduct = createProduct("cart-available-stock");
+        stockPileRepository.saveAndFlush(StockPile.builder()
+                .productId(anotherProduct.getId())
+                .amount(2)
+                .frozen(7)
+                .build());
+
+        mockMvc.perform(post("/api/cart")
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":" + anotherProduct.getId() + ",\"quantity\":2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.data.quantity").value(2));
+
+        StockPile stock = stockPileRepository.findByProductId(anotherProduct.getId())
+                .orElseThrow(AssertionError::new);
+        assertEquals(2, stock.getAmount());
+        assertEquals(7, stock.getFrozen());
+    }
+
+    @Test
+    void addRejectsMissingStockRowAsServerDataError() throws Exception {
+        Product anotherProduct = createProduct("cart-missing-stock-add");
+
+        mockMvc.perform(post("/api/cart")
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":" + anotherProduct.getId() + ",\"quantity\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("500"));
+
+        assertTrue(cartsRepository.findByAccount(owner).stream()
+                .noneMatch(item -> item.getProduct().getId() == anotherProduct.getId()));
+    }
+
+    @Test
+    void updateRejectsMissingStockRowAsServerDataErrorAndKeepsOriginalQuantity() throws Exception {
+        Product missingStockProduct = createProduct("cart-missing-stock-update");
+        Carts missingStockItem = new Carts();
+        missingStockItem.setAccount(owner);
+        missingStockItem.setProduct(missingStockProduct);
+        missingStockItem.setQuantity(2);
+        missingStockItem = cartsRepository.saveAndFlush(missingStockItem);
+
+        mockMvc.perform(patch("/api/cart/{id}", missingStockItem.getCartItemId())
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"quantity\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("500"));
+
+        assertEquals(2, cartsRepository.findById(missingStockItem.getCartItemId())
+                .orElseThrow(AssertionError::new)
+                .getQuantity());
+    }
+
+    @Test
+    void updateRejectsQuantityAboveAvailableStockAndKeepsOriginalQuantity() throws Exception {
+        mockMvc.perform(patch("/api/cart/{id}", cartItem.getCartItemId())
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"quantity\":9}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("409"));
+
+        assertEquals(1, reloadCartItem().getQuantity());
+        assertStockUnchanged();
+    }
+
+    @Test
+    void cartListReturnsAvailableStockAndKeepsItemsWhoseStockRowIsMissing() throws Exception {
+        Product missingStockProduct = createProduct("cart-missing-stock-list");
+        Carts missingStockItem = new Carts();
+        missingStockItem.setAccount(owner);
+        missingStockItem.setProduct(missingStockProduct);
+        missingStockItem.setQuantity(2);
+        cartsRepository.saveAndFlush(missingStockItem);
+
+        Product insufficientProduct = createProduct("cart-insufficient-list");
+        stockPileRepository.saveAndFlush(StockPile.builder()
+                .productId(insufficientProduct.getId())
+                .amount(1)
+                .frozen(0)
+                .build());
+        Carts insufficientItem = new Carts();
+        insufficientItem.setAccount(owner);
+        insufficientItem.setProduct(insufficientProduct);
+        insufficientItem.setQuantity(2);
+        cartsRepository.saveAndFlush(insufficientItem);
+
+        clearInvocations(stockPileRepository);
+        mockMvc.perform(get("/api/cart")
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.data.items[?(@.productId == " + product.getId()
+                        + ")].availableStock").value(8))
+                .andExpect(jsonPath("$.data.items[?(@.productId == " + product.getId()
+                        + ")].stockStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.data.items[?(@.productId == " + missingStockProduct.getId()
+                        + ")].availableStock").value(0))
+                .andExpect(jsonPath("$.data.items[?(@.productId == " + missingStockProduct.getId()
+                        + ")].stockStatus").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.data.items[?(@.productId == " + insufficientProduct.getId()
+                        + ")].availableStock").value(1))
+                .andExpect(jsonPath("$.data.items[?(@.productId == " + insufficientProduct.getId()
+                        + ")].stockStatus").value("INSUFFICIENT"));
+
+        verify(stockPileRepository, times(1)).findAllByProductIdIn(anyCollection());
+        verify(stockPileRepository, never()).findByProductId(anyInt());
     }
 
     @Test
@@ -198,6 +358,21 @@ class CartOwnershipIntegrationTest {
         account.setPoints(0);
         account.setTelephone(phonePrefix + String.format("%09d", Math.abs(username.hashCode()) % 1_000_000_000));
         return userRepository.saveAndFlush(account);
+    }
+
+    private Product createProduct(String titlePrefix) {
+        Product created = Product.builder()
+                .title(titlePrefix + "-" + UUID.randomUUID())
+                .price(new BigDecimal("9.99"))
+                .rate(4.0)
+                .description("test")
+                .detail("test")
+                .cover("test")
+                .category("test")
+                .specifications(new ArrayList<>())
+                .contentImages(new ArrayList<>())
+                .build();
+        return productRepository.saveAndFlush(created);
     }
 
     private Carts reloadCartItem() {
