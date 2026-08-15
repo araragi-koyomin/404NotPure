@@ -20,12 +20,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.web.servlet.MockMvc;
+import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.Cookie;
 import javax.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -72,7 +74,8 @@ class PaymentFormAuthorizationIntegrationTest {
         pendingOrder = createOrder(owner, OrderStatus.PENDING.name());
         paidOrder = createOrder(owner, OrderStatus.PAID.name());
         pendingProduct = createPendingOrderItem(pendingOrder, marker);
-        when(paymentFormGateway.createPaymentForm(any(Orders.class))).thenReturn("<form></form>");
+        when(paymentFormGateway.createPaymentForm(any(Orders.class), any(Instant.class)))
+                .thenReturn("<form></form>");
     }
 
     @Test
@@ -99,7 +102,9 @@ class PaymentFormAuthorizationIntegrationTest {
                 .andExpect(jsonPath("$.data.paymentMethod").value("Alipay"))
                 .andExpect(jsonPath("$.data.paymentForm").value("<form></form>"));
 
-        verify(paymentFormGateway).createPaymentForm(any(Orders.class));
+        ArgumentCaptor<Instant> expiration = ArgumentCaptor.forClass(Instant.class);
+        verify(paymentFormGateway).createPaymentForm(any(Orders.class), expiration.capture());
+        assertEquals(pendingOrder.getCreateTime().toInstant().plusSeconds(30 * 60), expiration.getValue());
         assertPendingOrderUnchanged();
     }
 
@@ -157,6 +162,27 @@ class PaymentFormAuthorizationIntegrationTest {
         assertPendingOrderUnchanged();
     }
 
+    @Test
+    void expiredPendingOrderIsClosedAndStockIsRestoredBeforePaymentGateway() throws Exception {
+        pendingOrder.setCreateTime(Timestamp.from(Instant.now().minusSeconds(31 * 60)));
+        ordersRepository.saveAndFlush(pendingOrder);
+
+        mockMvc.perform(post("/api/orders/{id}/pay", pendingOrder.getOrderId())
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("409"));
+
+        verifyNoInteractions(paymentFormGateway);
+        entityManager.clear();
+        Orders closed = ordersRepository.findById(pendingOrder.getOrderId()).orElseThrow(AssertionError::new);
+        assertEquals(OrderStatus.CLOSED.name(), closed.getStatus());
+        assertNull(closed.getCancelledTime());
+        StockPile stock = stockPileRepository.findByProductId(pendingProduct.getId())
+                .orElseThrow(AssertionError::new);
+        assertEquals(8, stock.getAmount());
+        assertEquals(0, stock.getFrozen());
+    }
+
     private Account createAccount(String username, String role, String phonePrefix) {
         Account account = new Account();
         account.setUsername(username);
@@ -201,6 +227,7 @@ class PaymentFormAuthorizationIntegrationTest {
         orderItem.setOrder(order);
         orderItem.setProduct(product);
         orderItem.setQuantity(2);
+        order.getOrderItems().add(orderItem);
         entityManager.persist(orderItem);
         entityManager.flush();
         return product;

@@ -41,6 +41,12 @@ public class Orders implements Serializable{
     @Column(name = "paid_time")
     private Timestamp paidTime;
 
+    @Column(name = "cancelled_time")
+    private Timestamp cancelledTime;
+
+    @Column(name = "closed_time")
+    private Timestamp closedTime;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<OrderItem>();
 
@@ -53,6 +59,8 @@ public class Orders implements Serializable{
         vo.setStatus(status);
         vo.setCreateTime(createTime);
         vo.setPaidTime(paidTime);
+        vo.setCancelledTime(cancelledTime);
+        vo.setClosedTime(closedTime);
         return vo;
     }
 }

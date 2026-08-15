@@ -21,3 +21,8 @@ management:
 logging:
   level:
     org.hibernate.engine.internal.StatisticalLoggingSessionEventListener: "OFF"
+
+tomatomall:
+  order:
+    expiration:
+      enabled: false

@@ -10,8 +10,15 @@ import com.example.tomatomall.service.PaymentFormGateway;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
 @Component
 public class AlipayPaymentFormGateway implements PaymentFormGateway {
+    private static final DateTimeFormatter ALIPAY_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(ZoneId.of("Asia/Shanghai"));
     private final String serverUrl;
     private final String appId;
     private final String privateKey;
@@ -42,7 +49,7 @@ public class AlipayPaymentFormGateway implements PaymentFormGateway {
     }
 
     @Override
-    public String createPaymentForm(Orders order) throws AlipayApiException {
+    public String createPaymentForm(Orders order, Instant expiresAt) throws AlipayApiException {
         AlipayClient alipayClient = new DefaultAlipayClient(
                 serverUrl, appId, privateKey, "json", charset, alipayPublicKey, signType
         );
@@ -50,12 +57,17 @@ public class AlipayPaymentFormGateway implements PaymentFormGateway {
         request.setNotifyUrl(notifyUrl);
         request.setReturnUrl(returnUrl);
 
+        request.setBizContent(buildBizContent(order, expiresAt));
+        return alipayClient.pageExecute(request).getBody();
+    }
+
+    String buildBizContent(Orders order, Instant expiresAt) {
         JSONObject bizContent = new JSONObject();
         bizContent.put("out_trade_no", order.getOrderId().toString());
         bizContent.put("total_amount", order.getTotalAmount().toPlainString());
         bizContent.put("subject", "订单支付 - " + order.getOrderId());
         bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
-        request.setBizContent(bizContent.toJSONString());
-        return alipayClient.pageExecute(request).getBody();
+        bizContent.put("time_expire", ALIPAY_TIME_FORMAT.format(expiresAt));
+        return bizContent.toJSONString();
     }
 }

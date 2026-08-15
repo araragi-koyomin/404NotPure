@@ -158,9 +158,9 @@ const initiatePayment = async (orderId: string) => {
   }
 }
 
-// 取消订单并返回购物车
+// 此时订单尚未创建，只是离开结算页并返回购物车。
 const cancelOrder = () => {
-  ElMessageBox.confirm('确定要取消结算吗？', '提示', {
+  ElMessageBox.confirm('确定要返回购物车吗？当前尚未创建订单。', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
@@ -334,7 +334,7 @@ onMounted(() => {
               @click="cancelOrder"
               :disabled="submitting || loading"
           >
-            取消订单
+            返回购物车
           </el-button>
           <el-button
               type="primary"

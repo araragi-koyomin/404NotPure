@@ -88,11 +88,13 @@ class PaymentSchemaMigrationIntegrationTest {
 
         MigrateResult firstRun = flyway.migrate();
 
-        assertEquals(5, firstRun.migrationsExecuted);
+        assertEquals(6, firstRun.migrationsExecuted);
         assertTrue(tableExists(schema, "orders"));
         assertTrue(tableExists(schema, "stockpile"));
         assertTrue(columnExists(schema, "orders", "paid_time"));
         assertTrue(columnExists(schema, "orders", "alipay_trade_no"));
+        assertTrue(columnExists(schema, "orders", "cancelled_time"));
+        assertTrue(columnExists(schema, "orders", "closed_time"));
         assertTrue(uniqueIndexExists(schema, "orders", "alipay_trade_no"));
         assertTrue(uniqueIndexExists(schema, "stockpile", "product_id"));
         assertTrue(foreignKeyHasRestrictRules(
@@ -113,7 +115,8 @@ class PaymentSchemaMigrationIntegrationTest {
         String schema = createTemporarySchema();
 
         createJpaSchema(schema);
-        execute(schema, "ALTER TABLE orders DROP COLUMN paid_time, DROP COLUMN alipay_trade_no");
+        execute(schema, "ALTER TABLE orders DROP COLUMN paid_time, DROP COLUMN alipay_trade_no, "
+                + "DROP COLUMN cancelled_time, DROP COLUMN closed_time");
         execute(schema, "ALTER TABLE stockpile DROP INDEX uk_stockpile_product_id");
         execute(schema, "CREATE INDEX idx_legacy_carts_user_id ON carts(user_id)");
         execute(schema, "ALTER TABLE carts DROP INDEX uk_carts_user_product");
@@ -121,7 +124,7 @@ class PaymentSchemaMigrationIntegrationTest {
 
         MigrateResult upgrade = flyway(schema, null, true).migrate();
 
-        assertEquals(4, upgrade.migrationsExecuted);
+        assertEquals(5, upgrade.migrationsExecuted);
         assertEquals(1, count(schema, "SELECT COUNT(*) FROM orders WHERE order_id = 7001"));
         assertEquals(1, count(schema,
                 "SELECT COUNT(*) FROM orders WHERE order_id = 7001 "

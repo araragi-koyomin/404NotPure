@@ -38,6 +38,12 @@ server:
     include-binding-errors: always
 
 tomatomall:
+  order:
+    expiration:
+      enabled: ${ORDER_EXPIRATION_ENABLED:true}
+      pending-timeout: ${ORDER_PENDING_TIMEOUT:30m}
+      scan-interval: ${ORDER_EXPIRATION_SCAN_INTERVAL:60s}
+      batch-size: ${ORDER_EXPIRATION_BATCH_SIZE:100}
   cache:
     product-detail:
       enabled: ${PRODUCT_DETAIL_CACHE_ENABLED:true}
