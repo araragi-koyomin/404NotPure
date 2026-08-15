@@ -23,6 +23,7 @@ related:
   - PAY-001
   - PAY-002
   - PAY-003
+  - PAY-004
   - SEC-009
   - SEC-010
   - CACHE-001
@@ -188,6 +189,8 @@ V6 使用单条 MySQL `ALTER TABLE` 同时增加 `cancelled_time`、`closed_time
 
 当前完整 Maven 回归在 Maven 3.9.9、Java 17、MySQL 8、Redis 6 和 1 GiB 容器上为 50 个测试类、310/310；前端 `npm run build` 成功，仍只出现 FE-001 已记录的旧背景资源、CSS 注释和大 chunk 警告。`Test-ComposeConfiguration.ps1` 与 `git diff --check` 通过。独立冷启动审查发现的状态大小写、迁移历史检查、并发/权限证据、性能隔离和批处理测试隔离问题均已修复，最终复核未发现剩余 P0～P2。真实支付宝外部交易关闭和晚付款补偿没有测试或实现，继续由 PAY-004 跟踪。
 
+ORD-003 功能提交 `95ee7b6b` 已通过 [PR #23](https://github.com/araragi-koyomin/404NotPure/pull/23) squash 合并到个人 `master@0a0f72ed`。完成证据转入[订单取消与超时关闭交付记录](../archive/2026-08-16-order-cancellation-expiration-delivery.md)；本温层计划继续承载 ORD-002、PAY-002、PAY-003 和 PAY-004 等尚未完成的交易链路工作。
+
 ## CACHE-001：Redis Cache-Aside
 
 当前实际 key 为 `advertisement:product:{productId}`，TTL 随机 1800～3599 秒。这不是错误设计：广告创建/更新会提前缓存更可能被访问的热门商品详情。CACHE-001 要解决的是这份广告预热缓存后来同时承担通用商品详情读取后，回填、失效和类型边界仍不完整。改造必须保留广告商品预热，并保持广告位和商品详情前端行为兼容：
@@ -236,7 +239,7 @@ Red 阶段先运行真实集成测试，8 项中出现 1 个失败和 7 个错�
 5. TEST-002 已通过 PR #17 完成默认 Maven 测试进程和当前测试集内存基线并转入冷层，不再占用活跃主线。
 6. DB-001B 已通过 [PR #19](https://github.com/araragi-koyomin/404NotPure/pull/19) 合并：V3 增加库存商品唯一约束与外键，V4 只为历史缺失商品补零库存；历史重复数据或无效商品引用拒绝迁移而不是自动合并、删除。完整证据见[库存结构完整性交付记录](../archive/2026-08-15-inventory-schema-integrity-delivery.md)。遗留 `PaymentInfo/payment_info` 清理由范围独立的 DB-001C 后续处理。
 7. 处理 CART-001，拒绝购物车零数、负数和超过可用库存的数量。
-8. 处理 ORD-003，建立取消、超时关闭和冻结库存恢复规则；随后处理 ORD-002 结算请求幂等。
+8. ORD-003 已通过 PR #23 完成取消、超时关闭和冻结库存恢复；随后处理 ORD-002 结算请求幂等。
 9. 处理 API-001，补齐带订单所有权校验的详情和列表读取接口；随后处理 PAY-002，使同步返回页只根据服务端订单状态展示结果。
 10. 在最终订单和支付路由契约上处理 SEC-012 的 CSRF token 与精确公开例外；最后执行 PAY-003 一次性沙箱端到端人工验收，避免安全路由变化后重复外部验收。
 11. DB-001C、SEC-013、JPA-001 和运行/前端事项继续按 BACKLOG 优先级推进。
