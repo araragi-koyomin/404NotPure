@@ -16,6 +16,8 @@ public class CartItemVO {
     private String cover;
     private String detail;
     private Integer quantity;
+    private Integer availableStock;
+    private String stockStatus;
 
     public CartItemVO(Carts cart) {
         Product product = cart.getProduct();
@@ -27,5 +29,11 @@ public class CartItemVO {
         this.cover = product.getCover();
         this.detail = product.getDetail();
         this.quantity = cart.getQuantity();
+    }
+
+    public CartItemVO(Carts cart, Integer availableStock, String stockStatus) {
+        this(cart);
+        this.availableStock = availableStock;
+        this.stockStatus = stockStatus;
     }
 }

@@ -10,6 +10,8 @@ export type CartItem = {
     cover: string;
     detail: string;
     quantity: number;
+    availableStock: number;
+    stockStatus: 'AVAILABLE' | 'INSUFFICIENT' | 'UNAVAILABLE';
 };
 
 export type CartList = {
@@ -28,10 +30,16 @@ export const updateCartQuantity = async (
     cartItemId: string,
     quantity: number
 ): Promise<string> => {
-    const response = await axios.patch<BaseResponse<string>>(
-        `${CART_MODULE}/${cartItemId}`,
-        { quantity }
-    );
+    let response;
+    try {
+        response = await axios.patch<BaseResponse<string>>(
+            `${CART_MODULE}/${cartItemId}`,
+            { quantity }
+        );
+    } catch (error: any) {
+        const failure = error?.response?.data as BaseResponse<string> | undefined;
+        return handleError(failure?.code || '500', failure?.msg || '修改商品数量失败，请稍后重试');
+    }
     if (response.data.code === '200') return response.data.data;
     return handleError(response.data.code, response.data.msg || '修改商品数量失败');
 };

@@ -14,11 +14,14 @@ import com.example.tomatomall.vo.CartItemVO;
 import com.example.tomatomall.vo.CartsListVO;
 import com.example.tomatomall.vo.CartsVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -49,24 +52,37 @@ public class CartsServiceImpl implements CartsService {
      * @throws TomatoException 商品不存在或已在购物车中时抛出
      */
     @Override
+    @Transactional
     public CartsVO addProductToCart(int userId, int productId, int quantity) {
+        validateProductId(productId);
+        validateQuantity(quantity);
         Product product = productRepository.findById(productId)
             .orElseThrow(TomatoException::productNotExist);
 
         Account account = accountRepository.findById(userId)
             .orElseThrow(TomatoException::notLogin);
 
-        List<Carts> cartItems = cartsRepository.findByAccount(account);
-        for (Carts cartItem : cartItems) {
-            if (cartItem.getProduct().getId() == productId) {
-                throw TomatoException.existInCart();
-            }
+        if (cartsRepository.findByAccountIdAndProductId(account.getId(), productId).isPresent()) {
+            throw TomatoException.existInCart();
         }
+
+        StockPile stockPile = stockPileRepository.findByProductId(productId)
+                .orElseThrow(TomatoException::stockDataInconsistent);
+        validateAvailableStock(quantity, stockPile.getAmount());
+
         Carts cartItem = new Carts();
         cartItem.setAccount(account);
         cartItem.setProduct(product);
         cartItem.setQuantity(quantity);
-        Carts savedCartItem = cartsRepository.save(cartItem);
+        Carts savedCartItem;
+        try {
+            savedCartItem = cartsRepository.saveAndFlush(cartItem);
+        } catch (DataIntegrityViolationException exception) {
+            if (isCartUniquenessViolation(exception)) {
+                throw TomatoException.existInCart();
+            }
+            throw exception;
+        }
 
         return savedCartItem.toVO();
     }
@@ -95,14 +111,13 @@ public class CartsServiceImpl implements CartsService {
     @Override
     @Transactional
     public String updateCartItemQuantity(int userId, int cartItemId, int quantity) {
+        validateQuantity(quantity);
         Carts cartItem = ownedCartItem(userId, cartItemId);
         Product product = cartItem.getProduct();
         StockPile stockPile = stockPileRepository.findByProductId(product.getId())
-                .orElseThrow(TomatoException::productNotExist);
+                .orElseThrow(TomatoException::stockDataInconsistent);
 
-        if (quantity > stockPile.getAmount()) {
-            throw TomatoException.spillStock();
-        }
+        validateAvailableStock(quantity, stockPile.getAmount());
 
         cartItem.setQuantity(quantity);
         cartsRepository.save(cartItem);
@@ -126,13 +141,23 @@ public class CartsServiceImpl implements CartsService {
      * @throws TomatoException 用户不存在时抛出
      */
     @Override
+    @Transactional(readOnly = true)
     public CartsListVO getCartItems(int userId) {
         Account account = accountRepository.findById(userId)
                 .orElseThrow(TomatoException::notLogin);
 
         List<Carts> cartItems = cartsRepository.findByAccount(account);
+        List<Integer> productIds = cartItems.stream()
+                .map(item -> item.getProduct().getId())
+                .collect(Collectors.toList());
+        Map<Integer, StockPile> stockByProduct = new HashMap<>();
+        if (!productIds.isEmpty()) {
+            for (StockPile stockPile : stockPileRepository.findAllByProductIdIn(productIds)) {
+                stockByProduct.put(stockPile.getProductId(), stockPile);
+            }
+        }
         List<CartItemVO> cartItemVOs = cartItems.stream()
-                .map(CartItemVO::new)
+                .map(item -> toCartItemVO(item, stockByProduct.get(item.getProduct().getId())))
                 .collect(Collectors.toList());
 
         int total = cartItemVOs.size();
@@ -146,5 +171,44 @@ public class CartsServiceImpl implements CartsService {
         cartsListVO.setTotalAmount(totalAmount);
 
         return cartsListVO;
+    }
+
+    private CartItemVO toCartItemVO(Carts cartItem, StockPile stockPile) {
+        if (stockPile == null) {
+            return new CartItemVO(cartItem, 0, "UNAVAILABLE");
+        }
+        int available = stockPile.getAmount();
+        String status = available >= cartItem.getQuantity() ? "AVAILABLE" : "INSUFFICIENT";
+        return new CartItemVO(cartItem, available, status);
+    }
+
+    private void validateQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw TomatoException.invalidCartQuantity();
+        }
+    }
+
+    private void validateProductId(int productId) {
+        if (productId <= 0) {
+            throw TomatoException.invalidCartProductId();
+        }
+    }
+
+    private void validateAvailableStock(int quantity, int availableStock) {
+        if (quantity > availableStock) {
+            throw TomatoException.spillStock();
+        }
+    }
+
+    private boolean isCartUniquenessViolation(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase().contains("uk_carts_user_product")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

@@ -300,8 +300,8 @@ async function confirmAddToCart() {
     return;
   }
 
-  if (cartForm.value.quantity > stockpile.value.amount - stockpile.value.frozen) {
-    ElMessage.warning(`库存不足，当前库存为 ${stockpile.value.amount - stockpile.value.frozen} 件（不含冻结商品）`);
+  if (cartForm.value.quantity > stockpile.value.amount) {
+    ElMessage.warning(`库存不足，当前可用库存为 ${stockpile.value.amount} 件`);
     return;
   }
 
@@ -535,6 +535,7 @@ onMounted(() => {
         <el-input-number
             v-model="cartForm.quantity"
             :min="1"
+            :max="Math.max(stockpile.amount, 1)"
             :step="1"
         ></el-input-number>
       </el-form-item>
@@ -542,7 +543,7 @@ onMounted(() => {
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="addToCartDialogVisible = false">取消</el-button>
-        <el-button type="success" @click="confirmAddToCart">确认</el-button>
+        <el-button type="success" @click="confirmAddToCart" :disabled="stockpile.amount <= 0">确认</el-button>
       </span>
     </template>
   </el-dialog>
