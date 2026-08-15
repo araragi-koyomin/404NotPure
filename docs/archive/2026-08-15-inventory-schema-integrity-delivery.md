@@ -1,10 +1,11 @@
 ---
-title: DB-001B 库存结构完整性计划
-type: plan
-layer: warm
-status: active
+title: DB-001B 库存结构完整性交付记录
+type: report
+layer: cold
+status: completed
 created: 2026-08-15
 updated: 2026-08-15
+archived_at: 2026-08-15
 owners:
   - maintainers
 tags:
@@ -19,7 +20,7 @@ related:
   - STOCK-001
 ---
 
-# DB-001B 库存结构完整性计划
+# DB-001B 库存结构完整性交付记录
 
 ## 目标与现状
 
@@ -83,3 +84,11 @@ MySQL 的结构变更不是整个 Flyway 文件级别的通用事务。V3 把唯
 - 本机端口边界：Windows 当前保留 TCP 8062～8161，导致 Compose 无法把后端映射到宿主机 8080。容器内部启动和接口验证已通过，因此该问题登记到 RUN-002，不作为数据库迁移失败或生产能力证据。
 - 冷启动独立审查：首轮未发现 P0～P2。审查指出预检两次查询可能读到不同时间点、默认 `GROUP_CONCAT` 可能静默截断，以及测试没有固定外键删除/更新规则；修复后预检使用单次一致性快照和显式 100 条明细边界，迁移测试同时断言 `ON DELETE RESTRICT` 与 `ON UPDATE RESTRICT`。第一次修复后完整回归因测试容器错误沿用 `REDIS_HOST=127.0.0.1` 而失败，该结果没有被采用；确认容器应使用 `host.docker.internal:6379` 后重新执行 `mvn clean test`，最终 251/251 通过。
 - 针对性复核：前三项修复均正确。复核继续发现“101 组重复库存只检查截断标志、没有数明细项”的低风险测试缺口；最终测试会解析明细并断言恰好 100 项、从 1001 到 1100 且不包含 1101。脚本 3/3 重跑通过，极窄复核没有发现新的 P0～P3。
+
+## Git 交付证据
+
+- 功能分支：`codex/db-inventory-unique`。
+- 功能提交：`c2c886a1 feat(db): enforce inventory product integrity`。
+- [Pull Request #19](https://github.com/araragi-koyomin/404NotPure/pull/19) 已通过 squash 方式合并到个人 `master`。
+- 合并提交：`d82a23c9f6305cc2b83af1351d173f9b8f82fb61`。
+- 合并后的文档归档分支：`codex/archive-db001b`。

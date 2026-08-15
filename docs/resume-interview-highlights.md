@@ -83,10 +83,10 @@ related:
 |---|---|---|---|---|
 | 订单与库存一致性 | 已合并并有真实 MySQL 事务、回滚和并发测试 | 是，当前最强亮点 | PR #2、ORD-001 冷层记录、订单集成测试 | 不等于结算请求幂等、取消订单或完整订单生命周期 |
 | 支付宝异步通知 | 已合并验签、通知归属、金额、状态、交易号与并发幂等处理 | 是，当前第二强亮点 | PR #3、PAY-001 冷层记录、支付集成测试 | 尚未完成真实沙箱买家付款与公网异步通知端到端验收 |
-| Flyway 数据库迁移 | 已建立 V1/V2，Hibernate 改为只验证结构 | 是，适合作为支付亮点的支撑项 | DB-001A、迁移集成测试 | 库存唯一约束由 DB-001B 跟踪，遗留支付表清理由 DB-001C 独立跟踪 |
+| Flyway 数据库迁移 | 已建立 V1～V4；V3 增加库存商品唯一约束与外键，V4 补齐历史缺失的零库存；Hibernate 只验证结构 | 是，适合作为支付和库存亮点的支撑项 | DB-001A、DB-001B、迁移集成测试 | 遗留支付表清理由 DB-001C 独立跟踪 |
 | OSS 与图片上传安全 | 已完成应用内权限、内容检测、对象命名、禁止覆盖、隔离探针和后端日志保护；当时的云端探针验证业务目录删除被拒绝 | 是，适合作为安全工程亮点 | PR #1、OSS 冷层记录、图片与 OSS 测试 | 云端 RAM 权限可能被人工改变，演示前必须复验；尚无未引用图片自动清理 |
 | Java 17 与本机运行恢复 | 已完成版本升级、端口调整、MySQL/Redis 与前后端联通；本轮四个 Compose 服务成功运行并完成 5173 主链路烟雾 | 可以，作为项目接管背景 | 运行恢复归档、PR #1、PR #5 人工验收 | RUN-002 仍缺数据卷重启、日志配置回显和基础镜像稳定拉取的完整证据；未做长期公网部署 |
-| TDD 与真实依赖测试 | 订单、支付、缓存、演示数据和商品分页使用真实 MySQL/Redis 或真实浏览器验证事务、序列化、回滚、并发和接口行为；PR #17 合并后后端为 41 个测试类、246/246，并在 1 GiB 容器硬上限下连续两轮使用独立测试进程通过 | 是，适合作为方法、测试真实性和构建资源治理证据 | 各批次冷层记录、[TEST-002 冷层记录](archive/2026-08-15-test-default-surefire-memory-delivery.md)和测试源码 | 没有远端 CI；1 GiB 是预先选择的本机最低候选档位，不是理论最小值或未来永久保证 |
+| TDD 与真实依赖测试 | 订单、支付、缓存、演示数据、商品分页和数据库迁移使用真实 MySQL/Redis 或真实浏览器验证事务、序列化、回滚、并发和接口行为；PR #19 合并代码为 42 个测试类、251/251，并在 1 GiB 容器硬上限下通过 | 是，适合作为方法、测试真实性和构建资源治理证据 | 各批次冷层记录、[TEST-002 冷层记录](archive/2026-08-15-test-default-surefire-memory-delivery.md)、[DB-001B 冷层记录](archive/2026-08-15-inventory-schema-integrity-delivery.md)和测试源码 | 没有远端 CI；1 GiB 是预先选择的本机最低候选档位，不是理论最小值或未来永久保证 |
 | Git 与文档治理 | 已完成个人 Fork、只读 upstream、PR/squash merge、三层文档和 SOP | 可以，适合面试展开，不必占最核心简历篇幅 | PR #1～#17、仓库迁移归档、开发 SOP | 属于工程协作能力，不能替代业务技术亮点 |
 | 可重复演示数据 | 已完成独立演示数据库保护、固定种子生成、单事务批量导入、并发导入串行化、重复执行不新增以及本地 SVG 资源生成 | 可以，适合回答测试数据、演示环境和工程边界，不建议占核心简历条目 | [PR #8](https://github.com/araragi-koyomin/404NotPure/pull/8)、[DATA-001 冷层记录](archive/2026-08-11-demo-data-delivery.md)、15 项定向测试和 187/187 回归 | 不是生产初始化方案；502 个账户不是真实用户；本地图片不代表 OSS 集成；缓存性能结论来自独立 PERF-001 测量，不能归功于数据生成器 |
 | Redis Cache-Aside、热点回填与故障保护 | 已完成商品详情回填、随机 TTL、短期不存在标记、事务提交后失效和广告预热；增加 Redis 有界超时、受限 MySQL 回退、HTTP 503、单检查者恢复，以及单实例内同商品热点未命中的请求合并。独立 Compose 与开源 k6 分别完成真实 Redis 停机/恢复和六轮热点开关对照 | 是，可作为缓存正确性、故障保护、并发协调和测量方法的亮点 | [PR #7](https://github.com/araragi-koyomin/404NotPure/pull/7)、[PR #11](https://github.com/araragi-koyomin/404NotPure/pull/11)、[PR #13](https://github.com/araragi-koyomin/404NotPure/pull/13)、[PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15)、[CACHE-002 冷层记录](archive/2026-08-14-cache-hotspot-single-flight-delivery.md) | 结果仅适用于固定本机和单实例；CACHE-002 与 CACHE-003 的当前版本真实停机复合压测尚未执行；不代表生产容量或多实例全局协调 |
@@ -160,6 +160,8 @@ related:
 - 同一请求中的重复商品先按照商品 ID 汇总，避免把总购买量拆成多行绕过校验；使用 `Math.addExact` 拒绝整数溢出。
 - `StockPileRepository.freezeStockIfAvailable` 通过一条 MySQL 条件更新执行 `amount -= quantity`、`frozen += quantity`，只有 `amount >= quantity` 时才成功。
 - SQL 同时拒绝一个商品对应多条库存记录的异常数据，避免随意选择其中一条继续下单。
+- Flyway V3 进一步在数据库层增加 `stockpile.product_id` 唯一约束和商品外键，使直接 SQL、旧程序或并发写入也不能为同一商品创建两条库存，库存也不能指向不存在的商品。
+- Flyway V4 只为历史上缺少库存的商品补一条 `amount=0`、`frozen=0` 的不可售库存，不覆盖已有数量；迁移遇到重复库存或无效商品引用时拒绝继续，而不是猜测如何合并或删除数据。
 - 任意商品库存不足、库存数据异常或订单保存失败都会抛出异常，由同一事务回滚之前已经完成的库存冻结和订单写入。
 - 服务端使用数据库商品价格和购买数量计算 `BigDecimal` 订单总额，不信任客户端价格。
 
@@ -177,6 +179,7 @@ related:
 - 订单持久化失败会回滚库存。
 - 库存记录缺失或同商品多条库存记录时不会创建订单。
 - 16 个线程争抢 1 件库存的真实 MySQL 测试中，成功订单和冻结库存总量不会超过 1；重复库存修正版测试又连续运行 3 次通过。
+- DB-001B 的真实 MySQL 迁移测试覆盖全新库、V2 升级、异常数据拒绝、缺失库存补齐、重复运行和两线程并发创建库存；开发库从 3 个商品/0 条库存安全迁移为 3/3，演示库保持 300/300。
 - ORD-001 定向测试 27/27，合并前完整回归 79/79。
 
 ### 面试常见追问
@@ -200,7 +203,9 @@ related:
 - [StockPileRepository](../back_end/src/main/java/com/example/tomatomall/repository/StockPileRepository.java)
 - [订单真实 MySQL 集成测试](../back_end/src/test/java/com/example/tomatomall/service/serviceImpl/OrderServiceIntegrationTest.java)
 - [订单服务层校验测试](../back_end/src/test/java/com/example/tomatomall/service/serviceImpl/OrderServiceValidationTest.java)
+- [DB-001B 库存结构完整性交付记录](archive/2026-08-15-inventory-schema-integrity-delivery.md)
 - [Pull Request #2](https://github.com/araragi-koyomin/404NotPure/pull/2)
+- [Pull Request #19](https://github.com/araragi-koyomin/404NotPure/pull/19)
 
 ## 亮点二：支付宝异步通知可信处理与并发幂等
 
@@ -268,18 +273,19 @@ related:
 
 ### 当前实现
 
-- V1 保存当前完整商城结构基线，V2 增加订单支付时间、支付宝交易号和唯一索引。
+- V1 保存当前完整商城结构基线，V2 增加订单支付时间、支付宝交易号和唯一索引，V3 增加库存商品唯一约束与外键，V4 为历史缺失库存的商品补零库存。
 - Hibernate 改为 `ddl-auto: validate`：Flyway 负责改变结构，Hibernate 只检查实体映射是否匹配。
 - `baseline-on-migrate` 默认关闭，陌生的非空数据库不会被自动当成 V1。
 - 只有经过备份和人工核对、确认与 V1 一致的旧数据库，才允许临时显式开启一次基线操作，随后必须恢复关闭。
-- 已经执行过的 V1/V2 不再修改；后续结构变化必须新增 V3、V4 等迁移。
+- 已经执行过的 V1～V4 不再修改；后续结构变化必须从 V5 开始新增迁移。
 
 ### 测试证据
 
 - 默认配置明确关闭自动基线。
 - 陌生非空 schema 未显式授权时迁移失败，不会继续修改表。
-- 全新数据库执行 V1+V2 后通过全部 JPA 实体结构验证，重复执行不会重复改变结构。
+- 全新数据库执行 V1～V4 后通过全部 JPA 实体结构验证，重复执行不会重复改变结构。
 - 由 Hibernate 生成的旧结构移除支付字段后，显式基线并执行 V2，可以保留已有订单并再次通过全实体验证。
+- V2 数据库存在重复库存或无效商品引用时，V3 拒绝迁移且原数据和结构不被部分修改；正常数据升级后，V4 只补缺失库存，已有库存的主键和数量保持不变。
 
 ### 适合面试的总结
 
@@ -289,7 +295,11 @@ related:
 
 - [V1 完整结构基线](../back_end/src/main/resources/db/migration/V1__baseline_schema.sql)
 - [V2 支付字段迁移](../back_end/src/main/resources/db/migration/V2__add_order_payment_result.sql)
+- [V3 库存唯一约束与商品外键](../back_end/src/main/resources/db/migration/V3__enforce_stockpile_product_integrity.sql)
+- [V4 缺失库存补齐](../back_end/src/main/resources/db/migration/V4__backfill_missing_stockpile.sql)
 - [Flyway 真实 MySQL 迁移测试](../back_end/src/test/java/com/example/tomatomall/migration/PaymentSchemaMigrationIntegrationTest.java)
+- [库存迁移真实 MySQL 测试](../back_end/src/test/java/com/example/tomatomall/migration/InventorySchemaMigrationIntegrationTest.java)
+- [DB-001B 库存结构完整性交付记录](archive/2026-08-15-inventory-schema-integrity-delivery.md)
 - [安全与质量计划中的 DB-001A 说明](plans/security-and-quality.md)
 
 ## 亮点四：OSS 图片上传和云端验证安全
@@ -409,6 +419,7 @@ related:
 - PR #11 最终代码完成 Maven 编译、32 个测试类 201/201、资源保护脚本 9/9、结果完整性脚本 4/4、异常清理集成测试 1/1，并生成固定本机环境的 Redis/MySQL/k6 三轮性能基线。
 - PR #13 最终代码完成 CACHE-003 定向测试 18/18、完整回归 38 个测试类 219/219、性能脚本检查 6/6、前端构建和真实 Redis 停机/恢复验收；独立审查后的严格恢复轮询脚本因本机内存低于安全线没有重新运行 50 QPS。
 - PR #17 最终代码固定 Surefire 3.2.5 的一个可复用独立测试进程，完成 41 个测试类 246/246；2 GiB、1.5 GiB、1 GiB 三档 `mvn clean test` 均通过，1 GiB 下连续两轮默认 `mvn test` 通过，最终有效轮最多同时观察到 2 个 Java 进程。
+- PR #19 在同一 1 GiB 容器硬上限下完成 42 个测试类 251/251；新增库存迁移定向测试 9/9、库存服务适配测试 17/17 和预检脚本测试 3/3。
 
 这些数字只能用于说明对应提交当时的验证结果，不能推导出系统吞吐量或生产稳定性。项目尚未建立远端 CI；TEST-002 的 1 GiB 结果只适用于固定本机 Docker 环境和当前 246 项测试，低于 1 GiB 未测试，测试集增长后需要重新测量。
 
@@ -471,7 +482,7 @@ PERF-001 把应用后端、MySQL 8、Redis 6、指标采集和开源版 k6 放�
 - `origin` 指向个人 Fork，用于个人主线和开发分支；
 - `upstream` 指向原多人仓库，并禁用 push，避免误改原团队项目；
 - 每批改动使用独立分支、Pull Request、冷启动审查和 squash merge；
-- PR #1～#15 已依次交付运行/OSS 安全、订单库存一致性、支付回调与迁移、简历事实治理、认证授权与前端敏感日志保护、文档一致性与演示数据规划、商品详情 Cache-Aside 与真实 Redis 测试、可重复本机演示数据、商品列表分页与服务端查询、对应归档、Redis/MySQL 本机性能基线、Redis 故障保护及热门商品单次回填。
+- PR #1～#19 已依次交付运行/OSS 安全、订单库存一致性、支付回调与迁移、简历事实治理、认证授权与前端敏感日志保护、文档一致性与演示数据规划、商品详情 Cache-Aside 与真实 Redis 测试、可重复本机演示数据、商品列表分页与服务端查询、对应归档、Redis/MySQL 本机性能基线、Redis 故障保护、热门商品单次回填、默认测试内存基线和库存结构完整性。
 
 文档使用三层生命周期：BACKLOG 只保留活跃项，温层保存持续演进的计划和指南，冷层保留已经完成的交付证据；发现缺陷、创建分支、完成合并时都同步更新 BACKLOG。
 
@@ -496,7 +507,7 @@ PERF-001 把应用后端、MySQL 8、Redis 6、指标采集和开源版 k6 放�
 | ORD-003 | 待支付订单不能取消或超时关闭，冻结库存可能长期占用 | 支付与取消竞争、超时关闭、库存安全恢复 |
 | PAY-002 | 同步返回页没有以服务端订单状态为准 | 防止伪造浏览器参数展示成功或错误清理购物车 |
 | PAY-003 | 没有真实沙箱买家付款和公网异步通知闭环 | 一次性临时 HTTPS 沙箱端到端验收 |
-| DB-001B / DB-001C | 库存商品唯一约束与遗留支付表清理尚未完成，两个风险不同的迁移已经拆分 | 可审计数据检查、失败保护与后续迁移纪律 |
+| DB-001C | 没有业务接入的遗留 `PaymentInfo/payment_info` 实体和表尚未完成数据核对与安全清理 | 遗留结构审计、有数据时拒绝破坏性清理、通过新 Flyway 版本移除无用表 |
 | RUN-002 / DEPLOY-001 | 四个 Compose 服务已在本轮运行并完成 5173 主链路烟雾，但数据卷重启、日志配置回显、镜像稳定拉取和长期公网部署仍未完成 | 可重复部署、完整重启证据、健康检查和环境隔离 |
 
 仓库中的 AI assistant 已明确废弃，不属于后续改进、运行验收或简历亮点。物理删除遗留接口、前端入口和依赖如果以后需要执行，应作为独立兼容性清理任务评估，不能在本文档中把它恢复成活跃能力。
