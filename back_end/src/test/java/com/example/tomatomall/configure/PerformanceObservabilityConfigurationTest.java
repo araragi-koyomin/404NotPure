@@ -34,6 +34,7 @@ class PerformanceObservabilityConfigurationTest {
         assertTrue(Boolean.parseBoolean(properties.getProperty("spring.jpa.properties.hibernate.generate_statistics")));
         assertEquals("OFF", properties.getProperty(
                 "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener"));
+        assertEquals("false", properties.getProperty("tomatomall.order.expiration.enabled"));
     }
 
     private Properties load(String resourceName) {

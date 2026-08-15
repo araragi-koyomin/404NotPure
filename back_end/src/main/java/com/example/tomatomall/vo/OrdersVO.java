@@ -15,4 +15,6 @@ public class OrdersVO implements Serializable {
     private String status;
     private Timestamp createTime;
     private Timestamp paidTime;
+    private Timestamp cancelledTime;
+    private Timestamp closedTime;
 }

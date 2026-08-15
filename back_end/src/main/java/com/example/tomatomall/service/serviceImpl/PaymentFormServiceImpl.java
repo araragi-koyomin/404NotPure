@@ -7,6 +7,8 @@ import com.example.tomatomall.po.Orders;
 import com.example.tomatomall.repository.OrdersRepository;
 import com.example.tomatomall.service.PaymentFormGateway;
 import com.example.tomatomall.service.PaymentFormService;
+import com.example.tomatomall.service.OrderLifecycleService;
+import com.example.tomatomall.service.order.OrderExpirationPolicy;
 import com.example.tomatomall.dto.PaymentData;
 import org.springframework.stereotype.Service;
 
@@ -14,17 +16,26 @@ import org.springframework.stereotype.Service;
 public class PaymentFormServiceImpl implements PaymentFormService {
     private final OrdersRepository ordersRepository;
     private final PaymentFormGateway paymentFormGateway;
+    private final OrderLifecycleService orderLifecycleService;
+    private final OrderExpirationPolicy expirationPolicy;
 
     public PaymentFormServiceImpl(
             OrdersRepository ordersRepository,
-            PaymentFormGateway paymentFormGateway
+            PaymentFormGateway paymentFormGateway,
+            OrderLifecycleService orderLifecycleService,
+            OrderExpirationPolicy expirationPolicy
     ) {
         this.ordersRepository = ordersRepository;
         this.paymentFormGateway = paymentFormGateway;
+        this.orderLifecycleService = orderLifecycleService;
+        this.expirationPolicy = expirationPolicy;
     }
 
     @Override
     public PaymentData createPaymentForm(int userId, int orderId) throws AlipayApiException {
+        if (orderLifecycleService.closeIfExpiredForPayment(userId, orderId)) {
+            throw TomatoException.illegalOrderStatusForPayment();
+        }
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(TomatoException::orderNotExist);
         if (order.getAccount() == null || order.getAccount().getId() == null
@@ -36,7 +47,7 @@ public class PaymentFormServiceImpl implements PaymentFormService {
         }
 
         PaymentData paymentData = new PaymentData();
-        paymentData.setPaymentForm(paymentFormGateway.createPaymentForm(order));
+        paymentData.setPaymentForm(paymentFormGateway.createPaymentForm(order, expirationPolicy.expiresAt(order)));
         paymentData.setOrderId(String.valueOf(order.getOrderId()));
         paymentData.setTotalAmount(order.getTotalAmount().toPlainString());
         paymentData.setPaymentMethod("Alipay");

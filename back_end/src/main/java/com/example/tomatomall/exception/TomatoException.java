@@ -128,4 +128,16 @@ public class TomatoException extends RuntimeException{
     public static TomatoException frozenStockReleaseFailure() {
         return new TomatoException("订单冻结库存无法正确释放", "500");
     }
+
+    public static TomatoException frozenStockRestoreFailure() {
+        return new TomatoException("订单冻结库存无法正确恢复", "500");
+    }
+
+    public static TomatoException illegalOrderStatusForCancellation() {
+        return new TomatoException("订单当前状态不允许取消", "409");
+    }
+
+    public static TomatoException orderDataInconsistent() {
+        return new TomatoException("订单明细数据异常，请联系管理员", "500");
+    }
 }

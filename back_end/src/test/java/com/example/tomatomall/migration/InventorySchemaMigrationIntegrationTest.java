@@ -57,7 +57,7 @@ class InventorySchemaMigrationIntegrationTest {
 
         MigrateResult first = flyway(schema, null).migrate();
 
-        assertEquals(5, first.migrationsExecuted);
+        assertEquals(6, first.migrationsExecuted);
         assertTrue(uniqueIndexExists(schema, "uk_stockpile_product_id", "product_id"));
         assertTrue(foreignKeyHasRestrictRules(
                 schema,
@@ -80,7 +80,7 @@ class InventorySchemaMigrationIntegrationTest {
 
         MigrateResult result = flyway(schema, null).migrate();
 
-        assertEquals(3, result.migrationsExecuted);
+        assertEquals(4, result.migrationsExecuted);
         assertEquals(1, count(schema,
                 "SELECT COUNT(*) FROM stockpile "
                         + "WHERE id=9101 AND product_id=8101 AND amount=7 AND frozen=2"));
