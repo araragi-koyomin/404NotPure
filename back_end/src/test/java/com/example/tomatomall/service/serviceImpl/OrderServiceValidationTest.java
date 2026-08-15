@@ -2,6 +2,8 @@ package com.example.tomatomall.service.serviceImpl;
 
 import com.example.tomatomall.dto.CreateOrderDTO;
 import com.example.tomatomall.exception.TomatoException;
+import com.example.tomatomall.po.Account;
+import com.example.tomatomall.po.Product;
 import com.example.tomatomall.repository.OrdersRepository;
 import com.example.tomatomall.repository.ProductRepository;
 import com.example.tomatomall.repository.StockPileRepository;
@@ -9,12 +11,16 @@ import com.example.tomatomall.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Arrays;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 class OrderServiceValidationTest {
@@ -103,6 +109,28 @@ class OrderServiceValidationTest {
         request.setItems(Arrays.asList(request.getItems().get(0), additionalItem));
 
         assertInvalidOrder(request);
+    }
+
+    @Test
+    void rejectsOrderWhenDefensiveRepositoryCheckReportsDuplicateStock() {
+        Account account = new Account();
+        account.setId(1);
+        Product product = Product.builder()
+            .id(1)
+            .price(new BigDecimal("12.50"))
+            .build();
+        when(userRepository.findById(1)).thenReturn(Optional.of(account));
+        when(productRepository.findAllById(anyList())).thenReturn(Collections.singletonList(product));
+        when(stockPileRepository.freezeStockIfAvailable(1, 1)).thenReturn(0);
+        when(stockPileRepository.countByProductId(1)).thenReturn(2L);
+
+        TomatoException exception = assertThrows(
+            TomatoException.class,
+            () -> orderService.addOrder(1, validRequest(1))
+        );
+
+        assertEquals("500", exception.getCode());
+        verifyNoInteractions(ordersRepository);
     }
 
     private void assertInvalidOrder(CreateOrderDTO request) {

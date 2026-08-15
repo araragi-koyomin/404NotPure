@@ -88,12 +88,20 @@ class PaymentSchemaMigrationIntegrationTest {
 
         MigrateResult firstRun = flyway.migrate();
 
-        assertEquals(2, firstRun.migrationsExecuted);
+        assertEquals(4, firstRun.migrationsExecuted);
         assertTrue(tableExists(schema, "orders"));
         assertTrue(tableExists(schema, "stockpile"));
         assertTrue(columnExists(schema, "orders", "paid_time"));
         assertTrue(columnExists(schema, "orders", "alipay_trade_no"));
         assertTrue(uniqueIndexExists(schema, "orders", "alipay_trade_no"));
+        assertTrue(uniqueIndexExists(schema, "stockpile", "product_id"));
+        assertTrue(foreignKeyHasRestrictRules(
+                schema,
+                "stockpile",
+                "product_id",
+                "products",
+                "product_id"
+        ));
         validateJpaSchema(schema);
 
         MigrateResult secondRun = flyway.migrate();
@@ -106,16 +114,25 @@ class PaymentSchemaMigrationIntegrationTest {
 
         createJpaSchema(schema);
         execute(schema, "ALTER TABLE orders DROP COLUMN paid_time, DROP COLUMN alipay_trade_no");
+        execute(schema, "ALTER TABLE stockpile DROP INDEX uk_stockpile_product_id");
         insertLegacyOrder(schema);
 
         MigrateResult upgrade = flyway(schema, null, true).migrate();
 
-        assertEquals(1, upgrade.migrationsExecuted);
+        assertEquals(3, upgrade.migrationsExecuted);
         assertEquals(1, count(schema, "SELECT COUNT(*) FROM orders WHERE order_id = 7001"));
         assertEquals(1, count(schema,
                 "SELECT COUNT(*) FROM orders WHERE order_id = 7001 "
                         + "AND paid_time IS NULL AND alipay_trade_no IS NULL"));
         assertTrue(uniqueIndexExists(schema, "orders", "alipay_trade_no"));
+        assertTrue(uniqueIndexExists(schema, "stockpile", "product_id"));
+        assertTrue(foreignKeyHasRestrictRules(
+                schema,
+                "stockpile",
+                "product_id",
+                "products",
+                "product_id"
+        ));
         validateJpaSchema(schema);
     }
 
@@ -239,6 +256,29 @@ class PaymentSchemaMigrationIntegrationTest {
                 schema,
                 table,
                 column
+        ) == 1;
+    }
+
+    private boolean foreignKeyHasRestrictRules(String schema,
+                                               String table,
+                                               String column,
+                                               String referencedTable,
+                                               String referencedColumn) throws SQLException {
+        return metadataCount(
+                "SELECT COUNT(*) FROM information_schema.key_column_usage key_usage "
+                        + "JOIN information_schema.referential_constraints reference_rule "
+                        + "ON reference_rule.constraint_schema=key_usage.constraint_schema "
+                        + "AND reference_rule.constraint_name=key_usage.constraint_name "
+                        + "WHERE key_usage.table_schema=? AND key_usage.table_name=? "
+                        + "AND key_usage.column_name=? AND key_usage.referenced_table_name=? "
+                        + "AND key_usage.referenced_column_name=? "
+                        + "AND reference_rule.update_rule='RESTRICT' "
+                        + "AND reference_rule.delete_rule='RESTRICT'",
+                schema,
+                table,
+                column,
+                referencedTable,
+                referencedColumn
         ) == 1;
     }
 

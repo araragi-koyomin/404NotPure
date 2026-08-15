@@ -19,6 +19,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
@@ -171,45 +172,17 @@ class OrderServiceIntegrationTest {
     }
 
     @Test
-    void duplicateStockRowsFailAndRollBackEveryUpdatedRow() {
+    void databaseConstraintRejectsDuplicateStockWithoutChangingOriginalRow() {
         Product product = createProduct("duplicate-stock", 3);
-        jdbcTemplate.update(
-            "insert into stockpile (amount, frozen, product_id) values (?, ?, ?)",
-            4,
-            0,
-            product.getId()
-        );
+        assertThrows(DuplicateKeyException.class, () -> jdbcTemplate.update(
+                "insert into stockpile (amount, frozen, product_id) values (?, ?, ?)",
+                4,
+                0,
+                product.getId()
+        ));
 
-        TomatoException exception = assertThrows(
-            TomatoException.class,
-            () -> orderService.addOrder(accountId, request(item(product.getId(), 1)))
-        );
-
-        assertEquals("500", exception.getCode());
         assertEquals(0, countOrders());
-        assertEquals(2, countStockRows(product.getId()));
-        assertEquals(7, totalAvailableStock(product.getId()));
-        assertEquals(0, totalFrozenStock(product.getId()));
-    }
-
-    @Test
-    void duplicateStockRowsFailWhenOnlyOneRowHasEnoughStock() {
-        Product product = createProduct("mixed-duplicate-stock", 3);
-        jdbcTemplate.update(
-            "insert into stockpile (amount, frozen, product_id) values (?, ?, ?)",
-            0,
-            0,
-            product.getId()
-        );
-
-        TomatoException exception = assertThrows(
-            TomatoException.class,
-            () -> orderService.addOrder(accountId, request(item(product.getId(), 1)))
-        );
-
-        assertEquals("500", exception.getCode());
-        assertEquals(0, countOrders());
-        assertEquals(2, countStockRows(product.getId()));
+        assertEquals(1, countStockRows(product.getId()));
         assertEquals(3, totalAvailableStock(product.getId()));
         assertEquals(0, totalFrozenStock(product.getId()));
     }

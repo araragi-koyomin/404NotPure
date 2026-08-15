@@ -6,7 +6,13 @@ import lombok.*;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "stockpile")
+@Table(
+    name = "stockpile",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_stockpile_product_id",
+        columnNames = "product_id"
+    )
+)
 @Getter
 @Setter
 @Data
@@ -19,6 +25,7 @@ public class StockPile {
     @Column(name = "id")
     private Integer id;
 
+    @Column(name = "product_id", nullable = false)
     private int productId;
     private int amount;
     private int frozen;
