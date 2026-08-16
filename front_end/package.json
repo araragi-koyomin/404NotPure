@@ -7,16 +7,17 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "test": "vitest run",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
     "check:sensitive-logging": "node scripts/check-sensitive-response-logging.mjs && node --test scripts/security-ui.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
-    "axios": "^1.6.2",
+    "axios": "^1.19.0",
     "echarts": "^5.5.0",
-    "element-plus": "^2.7.3",
+    "element-plus": "^2.14.4",
     "live2d-render": "^0.0.6",
-    "vue": "^3.4.27",
+    "vue": "^3.5.41",
     "vue-echarts": "^6.7.2",
     "vue-router": "^4.3.2"
   },
@@ -27,7 +28,7 @@
     "typescript": "^5.2.2",
     "unplugin-auto-import": "^0.16.7",
     "unplugin-vue-components": "^0.25.2",
-    "vite": "^5.4.15",
+    "vite": "^5.4.21",
     "vitest": "^2.1.9",
     "vue-tsc": "^3.3.9"
   }

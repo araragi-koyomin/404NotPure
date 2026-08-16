@@ -49,14 +49,12 @@ async function handleRegister() {
       ElMessage({
         message: "注册成功！请登录账号",
         type: 'success',
-        center: true,
       });
       router.push({ path: "/login" });
     } else {
       ElMessage({
         message: res.data.code + res.data.msg,
         type: 'error',
-        center: true,
       });
     }
   });
@@ -74,7 +72,6 @@ async function handleChangeUltimate() {
     ElMessage({
       message: "创建账户失败：请求超时，请重试",
       type: 'error',
-      center: true,
     });
   } finally {
     loading.value = false;

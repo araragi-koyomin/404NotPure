@@ -188,7 +188,7 @@ onMounted(loadCart)
                 >
                   <el-row :gutter="10" class="product-info" wrap>
                     <el-col :span="1">
-                      <el-checkbox :label="item.cartItemId" :disabled="!canCheckout(item)">&nbsp;</el-checkbox>
+                      <el-checkbox :value="item.cartItemId" :disabled="!canCheckout(item)">&nbsp;</el-checkbox>
                     </el-col>
                     <el-col :span="3" class="image-col">
                       <el-image :src="item.cover" class="product-image" fit="contain" />
