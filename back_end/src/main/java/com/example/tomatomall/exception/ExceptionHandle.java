@@ -32,6 +32,24 @@ public class ExceptionHandle {
         return Response.buildFailure(exception.getMessage(), "400");
     }
 
+    @ExceptionHandler(InvalidCheckoutRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Response<String> handleInvalidCheckoutRequest(InvalidCheckoutRequestException exception) {
+        return Response.buildFailure(exception.getMessage(), "400");
+    }
+
+    @ExceptionHandler(OrderCheckoutConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Response<String> handleOrderCheckoutConflict(OrderCheckoutConflictException exception) {
+        return Response.buildFailure(exception.getMessage(), "409");
+    }
+
+    @ExceptionHandler(OrderCheckoutUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public Response<String> handleOrderCheckoutUnavailable(OrderCheckoutUnavailableException exception) {
+        return Response.buildFailure(exception.getMessage(), "503");
+    }
+
     @ExceptionHandler(ProductCacheFallbackRejectedException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public Response<String> handleProductCacheFallbackRejected(ProductCacheFallbackRejectedException exception) {

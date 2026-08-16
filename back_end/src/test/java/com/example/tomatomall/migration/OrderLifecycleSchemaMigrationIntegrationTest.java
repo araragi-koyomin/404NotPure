@@ -52,7 +52,7 @@ class OrderLifecycleSchemaMigrationIntegrationTest {
         Flyway flyway = flyway(schema, null);
         flyway.migrate();
 
-        assertEquals("6", flyway.info().current().getVersion().getVersion());
+        assertEquals("7", flyway.info().current().getVersion().getVersion());
         assertTrue(columnExists(schema, "orders", "cancelled_time"));
         assertTrue(columnExists(schema, "orders", "closed_time"));
         assertTrue(indexExists(schema, "orders", "idx_orders_status_create_time_order_id"));
@@ -127,7 +127,7 @@ class OrderLifecycleSchemaMigrationIntegrationTest {
         Flyway upgraded = flyway(schema, null);
         upgraded.migrate();
 
-        assertEquals("6", upgraded.info().current().getVersion().getVersion());
+        assertEquals("7", upgraded.info().current().getVersion().getVersion());
         assertEquals(4, count(schema, "SELECT COUNT(*) FROM orders WHERE order_id BETWEEN 8301 AND 8304"));
         assertEquals(4, count(schema, "SELECT COUNT(*) FROM orders "
                 + "WHERE order_id BETWEEN 8301 AND 8304 "

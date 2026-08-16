@@ -47,6 +47,12 @@ public class Orders implements Serializable{
     @Column(name = "closed_time")
     private Timestamp closedTime;
 
+    @Column(name = "idempotency_key", length = 36, columnDefinition = "CHAR(36)")
+    private String idempotencyKey;
+
+    @Column(name = "request_fingerprint", length = 64, columnDefinition = "CHAR(64)")
+    private String requestFingerprint;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<OrderItem>();
 

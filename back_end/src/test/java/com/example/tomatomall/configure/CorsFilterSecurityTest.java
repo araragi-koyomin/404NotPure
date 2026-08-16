@@ -39,6 +39,7 @@ class CorsFilterSecurityTest {
     void trustedPreflightReturnsOnlyConfiguredCorsContract() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/api/cart");
         request.addHeader("Origin", "http://localhost:5173");
+        request.addHeader("Access-Control-Request-Headers", "idempotency-key, token, content-type");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, new MockFilterChain());
@@ -47,6 +48,8 @@ class CorsFilterSecurityTest {
         assertEquals("http://localhost:5173", response.getHeader("Access-Control-Allow-Origin"));
         assertEquals("true", response.getHeader("Access-Control-Allow-Credentials"));
         assertTrue(response.getHeader("Access-Control-Allow-Headers").contains("token"));
+        assertTrue(response.getHeader("Access-Control-Allow-Headers").contains("Idempotency-Key"));
+        assertTrue(response.getHeader("Access-Control-Expose-Headers").contains("Idempotent-Replay"));
     }
 
     @Test

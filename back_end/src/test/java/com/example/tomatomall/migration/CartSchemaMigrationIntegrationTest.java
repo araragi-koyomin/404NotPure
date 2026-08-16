@@ -52,7 +52,7 @@ class CartSchemaMigrationIntegrationTest {
     void migratesFreshDatabaseWithPositiveQuantityAndUniqueUserProductConstraints() throws Exception {
         String schema = createTemporarySchema();
 
-        assertEquals(6, flyway(schema, null).migrate().migrationsExecuted);
+        assertEquals(7, flyway(schema, null).migrate().migrationsExecuted);
         assertTrue(uniqueConstraintExists(schema));
         assertTrue(positiveQuantityCheckExists(schema));
         insertRequiredParentRows(schema, 7010, 8010);
@@ -74,7 +74,7 @@ class CartSchemaMigrationIntegrationTest {
         execute(schema, "INSERT INTO carts (cart_item_id, quantity, user_id, product_id) "
                 + "VALUES (9001, 3, 7001, 8001)");
 
-        assertEquals(2, flyway(schema, null).migrate().migrationsExecuted);
+        assertEquals(3, flyway(schema, null).migrate().migrationsExecuted);
 
         assertEquals(1, count(schema, "SELECT COUNT(*) FROM carts "
                 + "WHERE cart_item_id=9001 AND quantity=3 AND user_id=7001 AND product_id=8001"));

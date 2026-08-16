@@ -6,6 +6,14 @@ import { router } from '../../router'
 import { submitOrder as apiSubmitOrder, initiatePayment as apiInitiatePayment, OrderRequest } from '../../api/order'
 import { removeFromCart } from '../../api/cart' // Import removeFromCart
 import { describeRequestError } from '../../utils/safe-error.ts'
+import { isAxiosError } from 'axios'
+import {
+  CheckoutAttempt,
+  clearCheckoutAttempt,
+  getOrCreateCheckoutAttempt,
+  markCheckoutOrderCreated,
+  shouldStartNewCheckoutAfterPaymentError
+} from '../../utils/checkout-idempotency.ts'
 
 // Types
 type CartItem = {
@@ -27,6 +35,7 @@ const orderId = ref<string>('')
 const paymentFormHtml = ref('')
 const isFromProductPage = ref(false) // 标记是否从产品页面来的
 const returnPage = ref<string>('') // 新增：存储支付后要返回的页面
+const checkoutAttempt = ref<CheckoutAttempt | null>(null)
 
 // 计算属性
 const totalAmount = computed(() => {
@@ -93,11 +102,25 @@ const submitOrder = async () => {
     }
     submitting.value = true
     const orderData = prepareOrderData()
-    const orderResponse = await apiSubmitOrder(orderData)
-    orderId.value = orderResponse.orderId
+    checkoutAttempt.value = getOrCreateCheckoutAttempt(sessionStorage, orderData)
+
+    if (checkoutAttempt.value.orderId) {
+      orderId.value = checkoutAttempt.value.orderId
+      await initiatePayment(orderId.value)
+      return
+    }
+
+    const orderResponse = await apiSubmitOrder(orderData, checkoutAttempt.value.idempotencyKey)
+    const createdOrderId = String(orderResponse.orderId)
+    orderId.value = createdOrderId
+    checkoutAttempt.value = markCheckoutOrderCreated(
+      sessionStorage,
+      checkoutAttempt.value,
+      createdOrderId
+    )
 
     // 保存订单信息和来源页面到 sessionStorage
-    sessionStorage.setItem('pendingOrderId', orderResponse.orderId)
+    sessionStorage.setItem('pendingOrderId', createdOrderId)
     sessionStorage.setItem('returnPage', returnPage.value)
 
     ElMessage.success('订单创建成功，准备跳转支付')
@@ -106,17 +129,26 @@ const submitOrder = async () => {
     await initiatePayment(orderId.value)
   } catch (error) {
     console.error('提交订单失败:', describeRequestError(error))
-    ElMessage.error('提交订单失败，请重试')
+    if (isAxiosError(error) && error.response?.status === 409) {
+      clearCheckoutAttempt(sessionStorage)
+      checkoutAttempt.value = null
+      orderId.value = ''
+      ElMessage.error('本次结算标识已用于其他内容，请确认商品后重新提交')
+    } else if (isAxiosError(error) && error.response?.status === 503) {
+      ElMessage.error('订单仍在处理中，请稍后重试；系统会继续使用同一结算标识')
+    } else {
+      ElMessage.error('提交订单失败，请重试；未修改商品时不会重复创建订单')
+    }
   } finally {
     submitting.value = false
   }
 }
 
 // 处理发起支付
-const initiatePayment = async (orderId: string) => {
+const initiatePayment = async (currentOrderId: string) => {
   try {
     loading.value = true
-    const paymentResponse = await apiInitiatePayment(orderId)
+    const paymentResponse = await apiInitiatePayment(currentOrderId)
     paymentFormHtml.value = paymentResponse.paymentForm
 
     // 创建临时div来渲染支付表单
@@ -152,7 +184,16 @@ const initiatePayment = async (orderId: string) => {
     }, 1000)
   } catch (error) {
     console.error('发起支付失败:', describeRequestError(error))
-    ElMessage.error('发起支付失败，请重试')
+    if (shouldStartNewCheckoutAfterPaymentError(error)) {
+      clearCheckoutAttempt(sessionStorage)
+      checkoutAttempt.value = null
+      orderId.value = ''
+      sessionStorage.removeItem('pendingOrderId')
+      sessionStorage.removeItem('cartItemsToRemove')
+      ElMessage.warning('原订单已取消或关闭，请再次确认以创建新订单')
+    } else {
+      ElMessage.error('发起支付失败，请重试')
+    }
   } finally {
     loading.value = false
   }
@@ -160,7 +201,10 @@ const initiatePayment = async (orderId: string) => {
 
 // 此时订单尚未创建，只是离开结算页并返回购物车。
 const cancelOrder = () => {
-  ElMessageBox.confirm('确定要返回购物车吗？当前尚未创建订单。', '提示', {
+  const message = orderId.value
+      ? '订单已经创建但尚未进入支付页面，确定要离开吗？再次进入时仍会继续支付该订单。'
+      : '确定要返回购物车吗？当前尚未创建订单。'
+  ElMessageBox.confirm(message, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
@@ -184,6 +228,8 @@ const updateItemAmount = (index: number, amount: number) => {
   cartItems.value[index].amount = amount
   // 同步更新sessionStorage
   sessionStorage.setItem('cartItems', JSON.stringify(cartItems.value))
+  checkoutAttempt.value = getOrCreateCheckoutAttempt(sessionStorage, prepareOrderData())
+  orderId.value = checkoutAttempt.value.orderId ?? ''
 }
 
 // 支付成功后清除购物车商品
@@ -193,6 +239,8 @@ const clearCartItems = () => {
   sessionStorage.removeItem('pendingOrderId')
   sessionStorage.removeItem('cartItemsToRemove')
   sessionStorage.removeItem('returnPage')
+  clearCheckoutAttempt(sessionStorage)
+  checkoutAttempt.value = null
 }
 
 // 检查是否从支付页面返回
@@ -248,6 +296,10 @@ const checkPaymentReturn = async () => {
 // 生命周期钩子
 onMounted(() => {
   loadCartItems()
+  if (cartItems.value.length > 0) {
+    checkoutAttempt.value = getOrCreateCheckoutAttempt(sessionStorage, prepareOrderData())
+    orderId.value = checkoutAttempt.value.orderId ?? ''
+  }
   checkPaymentReturn() // 检查是否从支付页面返回
 })
 

@@ -32,8 +32,10 @@ export type PaymentResponse = {
  * @param orderData Order data including payment method and items
  * @returns Created order
  */
-export const submitOrder = async (orderData: OrderRequest): Promise<Order> => {
-    const response = await axios.post<BaseResponse<Order>>(`${API_MODULE}/cart/checkout`, orderData);
+export const submitOrder = async (orderData: OrderRequest, idempotencyKey: string): Promise<Order> => {
+    const response = await axios.post<BaseResponse<Order>>(`${API_MODULE}/cart/checkout`, orderData, {
+        headers: { 'Idempotency-Key': idempotencyKey }
+    });
 
     if (response.data.code === '200') return response.data.data;
 
