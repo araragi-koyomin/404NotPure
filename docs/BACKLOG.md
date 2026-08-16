@@ -20,13 +20,13 @@ tags:
 
 | 当前信息 | 内容 |
 |---|---|
-| 主开发批次 | SEC-014A：前端严重/高危依赖的兼容升级 |
-| 当前阶段 | TDD Green、自动化验证、真实浏览器回归和独立只读审查均已完成，等待项目所有者授权 Git 交付。开发分支 `codex/frontend-dependency-security` 已于 2026-08-17 从个人 `master@a75b8983` 创建。升级前生产依赖审计以退出码 1 复现 1 个严重、5 个高危、4 个中危；兼容升级后严重/高危已清零，只剩 ECharts/Vue ECharts 两个需要跨主要版本处理的中危告警。`ElMessage.center` 类型不兼容、购物车复选框弃用接口和商品表单文本按钮弃用接口均已按最小范围修复；从锁文件重新安装后 11 项 Vitest、5 项敏感日志检查、生产构建和生产依赖审计通过。独立审查修正一处无关冷层差异后，未发现剩余 P0～P3 问题。 |
-| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001、CACHE-003 Redis 故障保护、CACHE-002 热门商品单次回填、TEST-002 默认测试进程与内存基线、DB-001B 库存唯一记录与商品外键、CART-001 购物车数量与库存状态、ORD-003 订单取消与超时关闭，以及 ORD-002 结算请求幂等均已合并并进入或正在进入冷层交付记录。 |
+| 主开发批次 | 下一批次待项目所有者确认 |
+| 当前阶段 | SEC-014A 已通过 [PR #27](https://github.com/araragi-koyomin/404NotPure/pull/27) squash 合并到个人 `master@00d71b05`；生产依赖严重/高危告警已清零，自动化、真实浏览器和独立审查通过。当前分支 `codex/archive-sec014a` 只处理合并后的冷层归档、热层移除和简历事实同步。 |
+| 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001、CACHE-003 Redis 故障保护、CACHE-002 热门商品单次回填、TEST-002 默认测试进程与内存基线、DB-001B 库存唯一记录与商品外键、CART-001 购物车数量与库存状态、ORD-003 订单取消与超时关闭、ORD-002 结算请求幂等，以及 SEC-014A 前端生产依赖兼容安全升级均已合并并进入或正在进入冷层交付记录。 |
 | 尚未完成 | 订单读取接口、支付返回页、CSRF、支付宝侧交易关闭等活跃项继续按表格跟踪。当前版本也没有执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测。 |
-| 当前阻塞或待确认 | 无环境阻塞；需求设计和开发授权均已确认。严重/高危告警阻止交付，中危继续记录并由兼容修复或 SEC-014B 处理；运行基线保持 Node.js 20.20.2/npm 10.8.2；浏览器验收由 Codex 优先执行，只有工具安全策略明确阻止的步骤才交由项目所有者人工确认。 |
-| 下一步 | 等待项目所有者授权暂存 SEC-014A 文件、提交、推送并创建/合并 PR；合并后再把 SEC-014A 从热层移除并写入冷层交付记录。浏览器验收发现的商品详情页字符串商品 ID 和可选手机号空字符串缺陷已分别登记为 CART-002、ACCT-002，不混入本次依赖升级。 |
-| 本批次不处理 | ECharts 5 → 6、Vue ECharts 6 → 8 等主要版本迁移；中危告警的跨主要版本修复；已废弃的 AI assistant；公网长期部署 |
+| 当前阻塞或待确认 | 无环境阻塞。SEC-014A 的功能交付已经完成；ECharts/Vue ECharts 的两个生产中危告警由 SEC-014B 跟踪，包含开发工具的完整依赖树仍有 1 个严重、5 个高危、6 个中危，由 SEC-014C 跟踪。 |
+| 下一步 | 完成 SEC-014A 冷层归档后，按既定主线优先讨论 API-001 订单详情/列表；CART-002 和 ACCT-002 是浏览器验收发现的 P1 业务缺陷，何时插入主线由项目所有者在下一次讨论中确认。 |
+| 本批次不处理 | 已废弃的 AI assistant；公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
 |---|---|---|---|---|---|
@@ -36,7 +36,6 @@ tags:
 | RUN-002 | P2 | blocked | Compose 端口配置已修复且四服务曾可运行；Docker Desktop 曾出现内部镜像数据块错误。2026-08-12 确认 frontend 以 Windows bind mount、`CHOKIDAR_USEPOLLING=true` 和 Vite 开发服务器运行，空闲时持续占约 54%～55% 的一个逻辑 CPU，项目所有者因此选择停止前端并延后完整开发模式修复。2026-08-15 又确认 Windows 当前同时把 IPv4/IPv6 TCP 8062～8161 列为保留范围，8080 位于其中，导致普通本机监听和 Docker 后端端口映射被系统拒绝；不映射宿主机端口的后端容器仍可正常启动和访问数据库 | 除既有端口、数据卷、日志和镜像稳定证据外，使文件轮询默认关闭或可配置；解决或避开 Windows 8080 保留范围且保持前后端契约一致；验证热更新仍可用且 frontend 空闲 CPU 回落；生产静态镜像仍由 DEPLOY-001 处理 | [运行与外部依赖计划](plans/runtime-and-external-dependencies.md) |
 | SEC-012 | P1 | planned | 本轮先把 CORS 从反射任意 Origin 改为明确前端来源白名单，并给认证 Cookie 增加 `SameSite=Lax`；CSRF 暂不直接开启，后续需要设计前端 CSRF token、登录/注册和支付宝 notify 精确例外 | 状态修改请求需要可信 CSRF token；前端正常调用、匿名公开接口和支付宝 notify 均有兼容测试；不能只打开开关造成商城请求全部失败 | [安全与质量计划](plans/security-and-quality.md) |
 | SEC-013 | P2 | planned | 全局异常处理目前对预期的未登录、越权和业务校验异常直接执行 `printStackTrace()`；ORD-002 页面验收还确认支付宝支付表单签名异常会由容器记录完整调用栈及请求业务元数据。两者都会制造日志噪声，并可能暴露订单号、金额、应用标识或回调地址；本轮不扩大 SEC-011 的前端敏感响应日志范围 | 预期业务拒绝只记录不含 token、Cookie、账户资料和内部堆栈的必要信息；支付 SDK 失败转换为稳定错误响应且不记录完整待签名请求；非预期异常仍保留可诊断且经过脱敏的结构化日志，并有日志捕获测试 | [安全与质量计划](plans/security-and-quality.md) |
-| SEC-014A | P1 | in_progress | 在不跨主要版本、不运行 `npm audit fix --force` 的前提下，升级能够兼容修复的前端直接依赖和锁文件中的间接依赖。当前严重/高危来源包括 Axios 及其 `form-data`、Element Plus 引入的 Lodash、Vue/Vite 工具链引入的 PostCSS/Nanoid；是否能仅靠兼容升级全部清除必须由实际锁文件和复测证明，不能预先承诺 | 记录升级前后依赖路径与版本；生产依赖严重和高危告警清零，或对仍无法在兼容范围修复的项目停止交付并请项目所有者决定是否扩大至 SEC-014B；前端单元测试、敏感日志检查、生产构建以及账户、商品、购物车、结算浏览器回归通过 | [安全与质量计划](plans/security-and-quality.md) |
 | SEC-014B | P2 | planned | 只处理 SEC-014A 完成后仍需跨主要版本才能修复的依赖告警。当前已知 ECharts `<6.1.0` 的中危跨站脚本风险需要 ECharts 6，且 Vue ECharts 也可能需要从 6 升到 8；这类升级可能改变图表组件接口和渲染行为，不能混入兼容升级 | 逐项完成主要版本迁移说明、组件契约测试、图表页面浏览器验收和生产构建；不通过调整审计阈值、忽略告警或无依据声称“项目未使用所以安全”来关闭任务 | [安全与质量计划](plans/security-and-quality.md) |
 | SEC-014C | P1 | planned | SEC-014A 重新安装锁文件后，包含开发依赖的完整 `npm audit` 仍报告 1 个严重、5 个高危、6 个中危；严重/高危主要来自 Vitest 2、Vite 5、Rollup 4 和旧版自动导入工具链。它们不进入浏览器生产包，但会由开发者和未来 CI 执行；当前安全版本需要 Vitest/Vite/插件等跨主要版本迁移，不得混进已确认的生产依赖兼容升级 | 独立核对每条开发工具公告的触发条件和修复版本；升级 Vitest、Vite、Vue 插件及自动导入工具链并保持 Node 运行基线兼容；单元测试、类型检查、生产构建、开发服务器和完整审计通过，或对无法修复项给出可核验的隔离措施 | [安全与质量计划](plans/security-and-quality.md) |
 | CART-002 | P1 | planned | 商品详情页从路由读取到字符串形式的商品 ID，并原样提交给购物车接口；CART-001 的严格 JSON 正整数解析会拒绝该请求，因此详情页加入购物车稳定返回 HTTP 400，而商品列表的数字 ID 入口正常 | 在前端接口边界把详情页 ID 明确转换并验证为正整数；自动化覆盖详情页和列表页两种入口；真实浏览器中两种入口均能加入购物车，非法路由参数不会发送请求 | [安全与质量计划](plans/security-and-quality.md#cart-002商品详情页加入购物车的商品-id-类型不兼容) |
@@ -56,19 +55,18 @@ tags:
 
 ## 推荐处理顺序
 
-CART-001、ORD-003 与 ORD-002 合并归档后，项目所有者已选择先处理前端严重/高危依赖，再回到订单读取和支付返回链路；顺序变化时必须同时更新本节和对应温层计划：
+CART-001、ORD-003、ORD-002 与 SEC-014A 合并归档后，主线回到订单读取和支付返回链路；顺序变化时必须同时更新本节和对应温层计划：
 
-1. SEC-014A：在现有主要版本范围内清除生产依赖严重/高危告警，并完成前端主链路兼容验收；
-2. API-001：补齐带订单所有权校验的详情和列表读取接口；
-3. PAY-002：支付同步返回页改为查询服务端订单状态，并处理浏览器临时保存 JWT 的 SEC-015 风险；
-4. SEC-012：在最终路由契约上增加 CSRF token，并精确保留登录、注册和支付宝异步通知例外；
-5. PAY-003：最后执行一次临时 HTTPS 入口下的支付宝沙箱端到端验收。
+1. API-001：补齐带订单所有权校验的详情和列表读取接口；
+2. PAY-002：支付同步返回页改为查询服务端订单状态，并处理浏览器临时保存 JWT 的 SEC-015 风险；
+3. SEC-012：在最终路由契约上增加 CSRF token，并精确保留登录、注册和支付宝异步通知例外；
+4. PAY-003：最后执行一次临时 HTTPS 入口下的支付宝沙箱端到端验收。
 
 DB-001C、SEC-013、JPA-001、运行环境和前端质量任务继续按风险与面试价值择机处理。CACHE-002/CACHE-003 真实停机复合压测、多实例后端和长期公网部署不在当前主线上。
 
 ## 当前分支与阻塞
 
-- SEC-014A 开发分支 `codex/frontend-dependency-security` 已于 2026-08-17 从个人 `master@a75b8983` 创建；尚未提交、推送或创建 PR。
+- SEC-014A 开发分支 `codex/frontend-dependency-security` 已通过 [PR #27](https://github.com/araragi-koyomin/404NotPure/pull/27) squash 合并到个人 `master@00d71b05`；冷层归档分支为 `codex/archive-sec014a`，完整证据见[前端生产依赖兼容安全升级交付记录](archive/2026-08-17-frontend-dependency-security-delivery.md)。
 - ORD-002 功能分支 `codex/order-checkout-idempotency` 已通过 [PR #25](https://github.com/araragi-koyomin/404NotPure/pull/25) squash 合并，功能合并提交为 `a9f406c7`；冷层归档分支 `codex/archive-ord002` 通过 PR #26 合并。本批次只实现结算幂等及其前端重试状态；购物车清理、订单读取接口、支付宝外部关单、多支付渠道完整接入和生产容量测试不在范围内。完整证据见[结算请求幂等交付记录](archive/2026-08-16-order-checkout-idempotency-delivery.md)。
 - ORD-003 开发分支 `codex/order-cancellation-timeout` 已于 2026-08-16 从个人 `master@b0a098f0` 创建；功能提交 `95ee7b6b` 通过 [PR #23](https://github.com/araragi-koyomin/404NotPure/pull/23) squash 合并到个人 `master@0a0f72ed`。冷层归档分支为 `codex/archive-ord003`，对应 PR #24；完整证据见[订单取消与超时关闭交付记录](archive/2026-08-16-order-cancellation-expiration-delivery.md)。
 - PR #1～#13 的交付历史保留在对应冷层记录；[PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15) 已于 2026-08-14 squash 合并 CACHE-002，提交为 `28b41ad4`。功能分支为 `codex/cache-hotspot-single-flight`，合并后冷层归档使用 `codex/archive-cache002`；目标集成分支始终为个人 `master`。
