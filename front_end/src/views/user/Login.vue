@@ -28,7 +28,6 @@ async function handleLogin() {
       ElMessage({
         message: "登录成功",
         type: 'success',
-        center: true,
       });
       const token = loginResponse.data.data;
       sessionStorage.setItem('token', token);
@@ -48,7 +47,6 @@ async function handleLogin() {
       ElMessage({
         message: loginResponse.data.code + loginResponse.data.msg,
         type: 'error',
-        center: true,
       });
       password.value = '';
     }

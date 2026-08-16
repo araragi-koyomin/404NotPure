@@ -128,7 +128,6 @@ const loadProducts = async () => {
       ElMessage({
         message: (res?.data?.code || '') + (res?.data?.msg || '加载商品失败'),
         type: 'error',
-        center: true,
       });
     }
   } catch (err) {

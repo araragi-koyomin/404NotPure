@@ -284,7 +284,7 @@ const handleSubmit = async () => {
               @change="handleRateChange"
           />
           <el-button
-              type="text"
+              link
               @click="product.rate = 0"
               style="margin-left: 10px"
           >
