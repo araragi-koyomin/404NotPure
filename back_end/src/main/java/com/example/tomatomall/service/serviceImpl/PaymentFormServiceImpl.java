@@ -34,13 +34,17 @@ public class PaymentFormServiceImpl implements PaymentFormService {
     @Override
     public PaymentData createPaymentForm(int userId, int orderId) throws AlipayApiException {
         if (orderLifecycleService.closeIfExpiredForPayment(userId, orderId)) {
-            throw TomatoException.illegalOrderStatusForPayment();
+            throw TomatoException.orderNoLongerPayable();
         }
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(TomatoException::orderNotExist);
         if (order.getAccount() == null || order.getAccount().getId() == null
                 || order.getAccount().getId() != userId) {
             throw TomatoException.noPermission();
+        }
+        if (OrderStatus.CANCELLED.name().equals(order.getStatus())
+                || OrderStatus.CLOSED.name().equals(order.getStatus())) {
+            throw TomatoException.orderNoLongerPayable();
         }
         if (!OrderStatus.PENDING.name().equals(order.getStatus())) {
             throw TomatoException.illegalOrderStatusForPayment();

@@ -417,7 +417,7 @@ class PaymentServiceIntegrationTest {
         CreateOrderDTO request = new CreateOrderDTO();
         request.setPaymentMethod("Alipay");
         request.setItems(items);
-        return orderService.addOrder(accountId, request);
+        return orderService.addOrder(accountId, UUID.randomUUID().toString(), request).getOrder();
     }
 
     private CreateOrderDTO.OrderItemDTO orderItem(int productId, int quantity) {

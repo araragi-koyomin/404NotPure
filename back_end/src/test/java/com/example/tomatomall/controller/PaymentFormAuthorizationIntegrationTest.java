@@ -170,7 +170,7 @@ class PaymentFormAuthorizationIntegrationTest {
         mockMvc.perform(post("/api/orders/{id}/pay", pendingOrder.getOrderId())
                         .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("409"));
+                .andExpect(jsonPath("$.code").value("410"));
 
         verifyNoInteractions(paymentFormGateway);
         entityManager.clear();
@@ -181,6 +181,34 @@ class PaymentFormAuthorizationIntegrationTest {
                 .orElseThrow(AssertionError::new);
         assertEquals(8, stock.getAmount());
         assertEquals(0, stock.getFrozen());
+    }
+
+    @Test
+    void cancelledOrderTellsClientToStartANewCheckoutAttempt() throws Exception {
+        pendingOrder.setStatus(OrderStatus.CANCELLED.name());
+        pendingOrder.setCancelledTime(Timestamp.from(Instant.now()));
+        ordersRepository.saveAndFlush(pendingOrder);
+
+        mockMvc.perform(post("/api/orders/{id}/pay", pendingOrder.getOrderId())
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("410"));
+
+        verifyNoInteractions(paymentFormGateway);
+    }
+
+    @Test
+    void alreadyClosedOrderTellsClientToStartANewCheckoutAttempt() throws Exception {
+        pendingOrder.setStatus(OrderStatus.CLOSED.name());
+        pendingOrder.setClosedTime(Timestamp.from(Instant.now()));
+        ordersRepository.saveAndFlush(pendingOrder);
+
+        mockMvc.perform(post("/api/orders/{id}/pay", pendingOrder.getOrderId())
+                        .cookie(new Cookie("token", tokenUtil.generateToken(owner.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("410"));
+
+        verifyNoInteractions(paymentFormGateway);
     }
 
     private Account createAccount(String username, String role, String phonePrefix) {

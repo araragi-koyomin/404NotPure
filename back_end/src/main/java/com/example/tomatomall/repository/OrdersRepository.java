@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface OrdersRepository extends JpaRepository<Orders, Integer> {
 
+    Optional<Orders> findByAccountIdAndIdempotencyKey(Integer userId, String idempotencyKey);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Orders orderRecord "
             + "set orderRecord.status = :paidStatus, "

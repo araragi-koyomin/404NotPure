@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "test": "vitest run",
     "check:sensitive-logging": "node scripts/check-sensitive-response-logging.mjs && node --test scripts/security-ui.test.mjs",
     "preview": "vite preview"
   },
@@ -27,6 +28,7 @@
     "unplugin-auto-import": "^0.16.7",
     "unplugin-vue-components": "^0.25.2",
     "vite": "^5.4.15",
+    "vitest": "^2.1.9",
     "vue-tsc": "^3.3.9"
   }
 }

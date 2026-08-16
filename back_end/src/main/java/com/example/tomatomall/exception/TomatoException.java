@@ -121,6 +121,10 @@ public class TomatoException extends RuntimeException{
         return new TomatoException("订单当前状态不允许完成支付", "409");
     }
 
+    public static TomatoException orderNoLongerPayable() {
+        return new TomatoException("订单已取消或关闭，请重新结算", "410");
+    }
+
     public static TomatoException paymentTradeConflict() {
         return new TomatoException("支付宝交易号与订单支付记录冲突", "409");
     }

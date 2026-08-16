@@ -1,132 +1,176 @@
 package com.example.tomatomall.service.serviceImpl;
 
 import com.example.tomatomall.dto.CreateOrderDTO;
-import com.example.tomatomall.exception.TomatoException;
-import com.example.tomatomall.po.*;
+import com.example.tomatomall.exception.OrderCheckoutConflictException;
+import com.example.tomatomall.exception.OrderCheckoutUnavailableException;
+import com.example.tomatomall.po.Orders;
 import com.example.tomatomall.repository.OrdersRepository;
-import com.example.tomatomall.repository.ProductRepository;
-import com.example.tomatomall.repository.StockPileRepository;
-import com.example.tomatomall.repository.UserRepository;
 import com.example.tomatomall.service.OrderService;
-import com.example.tomatomall.vo.OrdersVO;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.tomatomall.service.order.NormalizedCheckoutRequest;
+import com.example.tomatomall.service.order.OrderCheckoutRequestNormalizer;
+import com.example.tomatomall.service.order.OrderCheckoutResult;
+import com.example.tomatomall.service.order.OrderCheckoutTransactionService;
+import com.example.tomatomall.service.order.OrderIdempotencyKey;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.TransactionTimedOutException;
 
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
+import java.util.Locale;
+import java.util.Optional;
+import java.sql.SQLException;
+import java.util.concurrent.locks.LockSupport;
 
-/**
- * 订单服务实现类
- * 处理订单创建及相关业务逻辑
- */
 @Service
 public class OrderServiceImpl implements OrderService {
 
-  @Autowired
-  UserRepository userRepository;
+    private static final String METRIC_NAME = "tomatomall.order.checkout.requests";
+    private static final String IDEMPOTENCY_CONSTRAINT = "uk_orders_user_idempotency_key";
 
-  @Autowired
-  OrdersRepository ordersRepository;
+    private final OrdersRepository ordersRepository;
+    private final OrderCheckoutRequestNormalizer requestNormalizer;
+    private final OrderCheckoutTransactionService transactionService;
+    private final MeterRegistry meterRegistry;
 
-  @Autowired
-  ProductRepository productRepository;
-
-  @Autowired
-  StockPileRepository stockPileRepository;
-
-  /**
-   * 创建新订单
-   * @param userId 用户ID
-   * @param dto 订单创建DTO
-   * @return 订单视图对象
-   * @throws TomatoException 用户不存在、商品不存在或库存不足时抛出
-   */
-  @Override
-  @Transactional
-  public OrdersVO addOrder(Integer userId, CreateOrderDTO dto) {
-    validateOrderRequest(dto);
-    Map<Integer, Integer> quantitiesByProduct = aggregateQuantities(dto);
-    Account persistedUser = userRepository.findById(userId).orElseThrow(TomatoException::userNotExist);
-
-    List<Integer> productIds = new ArrayList<>(quantitiesByProduct.keySet());
-    Map<Integer, Product> productMap = productRepository.findAllById(productIds).stream()
-        .collect(Collectors.toMap(Product::getId, p -> p));
-
-    if (productMap.size() != productIds.size()) {
-      throw TomatoException.productNotExist();
+    public OrderServiceImpl(OrdersRepository ordersRepository,
+                            OrderCheckoutRequestNormalizer requestNormalizer,
+                            OrderCheckoutTransactionService transactionService,
+                            MeterRegistry meterRegistry) {
+        this.ordersRepository = ordersRepository;
+        this.requestNormalizer = requestNormalizer;
+        this.transactionService = transactionService;
+        this.meterRegistry = meterRegistry;
     }
 
-    Orders order = new Orders();
-    order.setAccount(persistedUser);
-    order.setPaymentMethod(dto.getPaymentMethod());
-    order.setStatus(OrderStatus.PENDING.name());
-    order.setCreateTime(new Timestamp(System.currentTimeMillis()));
-
-    List<OrderItem> orderItems = new ArrayList<>();
-    BigDecimal totalAmount = BigDecimal.ZERO;
-
-    for (Map.Entry<Integer, Integer> entry : quantitiesByProduct.entrySet()) {
-      Integer productId = entry.getKey();
-      Integer quantity = entry.getValue();
-      Product product = productMap.get(productId);
-
-      int updatedRows = stockPileRepository.freezeStockIfAvailable(productId, quantity);
-      if (updatedRows == 0) {
-        if (stockPileRepository.countByProductId(productId) > 1) {
-          throw TomatoException.stockDataInconsistent();
+    @Override
+    public OrderCheckoutResult addOrder(Integer userId,
+                                        String idempotencyKey,
+                                        CreateOrderDTO dto) {
+        try {
+            OrderCheckoutResult result = execute(userId, idempotencyKey, dto);
+            increment(result.isReplayed() ? "replayed" : "created");
+            return result;
+        } catch (OrderCheckoutConflictException exception) {
+            increment("conflict");
+            throw exception;
+        } catch (OrderCheckoutUnavailableException exception) {
+            increment("timeout");
+            throw exception;
+        } catch (RuntimeException exception) {
+            increment("failed");
+            throw exception;
         }
-        throw TomatoException.stockNotEnough();
-      }
-      if (updatedRows != 1) {
-        throw TomatoException.stockDataInconsistent();
-      }
-
-      BigDecimal price = product.getPrice().multiply(BigDecimal.valueOf(quantity));
-      totalAmount = totalAmount.add(price);
-
-      OrderItem orderItem = new OrderItem();
-      orderItem.setProduct(product);
-      orderItem.setQuantity(quantity);
-      orderItem.setOrder(order);
-      orderItems.add(orderItem);
     }
 
-    order.setOrderItems(orderItems);
-    order.setTotalAmount(totalAmount);
+    private OrderCheckoutResult execute(Integer userId,
+                                        String idempotencyKey,
+                                        CreateOrderDTO dto) {
+        String canonicalKey = OrderIdempotencyKey.requireCanonical(idempotencyKey);
+        NormalizedCheckoutRequest request = requestNormalizer.normalize(dto);
+        Optional<Orders> existing = ordersRepository
+                .findByAccountIdAndIdempotencyKey(userId, canonicalKey);
+        if (existing.isPresent()) {
+            return replayOrConflict(existing.get(), request);
+        }
 
-    ordersRepository.save(order);
-
-    return order.toVO();
-  }
-
-  private void validateOrderRequest(CreateOrderDTO dto) {
-    if (dto == null || dto.getPaymentMethod() == null || dto.getPaymentMethod().trim().isEmpty()
-        || dto.getItems() == null || dto.getItems().isEmpty()) {
-      throw TomatoException.invalidOrderRequest();
+        try {
+            Orders created = transactionService.create(userId, canonicalKey, request);
+            return OrderCheckoutResult.created(created.toVO());
+        } catch (DataIntegrityViolationException exception) {
+            if (!causedByNamedIdempotencyConstraint(exception)) {
+                throw exception;
+            }
+            Orders winner = ordersRepository.findByAccountIdAndIdempotencyKey(userId, canonicalKey)
+                    .orElseThrow(() -> exception);
+            return replayOrConflict(winner, request);
+        } catch (RuntimeException exception) {
+            if (isDeadlock(exception)) {
+                Optional<Orders> winner = waitForDeadlockWinner(userId, canonicalKey);
+                if (winner.isPresent()) {
+                    return replayOrConflict(winner.get(), request);
+                }
+            }
+            if (isLockOrTransactionTimeout(exception)) {
+                throw new OrderCheckoutUnavailableException(exception);
+            }
+            throw exception;
+        }
     }
 
-    for (CreateOrderDTO.OrderItemDTO item : dto.getItems()) {
-      if (item == null || item.getProductId() == null || item.getAmount() == null || item.getAmount() <= 0) {
-        throw TomatoException.invalidOrderRequest();
-      }
+    private OrderCheckoutResult replayOrConflict(Orders existing,
+                                                  NormalizedCheckoutRequest request) {
+        if (!request.getFingerprint().equals(existing.getRequestFingerprint())) {
+            throw new OrderCheckoutConflictException();
+        }
+        return OrderCheckoutResult.replayed(existing.toVO());
     }
-  }
 
-  private Map<Integer, Integer> aggregateQuantities(CreateOrderDTO dto) {
-    Map<Integer, Integer> quantitiesByProduct = new TreeMap<>();
-    try {
-      for (CreateOrderDTO.OrderItemDTO item : dto.getItems()) {
-        quantitiesByProduct.merge(item.getProductId(), item.getAmount(), Math::addExact);
-      }
-    } catch (ArithmeticException exception) {
-      throw TomatoException.invalidOrderRequest();
+    private boolean causedByNamedIdempotencyConstraint(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT)
+                    .contains(IDEMPOTENCY_CONSTRAINT)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
-    return quantitiesByProduct;
-  }
+
+    private boolean isLockOrTransactionTimeout(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof CannotAcquireLockException
+                    || current instanceof PessimisticLockingFailureException
+                    || current instanceof QueryTimeoutException
+                    || current instanceof TransactionTimedOutException) {
+                return true;
+            }
+            String className = current.getClass().getName();
+            if ("org.hibernate.exception.LockAcquisitionException".equals(className)
+                    || "org.hibernate.PessimisticLockException".equals(className)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private boolean isDeadlock(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof SQLException) {
+                SQLException sqlException = (SQLException) current;
+                if (sqlException.getErrorCode() == 1213
+                        || "40001".equals(sqlException.getSQLState())) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private Optional<Orders> waitForDeadlockWinner(Integer userId, String idempotencyKey) {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            Optional<Orders> winner = ordersRepository
+                    .findByAccountIdAndIdempotencyKey(userId, idempotencyKey);
+            if (winner.isPresent()) {
+                return winner;
+            }
+            if (Thread.currentThread().isInterrupted()) {
+                return Optional.empty();
+            }
+            LockSupport.parkNanos(10_000_000L);
+        }
+        return Optional.empty();
+    }
+
+    private void increment(String outcome) {
+        meterRegistry.counter(METRIC_NAME, "outcome", outcome).increment();
+    }
 }

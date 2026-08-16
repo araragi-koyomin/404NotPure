@@ -6,6 +6,8 @@ import com.example.tomatomall.dto.CreateOrderDTO;
 import com.example.tomatomall.exception.TomatoException;
 import com.example.tomatomall.service.CartsService;
 import com.example.tomatomall.service.OrderService;
+import com.example.tomatomall.service.order.OrderCheckoutResult;
+import com.example.tomatomall.service.order.OrderIdempotencyKey;
 import com.example.tomatomall.util.TokenUtil;
 import com.example.tomatomall.vo.CartsListVO;
 import com.example.tomatomall.vo.CartsVO;
@@ -13,6 +15,7 @@ import com.example.tomatomall.vo.OrdersVO;
 import com.example.tomatomall.vo.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
@@ -97,10 +100,19 @@ public class CartsController {
      * @throws TomatoException 未登录时抛出
      */
     @PostMapping("/checkout")
-    public Response<OrdersVO> createOrder(HttpServletRequest request, @Valid @RequestBody CreateOrderDTO dto) {
+    public ResponseEntity<Response<OrdersVO>> createOrder(
+            HttpServletRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CreateOrderDTO dto
+    ) {
         int userId = tokenUtil.getUserIdFromRequest(request);
-        OrdersVO ordersVO = orderService.addOrder(userId, dto);
-        return Response.buildSuccess(ordersVO);
+        String canonicalKey = OrderIdempotencyKey.requireCanonical(idempotencyKey);
+        OrderCheckoutResult result = orderService.addOrder(userId, canonicalKey, dto);
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok();
+        if (result.isReplayed()) {
+            response.header("Idempotent-Replay", "true");
+        }
+        return response.body(Response.buildSuccess(result.getOrder()));
     }
 
 }
