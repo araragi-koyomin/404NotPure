@@ -21,11 +21,11 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 下一批次待项目所有者确认 |
-| 当前阶段 | SEC-014A 已通过 [PR #27](https://github.com/araragi-koyomin/404NotPure/pull/27) squash 合并到个人 `master@00d71b05`；生产依赖严重/高危告警已清零，自动化、真实浏览器和独立审查通过。当前分支 `codex/archive-sec014a` 只处理合并后的冷层归档、热层移除和简历事实同步。 |
+| 当前阶段 | SEC-014A 功能已通过 [PR #27](https://github.com/araragi-koyomin/404NotPure/pull/27) squash 合并，冷层记录、热层移除和简历事实同步已通过 [PR #28](https://github.com/araragi-koyomin/404NotPure/pull/28) 完成；下一开发批次待项目所有者确认。 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001、CACHE-003 Redis 故障保护、CACHE-002 热门商品单次回填、TEST-002 默认测试进程与内存基线、DB-001B 库存唯一记录与商品外键、CART-001 购物车数量与库存状态、ORD-003 订单取消与超时关闭、ORD-002 结算请求幂等，以及 SEC-014A 前端生产依赖兼容安全升级均已合并并进入或正在进入冷层交付记录。 |
 | 尚未完成 | 订单读取接口、支付返回页、CSRF、支付宝侧交易关闭等活跃项继续按表格跟踪。当前版本也没有执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测。 |
-| 当前阻塞或待确认 | 无环境阻塞。SEC-014A 的功能交付已经完成；ECharts/Vue ECharts 的两个生产中危告警由 SEC-014B 跟踪，包含开发工具的完整依赖树仍有 1 个严重、5 个高危、6 个中危，由 SEC-014C 跟踪。 |
-| 下一步 | 完成 SEC-014A 冷层归档后，按既定主线优先讨论 API-001 订单详情/列表；CART-002 和 ACCT-002 是浏览器验收发现的 P1 业务缺陷，何时插入主线由项目所有者在下一次讨论中确认。 |
+| 当前阻塞或待确认 | 无环境阻塞；下一开发批次尚待项目所有者确认。ECharts/Vue ECharts 的两个生产中危告警由 SEC-014B 跟踪，包含开发工具的完整依赖树仍有 1 个严重、5 个高危、6 个中危，由 SEC-014C 跟踪。 |
+| 下一步 | 按既定主线优先讨论 API-001 订单详情/列表；CART-002 和 ACCT-002 是浏览器验收发现的 P1 业务缺陷，何时插入主线由项目所有者在下一次讨论中确认。 |
 | 本批次不处理 | 已废弃的 AI assistant；公网长期部署 |
 
 | ID | 优先级 | 状态 | 活跃项 | 完成证据 | 温层文档 |
@@ -66,7 +66,7 @@ DB-001C、SEC-013、JPA-001、运行环境和前端质量任务继续按风险�
 
 ## 当前分支与阻塞
 
-- SEC-014A 开发分支 `codex/frontend-dependency-security` 已通过 [PR #27](https://github.com/araragi-koyomin/404NotPure/pull/27) squash 合并到个人 `master@00d71b05`；冷层归档分支为 `codex/archive-sec014a`，完整证据见[前端生产依赖兼容安全升级交付记录](archive/2026-08-17-frontend-dependency-security-delivery.md)。
+- SEC-014A 开发分支 `codex/frontend-dependency-security` 已通过 [PR #27](https://github.com/araragi-koyomin/404NotPure/pull/27) squash 合并到个人 `master@00d71b05`；冷层归档分支 `codex/archive-sec014a` 已通过 [PR #28](https://github.com/araragi-koyomin/404NotPure/pull/28) 合并到个人 `master@12faba96`。完整证据见[前端生产依赖兼容安全升级交付记录](archive/2026-08-17-frontend-dependency-security-delivery.md)。
 - ORD-002 功能分支 `codex/order-checkout-idempotency` 已通过 [PR #25](https://github.com/araragi-koyomin/404NotPure/pull/25) squash 合并，功能合并提交为 `a9f406c7`；冷层归档分支 `codex/archive-ord002` 通过 PR #26 合并。本批次只实现结算幂等及其前端重试状态；购物车清理、订单读取接口、支付宝外部关单、多支付渠道完整接入和生产容量测试不在范围内。完整证据见[结算请求幂等交付记录](archive/2026-08-16-order-checkout-idempotency-delivery.md)。
 - ORD-003 开发分支 `codex/order-cancellation-timeout` 已于 2026-08-16 从个人 `master@b0a098f0` 创建；功能提交 `95ee7b6b` 通过 [PR #23](https://github.com/araragi-koyomin/404NotPure/pull/23) squash 合并到个人 `master@0a0f72ed`。冷层归档分支为 `codex/archive-ord003`，对应 PR #24；完整证据见[订单取消与超时关闭交付记录](archive/2026-08-16-order-cancellation-expiration-delivery.md)。
 - PR #1～#13 的交付历史保留在对应冷层记录；[PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15) 已于 2026-08-14 squash 合并 CACHE-002，提交为 `28b41ad4`。功能分支为 `codex/cache-hotspot-single-flight`，合并后冷层归档使用 `codex/archive-cache002`；目标集成分支始终为个人 `master`。

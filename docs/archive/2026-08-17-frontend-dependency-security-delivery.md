@@ -101,6 +101,8 @@ Axios 测试使用项目真实共享实例、请求/响应拦截器和替换后�
 
 功能提交 `76ac9d0b` 已推送到 `codex/frontend-dependency-security`，并通过 [Pull Request #27](https://github.com/araragi-koyomin/404NotPure/pull/27) 以 squash 方式合并到个人 `master`；合并提交为 `00d71b055b5eddb897ac3c8cb95aefa7fb5b1039`。GitHub 没有为该分支配置远端自动检查，本次合并依据是上述本地测试、在线 npm 审计、真实浏览器回归和独立审查，不能写成远端 CI 已通过。
 
+冷层交付记录、BACKLOG 热层移除和简历/面试事实同步通过 [Pull Request #28](https://github.com/araragi-koyomin/404NotPure/pull/28) 以 squash 方式合并；归档合并提交为 `12faba968e00b180651d7d91c366d78b329c203a`。
+
 ## 仍需诚实说明的边界
 
 1. ECharts 5 和 Vue ECharts 6 的两个生产中危告警仍存在，安全版本需要跨主要版本，由 SEC-014B 处理。
