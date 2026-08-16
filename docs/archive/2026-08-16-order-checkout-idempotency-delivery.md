@@ -100,7 +100,7 @@ Flyway V7 为 `orders` 增加：
 - 功能提交：`5f4a4f6d feat(order): make checkout requests idempotent`。
 - [Pull Request #25](https://github.com/araragi-koyomin/404NotPure/pull/25) 已通过 squash 方式合并到个人 `master`。
 - 功能合并提交：`a9f406c7b0eb7c4f95b5f4df0514a89c0c25483a`。
-- 合并后的文档归档分支：`codex/archive-ord002`；本记录将通过独立文档 PR 进入个人 `master`。
+- 合并后的文档归档分支：`codex/archive-ord002`；本记录通过 [Pull Request #26](https://github.com/araragi-koyomin/404NotPure/pull/26) 进入个人 `master`。
 
 ## 尚未解决的边界
 

@@ -21,7 +21,7 @@ tags:
 | 当前信息 | 内容 |
 |---|---|
 | 主开发批次 | 下一批次待项目所有者确认 |
-| 当前阶段 | ORD-002 已通过 [PR #25](https://github.com/araragi-koyomin/404NotPure/pull/25) squash 合并到个人 `master@a9f406c7`；正在通过 `codex/archive-ord002` 完成冷层记录、热层移除和简历事实同步。 |
+| 当前阶段 | ORD-002 已通过 [PR #25](https://github.com/araragi-koyomin/404NotPure/pull/25) squash 合并到个人 `master@a9f406c7`，冷层记录、热层移除和简历事实同步通过 [PR #26](https://github.com/araragi-koyomin/404NotPure/pull/26) 完成；下一开发批次待项目所有者确认。 |
 | 已完成 | OSS、图片上传、本机运行安全、个人仓库迁移、ORD-001 订单与库存一致性、支付宝回调一致性、支付字段 Flyway 迁移、沙箱探针安全边界、简历/面试亮点事实文档、SEC-011/SEC-001、DOC-005、CACHE-001/TEST-001、DATA-001、API-002、PERF-001、CACHE-003 Redis 故障保护、CACHE-002 热门商品单次回填、TEST-002 默认测试进程与内存基线、DB-001B 库存唯一记录与商品外键、CART-001 购物车数量与库存状态、ORD-003 订单取消与超时关闭，以及 ORD-002 结算请求幂等均已合并并进入或正在进入冷层交付记录。 |
 | 尚未完成 | 订单读取接口、支付返回页、CSRF、支付宝侧交易关闭等活跃项继续按表格跟踪。当前版本也没有执行 CACHE-002 开启时 Redis 真实停止、CACHE-003 自动保护并在恢复后重新进入 CACHE-002 热点回填的完整复合压测。 |
 | 当前阻塞或待确认 | 无环境阻塞；下一开发批次尚待项目所有者确认。ORD-002 页面验收发现的支付 SDK 异常日志和既有前端控制台错误分别由 SEC-013、FE-003 跟踪；完整回归复现的 Redis 冷启动命令超时测试计时不稳定由 TEST-003 跟踪。 |
@@ -62,7 +62,7 @@ DB-001C、SEC-013、JPA-001、运行环境和前端质量任务继续按风险�
 
 ## 当前分支与阻塞
 
-- ORD-002 功能分支 `codex/order-checkout-idempotency` 已通过 [PR #25](https://github.com/araragi-koyomin/404NotPure/pull/25) squash 合并，功能合并提交为 `a9f406c7`；冷层归档分支为 `codex/archive-ord002`。本批次只实现结算幂等及其前端重试状态；购物车清理、订单读取接口、支付宝外部关单、多支付渠道完整接入和生产容量测试不在范围内。完整证据见[结算请求幂等交付记录](archive/2026-08-16-order-checkout-idempotency-delivery.md)。
+- ORD-002 功能分支 `codex/order-checkout-idempotency` 已通过 [PR #25](https://github.com/araragi-koyomin/404NotPure/pull/25) squash 合并，功能合并提交为 `a9f406c7`；冷层归档分支 `codex/archive-ord002` 通过 PR #26 合并。本批次只实现结算幂等及其前端重试状态；购物车清理、订单读取接口、支付宝外部关单、多支付渠道完整接入和生产容量测试不在范围内。完整证据见[结算请求幂等交付记录](archive/2026-08-16-order-checkout-idempotency-delivery.md)。
 - ORD-003 开发分支 `codex/order-cancellation-timeout` 已于 2026-08-16 从个人 `master@b0a098f0` 创建；功能提交 `95ee7b6b` 通过 [PR #23](https://github.com/araragi-koyomin/404NotPure/pull/23) squash 合并到个人 `master@0a0f72ed`。冷层归档分支为 `codex/archive-ord003`，对应 PR #24；完整证据见[订单取消与超时关闭交付记录](archive/2026-08-16-order-cancellation-expiration-delivery.md)。
 - PR #1～#13 的交付历史保留在对应冷层记录；[PR #15](https://github.com/araragi-koyomin/404NotPure/pull/15) 已于 2026-08-14 squash 合并 CACHE-002，提交为 `28b41ad4`。功能分支为 `codex/cache-hotspot-single-flight`，合并后冷层归档使用 `codex/archive-cache002`；目标集成分支始终为个人 `master`。
 - TEST-002 功能分支 `codex/test-default-surefire-memory` 已通过 PR #17 squash 合并，合并提交为 `73f73836`；合并后冷层归档使用 `codex/archive-test002`。DB-001B 功能分支 `codex/db-inventory-unique` 已通过 PR #19 squash 合并，合并提交为 `d82a23c9`；合并后冷层归档使用 `codex/archive-db001b`，目标集成分支仍为个人 `master`。
